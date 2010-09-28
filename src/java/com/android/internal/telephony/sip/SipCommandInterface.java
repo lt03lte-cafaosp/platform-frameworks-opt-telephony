@@ -437,4 +437,7 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
 
     public void getVoiceRadioTechnology(Message result) {
     }
+
+    public void getDataCallProfile(int appType, Message result) {
+    }
 }
