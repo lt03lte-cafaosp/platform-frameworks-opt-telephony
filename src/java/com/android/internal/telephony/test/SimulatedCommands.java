@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1520,6 +1521,20 @@ public final class SimulatedCommands extends BaseCommands
     }
 
     public void getVoiceRadioTechnology(Message response) {
+        unimplemented(response);
+    }
+
+    public void getImsRegistrationState(Message response) {
+        unimplemented(response);
+    }
+
+    public void sendImsCdmaSms(byte[] pdu, int retry, int messageRef,
+            Message response){
+        unimplemented(response);
+    }
+
+    public void sendImsGsmSms(String smscPDU, String pdu,
+            int retry, int messageRef, Message response){
         unimplemented(response);
     }
 }

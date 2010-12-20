@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +52,7 @@ public abstract class BaseCommands implements CommandsInterface {
     protected RegistrantList mVoiceNetworkStateRegistrants = new RegistrantList();
     protected RegistrantList mDataNetworkStateRegistrants = new RegistrantList();
     protected RegistrantList mVoiceRadioTechChangedRegistrants = new RegistrantList();
+    protected RegistrantList mImsNetworkStateChangedRegistrants = new RegistrantList();
     protected RegistrantList mIccStatusChangedRegistrants = new RegistrantList();
     protected RegistrantList mVoicePrivacyOnRegistrants = new RegistrantList();
     protected RegistrantList mVoicePrivacyOffRegistrants = new RegistrantList();
@@ -124,6 +126,16 @@ public abstract class BaseCommands implements CommandsInterface {
         synchronized (mStateMonitor) {
             mRadioStateChangedRegistrants.remove(h);
         }
+    }
+
+
+    public void registerForImsNetworkStateChanged(Handler h, int what, Object obj) {
+        Registrant r = new Registrant (h, what, obj);
+        mImsNetworkStateChangedRegistrants.add(r);
+    }
+
+    public void unregisterForImsNetworkStateChanged(Handler h) {
+        mImsNetworkStateChangedRegistrants.remove(h);
     }
 
     public void registerForOn(Handler h, int what, Object obj) {

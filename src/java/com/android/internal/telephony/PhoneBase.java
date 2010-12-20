@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,9 +115,8 @@ public abstract class PhoneBase extends Handler implements Phone {
     protected static final int EVENT_CDMA_SUBSCRIPTION_SOURCE_CHANGED = 27;
     // other
     protected static final int EVENT_SET_NETWORK_AUTOMATIC          = 28;
-    protected static final int EVENT_NEW_ICC_SMS                    = 29;
-    protected static final int EVENT_ICC_RECORD_EVENTS              = 30;
-    protected static final int EVENT_ICC_CHANGED                    = 31;
+    protected static final int EVENT_ICC_RECORD_EVENTS              = 29;
+    protected static final int EVENT_ICC_CHANGED                    = 30;
 
     // Key used to read/write current CLIR setting
     public static final String CLIR_KEY = "clir_key";
@@ -139,7 +139,6 @@ public abstract class PhoneBase extends Handler implements Phone {
     public SmsUsageMonitor mSmsUsageMonitor;
     protected AtomicReference<UiccCardApplication> mUiccApplication =
             new AtomicReference<UiccCardApplication>();
-    public SMSDispatcher mSMS;
 
     /**
      * Set a system property, unless we're in unit test mode
@@ -282,7 +281,6 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void removeReferences() {
         mSmsStorageMonitor = null;
         mSmsUsageMonitor = null;
-        mSMS = null;
         mIccRecords.set(null);
         mUiccApplication.set(null);
         mDataConnectionTracker = null;
@@ -1230,7 +1228,6 @@ public abstract class PhoneBase extends Handler implements Phone {
         pw.println(" mUiccApplication=" + mUiccApplication.get());
         pw.println(" mSmsStorageMonitor=" + mSmsStorageMonitor);
         pw.println(" mSmsUsageMonitor=" + mSmsUsageMonitor);
-        pw.println(" mSMS=" + mSMS);
         pw.flush();
         pw.println(" mLooper=" + mLooper);
         pw.println(" mContext=" + mContext);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +48,7 @@ public class PhoneProxy extends Handler implements Phone {
 
     private Phone mActivePhone;
     private CommandsInterface mCommandsInterface;
-    private IccSmsInterfaceManagerProxy mIccSmsInterfaceManagerProxy;
+    private IccSmsInterfaceManager mIccSmsInterfaceManager;
     private IccPhoneBookInterfaceManagerProxy mIccPhoneBookInterfaceManagerProxy;
     private PhoneSubInfoProxy mPhoneSubInfoProxy;
     private IccCardProxy mIccCardProxy;
@@ -68,8 +69,8 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone = phone;
         mResetModemOnRadioTechnologyChange = SystemProperties.getBoolean(
                 TelephonyProperties.PROPERTY_RESET_ON_RADIO_TECH_CHANGE, false);
-        mIccSmsInterfaceManagerProxy = new IccSmsInterfaceManagerProxy(
-                phone.getIccSmsInterfaceManager());
+        mIccSmsInterfaceManager =
+                new IccSmsInterfaceManager((PhoneBase)this.mActivePhone);
         mIccPhoneBookInterfaceManagerProxy = new IccPhoneBookInterfaceManagerProxy(
                 phone.getIccPhoneBookInterfaceManager());
         mPhoneSubInfoProxy = new PhoneSubInfoProxy(phone.getPhoneSubInfo());
@@ -200,8 +201,7 @@ public class PhoneProxy extends Handler implements Phone {
         }
 
         // Set the new interfaces in the proxy's
-        mIccSmsInterfaceManagerProxy.setmIccSmsInterfaceManager(
-                mActivePhone.getIccSmsInterfaceManager());
+        mIccSmsInterfaceManager.updatePhoneObject((PhoneBase)mActivePhone);
         mIccPhoneBookInterfaceManagerProxy.setmIccPhoneBookInterfaceManager(mActivePhone
                 .getIccPhoneBookInterfaceManager());
         mPhoneSubInfoProxy.setmPhoneSubInfo(this.mActivePhone.getPhoneSubInfo());
@@ -802,10 +802,6 @@ public class PhoneProxy extends Handler implements Phone {
 
     public PhoneSubInfo getPhoneSubInfo(){
         return mActivePhone.getPhoneSubInfo();
-    }
-
-    public IccSmsInterfaceManager getIccSmsInterfaceManager(){
-        return mActivePhone.getIccSmsInterfaceManager();
     }
 
     public IccPhoneBookInterfaceManager getIccPhoneBookInterfaceManager(){
