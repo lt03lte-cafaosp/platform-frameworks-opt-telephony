@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2013, Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2009 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +19,17 @@
 
 package com.android.internal.telephony.cdma;
 
+import static com.android.internal.telephony.RILConstants.*;
+import static com.android.internal.telephony.cdma.ExtendedDisplayItemRec.ExtendedDisplayTag;
+import com.android.internal.util.HexDump;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.Vector;
+
 import android.os.Parcel;
+import android.util.Log;
 
 public final class CdmaInformationRecords {
     public Object record;
@@ -39,8 +52,11 @@ public final class CdmaInformationRecords {
     public CdmaInformationRecords(Parcel p) {
         int id = p.readInt();
         switch (id) {
-            case RIL_CDMA_DISPLAY_INFO_REC:
             case RIL_CDMA_EXTENDED_DISPLAY_INFO_REC:
+                byte []data = p.createByteArray();
+                record = new CdmaDisplayInfoRec(id, data);
+                break;
+            case RIL_CDMA_DISPLAY_INFO_REC:
                 record  = new CdmaDisplayInfoRec(id, p.readString());
                 break;
 
@@ -132,17 +148,102 @@ public final class CdmaInformationRecords {
         public int id;
         public String alpha;
 
+        public Vector<ExtendedDisplayItemRec> itemrecs;
+
         public CdmaDisplayInfoRec(int id, String alpha) {
             this.id = id;
             this.alpha = alpha;
         }
+        public CdmaDisplayInfoRec(int id, byte[] data) {
+            Log.d("CdmaInformationRecords","CdmaDisplayInfoRec(" + id + ", data: " + data + ")");
+            this.id = id;
+            this.alpha = "";
+            readItems(data);
+        }
+
+        private void readItems(byte[] data) {
+            Log.d("CdmaInformationRecords", "CdmaDisplayInfoRec.readItems(len: " + data.length
+                    + ")");
+            Log.d("CdmaInformationRecords", HexDump.dumpHexString(data));
+
+            int read = 0;
+            int linelen = 0;
+            StringBuffer buffer = new StringBuffer();
+            if (itemrecs == null)
+                itemrecs = new Vector<ExtendedDisplayItemRec>();
+            for (read = 0; read < data.length;) {
+                ExtendedDisplayTag itag = ExtendedDisplayTag.fromByte(data[read++]);
+                if (itag == null) {
+                    Log.e("CdmaInformationRecords", "itag for [" + data[read - 1] + "] is null!!!");
+                }
+                byte ilen = data[read++];
+                byte[] idata = null;
+                switch (itag) {
+                    case X_DISPLAY_TAG_BLANK:
+                        // According to the standard, this should display a number (in this case,
+                        // ilen) of blank characters on the terminal's display
+                        // (used to format and to clear)
+                        Log.d("CdmaInformationRecords", "readItems: got a DISPLAY_TAG_BLANK(ilen:"
+                                + ilen + ")");
+                        for (int i = 0; i < ilen; i++, linelen++) {
+                            buffer.append(" ");
+                            // Limit the line length to the maximum standard display size
+                            // (ANSI TI.610-1998)
+                            if (linelen >= 40) {
+                                buffer.append("\r\n");
+                                linelen = 0;
+                            }
+                        }
+                        break;
+                    case X_DISPLAY_TAG_SKIP:
+                        Log.d("CdmaInformationRecords", "readItems: got a DISPLAY_TAG_SKIP(ilen: "
+                                + ilen + ")");
+                        // Do nothing
+                        // TODO:Interpret the DISPLAY_TAG_SKIP
+                        break;
+                    default:
+                        idata = new byte[ilen];
+                        for (int i = 0; i < ilen; i++)
+                            idata[i] = data[read++];
+                        break;
+                }
+                Log.d("CdmaInformationRecords", "readItems: Creating a new DisplayItemRec");
+                ExtendedDisplayItemRec item = new ExtendedDisplayItemRec(itag, ilen, idata);
+                String s = item.getDataAsString();
+                if (s != null) {
+                    buffer.append(s);
+                    linelen += s.length();
+                }
+                itemrecs.add(item);
+                Log.d("CdmaInformationRecords", "readItems: Added a new DisplayItemRec");
+            }
+            alpha = buffer.toString();
+        }
+
+        public boolean isExtended() {
+          return id == RIL_CDMA_EXTENDED_DISPLAY_INFO_REC;
+        }
 
         @Override
         public String toString() {
-            return "CdmaDisplayInfoRec: {" +
-                    " id: " + CdmaInformationRecords.idToString(id) +
-                    ", alpha: " + alpha +
-                    " }";
+            StringBuffer buffer = new StringBuffer(200);
+            if(!isExtended()) {
+                buffer.append("CdmaDisplayInfoRec: { id: ");
+                buffer.append(CdmaInformationRecords.idToString(id));
+                buffer.append(", alpha: ");
+                buffer.append(alpha);
+                buffer.append(" }");
+                return buffer.toString();
+            }
+            buffer.append("CdmaDisplayInfoRec(extended): { id: ");
+            buffer.append(CdmaInformationRecords.idToString(id));
+            for (ExtendedDisplayItemRec rec : itemrecs) {
+                buffer.append(" [");
+                buffer.append(rec.toString());
+                buffer.append("]");
+            }
+            buffer.append(" }");
+            return buffer.toString();
         }
     }
 
