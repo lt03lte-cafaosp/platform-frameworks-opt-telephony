@@ -2564,6 +2564,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_RIL_CONNECTED: ret = responseInts(p); break;
             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: ret =  responseInts(p); break;
             case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: ret =  responseVoid(p); break;
+            case RIL_UNSOL_TETHERED_MODE_STATE_CHANGED: ret = responseInts(p); break;
 
             default:
                 throw new RuntimeException("Unrecognized unsol response: " + response);
@@ -2927,6 +2928,18 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 notifyRegistrantsRilConnectionChanged(((int[])ret)[0]);
                 break;
             }
+
+            case RIL_UNSOL_TETHERED_MODE_STATE_CHANGED:
+                if (RILJ_LOGD) unsljLogvRet(response, ret);
+                if (mTetheredModeStateRegistrants != null) {
+                    if (ret != null) {
+                        mTetheredModeStateRegistrants.notifyRegistrants(
+                                new AsyncResult (null, ret, null));
+                    } else {
+                        Log.e(LOG_TAG, "null returned, expected non-null");
+                    }
+                }
+                break;
         }
     }
 
@@ -3714,6 +3727,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_RIL_CONNECTED: return "UNSOL_RIL_CONNECTED";
             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: return "UNSOL_VOICE_RADIO_TECH_CHANGED";
             case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED";
+            case RIL_UNSOL_TETHERED_MODE_STATE_CHANGED: return "RIL_UNSOL_TETHERED_MODE_STATE_CHANGED";
             default: return "<unknown response>";
         }
     }
