@@ -91,12 +91,6 @@ public class GsmDataConnection extends DataConnection {
         Message msg = obtainMessage(EVENT_SETUP_DATA_CONNECTION_DONE, cp);
         msg.obj = cp;
 
-        int authType = mApn.authType;
-        if (authType == -1) {
-            authType = TextUtils.isEmpty(mApn.user) ? RILConstants.SETUP_DATA_AUTH_NONE
-                    : RILConstants.SETUP_DATA_AUTH_PAP_CHAP;
-        }
-
         String protocol;
         if (phone.getServiceState().getRoaming()) {
             protocol = mApn.roamingProtocol;
@@ -108,7 +102,7 @@ public class GsmDataConnection extends DataConnection {
                 Integer.toString(getRilRadioTechnology(RILConstants.SETUP_DATA_TECH_GSM)),
                 Integer.toString(mProfileId),
                 mApn.apn, mApn.user, mApn.password,
-                Integer.toString(authType),
+                Integer.toString(mApn.authType),
                 protocol, msg);
     }
 
