@@ -1013,7 +1013,7 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
 
     protected void clearTetheredStateOnStatus() {
         if (DBG) log("clearTetheredStateOnStatus()");
-        mActiveApn.mTetheredCallOn = false;
+        if (mActiveApn != null) mActiveApn.mTetheredCallOn = false;
     }
 
     @Override
