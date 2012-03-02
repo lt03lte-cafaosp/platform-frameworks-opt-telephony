@@ -1,6 +1,9 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
  * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
+ *
+ * Copyright (C) 2008 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +45,7 @@ import com.android.internal.telephony.test.SimulatedRadioControl;
 import com.android.internal.telephony.CallManager;
 
 import java.util.List;
+import java.util.Map;
 
 public class PhoneProxy extends Handler implements Phone {
     public final static Object lockForRadioTechnologyChange = new Object();
@@ -487,6 +491,18 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.acceptCall();
     }
 
+    public void acceptCall(int callType) throws CallStateException {
+        mActivePhone.acceptCall(callType);
+    }
+
+    public int getCallType(Call call) throws CallStateException {
+        return mActivePhone.getCallType(call);
+    }
+
+    public int getCallDomain(Call call) throws CallStateException {
+        return mActivePhone.getCallDomain(call);
+    }
+
     public void rejectCall() throws CallStateException {
         mActivePhone.rejectCall();
     }
@@ -501,6 +517,24 @@ public class PhoneProxy extends Handler implements Phone {
 
     public void conference() throws CallStateException {
         mActivePhone.conference();
+    }
+
+    public void changeConnectionType(Message msg, Connection conn,
+            int newCallType, Map<String, String> newExtras) throws CallStateException {
+        mActivePhone.changeConnectionType(msg, conn, newCallType, newExtras);
+    }
+
+    public void acceptConnectionTypeChange(Connection conn, Map<String, String> newExtras)
+            throws CallStateException {
+        mActivePhone.acceptConnectionTypeChange(conn, newExtras);
+    }
+
+    public void rejectConnectionTypeChange(Connection conn) throws CallStateException {
+        mActivePhone.rejectConnectionTypeChange(conn);
+    }
+
+    public int getProposedConnectionType(Connection conn) throws CallStateException {
+        return mActivePhone.getProposedConnectionType(conn);
     }
 
     public void enableEnhancedVoicePrivacy(boolean enable, Message onComplete) {
@@ -541,6 +575,11 @@ public class PhoneProxy extends Handler implements Phone {
 
     public Connection dial(String dialString, UUSInfo uusInfo) throws CallStateException {
         return mActivePhone.dial(dialString, uusInfo);
+    }
+
+    public Connection dial(String dialString, int callType, String[] extras)
+            throws CallStateException {
+        return mActivePhone.dial(dialString, callType, extras);
     }
 
     public boolean handlePinMmi(String dialString) {
@@ -983,5 +1022,14 @@ public class PhoneProxy extends Handler implements Phone {
     public void removeReferences() {
         mActivePhone = null;
         mCommandsInterface = null;
+    }
+
+    public void registerForModifyCallRequest(Handler h, int what, Object obj)
+            throws CallStateException {
+        mActivePhone.registerForModifyCallRequest(h, what, obj);
+    }
+
+    public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
+        mActivePhone.unregisterForModifyCallRequest(h);
     }
 }
