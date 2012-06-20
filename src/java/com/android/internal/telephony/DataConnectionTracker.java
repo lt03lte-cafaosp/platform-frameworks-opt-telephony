@@ -1107,7 +1107,6 @@ public abstract class DataConnectionTracker extends Handler {
 
     protected void onSetUserDataEnabled(boolean enabled) {
         synchronized (mDataEnabledLock) {
-            final boolean prevEnabled = getAnyDataEnabled();
             if (mUserDataEnabled != enabled) {
                 mUserDataEnabled = enabled;
                 Settings.Global.putInt(mPhone.getContext().getContentResolver(),
@@ -1120,13 +1119,12 @@ public abstract class DataConnectionTracker extends Handler {
                         notifyOffApnsOfAvailability(Phone.REASON_DATA_DISABLED);
                     }
                 }
-                if (prevEnabled != getAnyDataEnabled()) {
-                    if (!prevEnabled) {
-                        resetAllRetryCounts();
-                        onTrySetupData(Phone.REASON_DATA_ENABLED);
-                    } else {
-                        onCleanUpAllConnections(Phone.REASON_DATA_DISABLED);
-                    }
+
+                if (enabled) {
+                    resetAllRetryCounts();
+                    onTrySetupData(Phone.REASON_DATA_ENABLED);
+                } else {
+                    onCleanUpAllConnections(Phone.REASON_DATA_DISABLED);
                 }
             }
         }
@@ -1137,16 +1135,13 @@ public abstract class DataConnectionTracker extends Handler {
 
     protected void onSetPolicyDataEnabled(boolean enabled) {
         synchronized (mDataEnabledLock) {
-            final boolean prevEnabled = getAnyDataEnabled();
             if (sPolicyDataEnabled != enabled) {
                 sPolicyDataEnabled = enabled;
-                if (prevEnabled != getAnyDataEnabled()) {
-                    if (!prevEnabled) {
-                        resetAllRetryCounts();
-                        onTrySetupData(Phone.REASON_DATA_ENABLED);
-                    } else {
-                        onCleanUpAllConnections(Phone.REASON_DATA_DISABLED);
-                    }
+                if (enabled) {
+                    resetAllRetryCounts();
+                    onTrySetupData(Phone.REASON_DATA_ENABLED);
+                } else {
+                    onCleanUpAllConnections(Phone.REASON_DATA_DISABLED);
                 }
             }
         }
