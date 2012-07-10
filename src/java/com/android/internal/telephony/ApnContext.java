@@ -38,12 +38,12 @@ public class ApnContext {
 
     private DctConstants.State mState;
 
-    private ArrayList<ApnSetting> mWaitingApns = null;
+    private ArrayList<DataProfile> mWaitingApns = null;
 
     /** A zero indicates that all waiting APNs had a permanent error */
     private AtomicInteger mWaitingApnsPermanentFailureCountDown;
 
-    private ApnSetting mApnSetting;
+    private DataProfile mDataProfile;
 
     DataConnection mDataConnection;
 
@@ -108,15 +108,15 @@ public class ApnContext {
         mDataConnectionAc = dcac;
     }
 
-    public synchronized ApnSetting getApnSetting() {
-        return mApnSetting;
+    public synchronized DataProfile getApnSetting() {
+        return mDataProfile;
     }
 
-    public synchronized void setApnSetting(ApnSetting apnSetting) {
-        mApnSetting = apnSetting;
+    public synchronized void setApnSetting(DataProfile apnSetting) {
+        mDataProfile = apnSetting;
     }
 
-    public synchronized void setWaitingApns(ArrayList<ApnSetting> waitingApns) {
+    public synchronized void setWaitingApns(ArrayList<DataProfile> waitingApns) {
         mWaitingApns = waitingApns;
         mWaitingApnsPermanentFailureCountDown.set(mWaitingApns.size());
     }
@@ -129,9 +129,9 @@ public class ApnContext {
         mWaitingApnsPermanentFailureCountDown.decrementAndGet();
     }
 
-    public synchronized ApnSetting getNextWaitingApn() {
-        ArrayList<ApnSetting> list = mWaitingApns;
-        ApnSetting apn = null;
+    public synchronized DataProfile getNextWaitingApn() {
+        ArrayList<DataProfile> list = mWaitingApns;
+        DataProfile apn = null;
 
         if (list != null) {
             if (!list.isEmpty()) {
@@ -141,13 +141,13 @@ public class ApnContext {
         return apn;
     }
 
-    public synchronized void removeWaitingApn(ApnSetting apn) {
+    public synchronized void removeWaitingApn(DataProfile apn) {
         if (mWaitingApns != null) {
             mWaitingApns.remove(apn);
         }
     }
 
-    public synchronized ArrayList<ApnSetting> getWaitingApns() {
+    public synchronized ArrayList<DataProfile> getWaitingApns() {
         return mWaitingApns;
     }
 
@@ -232,7 +232,7 @@ public class ApnContext {
         // We don't print mDataConnection because its recursive.
         return "{mApnType=" + mApnType + " mState=" + getState() + " mWaitingApns=" + mWaitingApns +
                 " mWaitingApnsPermanentFailureCountDown=" + mWaitingApnsPermanentFailureCountDown +
-                " mApnSetting=" + mApnSetting + " mDataConnectionAc=" + mDataConnectionAc +
+                " mDataProfile =" + mDataProfile  + " mDataConnectionAc=" + mDataConnectionAc +
                 " mReason=" + mReason + " mRetryCount=" + mRetryCount +
                 " mDataEnabled=" + mDataEnabled + " mDependencyMet=" + mDependencyMet + "}";
     }
@@ -246,10 +246,10 @@ public class ApnContext {
     }
 
     public void setTetheredCallOn(boolean tetheredCallOn) {
-        if (mApnSetting != null) mApnSetting.mTetheredCallOn = tetheredCallOn;
+        if (mDataProfile != null) mDataProfile.mTetheredCallOn = tetheredCallOn;
     }
 
     public boolean getTetheredCallOn() {
-        return mApnSetting == null ? false : mApnSetting.mTetheredCallOn;
+        return mDataProfile == null ? false : mDataProfile.mTetheredCallOn;
     }
 }
