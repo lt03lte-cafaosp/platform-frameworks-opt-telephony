@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1353,7 +1354,12 @@ public final class BearerData {
     private static boolean decodeCallbackNumber(BearerData bData, BitwiseInputStream inStream)
         throws BitwiseInputStream.AccessException, CodingException
     {
+        final int EXPECTED_PARAM_SIZE = 1 * 8; //at least
         int paramBits = inStream.read(8) * 8;
+        if (paramBits < EXPECTED_PARAM_SIZE) {
+            inStream.skip(paramBits);
+            return false;
+        }
         CdmaSmsAddress addr = new CdmaSmsAddress();
         addr.digitMode = inStream.read(1);
         byte fieldBits = 4;
