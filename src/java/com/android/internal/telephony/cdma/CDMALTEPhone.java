@@ -33,10 +33,10 @@ import com.android.internal.telephony.OperatorInfo;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneNotifier;
-import com.android.internal.telephony.UiccCardApplication;
-import com.android.internal.telephony.gsm.SIMRecords;
-import com.android.internal.telephony.ims.IsimRecords;
-import com.android.internal.telephony.ims.IsimUiccRecords;
+import com.android.internal.telephony.uicc.IsimRecords;
+import com.android.internal.telephony.uicc.IsimUiccRecords;
+import com.android.internal.telephony.uicc.SIMRecords;
+import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
 
 import java.io.FileDescriptor;
