@@ -2,6 +2,9 @@
  * Copyright (C) 2011 The Android Open Source Project
  * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -644,5 +647,17 @@ class UsimDataDownloadCommands extends BaseCommands {
 
     @Override
     public void getDataCallProfile(int appType, Message result) {
+    }
+
+    public void setSubscriptionMode (int subscriptionMode, Message result) {
+    }
+
+    @Override
+    public void setUiccSubscription(int slotId, int appIndex, int subId, int subStatus,
+            Message result) {
+    }
+
+    @Override
+    public void setDataSubscription (Message result) {
     }
 }

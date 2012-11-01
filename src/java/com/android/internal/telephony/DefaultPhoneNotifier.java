@@ -37,7 +37,7 @@ public class DefaultPhoneNotifier implements PhoneNotifier {
 
     static final String LOG_TAG = "GSM";
     private static final boolean DBG = true;
-    private ITelephonyRegistry mRegistry;
+    protected ITelephonyRegistry mRegistry;
 
     protected DefaultPhoneNotifier() {
         mRegistry = ITelephonyRegistry.Stub.asInterface(ServiceManager.getService(

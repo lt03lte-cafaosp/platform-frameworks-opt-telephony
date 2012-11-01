@@ -2,6 +2,9 @@
  * Copyright (C) 2006 The Android Open Source Project
  * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -86,7 +89,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * {@hide}
  */
-public final class GsmDataConnectionTracker extends DataConnectionTracker {
+public class GsmDataConnectionTracker extends DataConnectionTracker {
     protected final String LOG_TAG = "GSM";
 
     /**
@@ -155,6 +158,11 @@ public final class GsmDataConnectionTracker extends DataConnectionTracker {
 
         if (dcac != null) {
             for (ApnContext apnContext : dcac.getApnListSync()) {
+                if (dcac.isInactiveSync()) {
+                    log("DataConnectionAC is Inactive.");
+                    apnContext.setDataConnectionAc(null);
+                    apnContext.setDataConnection(null);
+                }
                 apnContext.setReason(reason);
                 apnContext.setRetryCount(retryCount);
                 DctConstants.State apnContextState = apnContext.getState();
@@ -874,7 +882,7 @@ public final class GsmDataConnectionTracker extends DataConnectionTracker {
         cleanUpAllConnections(true, cause);
     }
 
-    private void cleanUpConnection(boolean tearDown, ApnContext apnContext) {
+    protected void cleanUpConnection(boolean tearDown, ApnContext apnContext) {
 
         if (apnContext == null) {
             if (DBG) log("cleanUpConnection: apn context is null");
@@ -959,7 +967,7 @@ public final class GsmDataConnectionTracker extends DataConnectionTracker {
      *
      * @param DataConnectionAc on which the alarm should be stopped.
      */
-    private void cancelReconnectAlarm(DataConnectionAc dcac) {
+    protected void cancelReconnectAlarm(DataConnectionAc dcac) {
         if (dcac == null) return;
 
         PendingIntent intent = dcac.getReconnectIntentSync();
@@ -2512,13 +2520,20 @@ public final class GsmDataConnectionTracker extends DataConnectionTracker {
         return cid;
     }
 
+    protected IccRecords getUiccCardApplication() {
+        return  mUiccController.getIccRecords(UiccController.APP_FAM_3GPP);
+    }
+
     @Override
     protected void onUpdateIcc() {
         if (mUiccController == null ) {
             return;
         }
 
-        IccRecords newIccRecords = mUiccController.getIccRecords(UiccController.APP_FAM_3GPP);
+        IccRecords newIccRecords = getUiccCardApplication();
+        if (newIccRecords == null) {
+            return;
+        }
 
         IccRecords r = mIccRecords.get();
         if (r != newIccRecords) {

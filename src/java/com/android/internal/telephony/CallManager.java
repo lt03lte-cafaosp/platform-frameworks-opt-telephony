@@ -4,6 +4,10 @@
  * for attribution purposes only.
  *
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (c) 2012 The Linux Foundation. All rights reserved.
+ *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -647,8 +651,8 @@ public final class CallManager {
         phone.registerForDisplayInfo(mHandler, EVENT_DISPLAY_INFO, null);
         phone.registerForSignalInfo(mHandler, EVENT_SIGNAL_INFO, null);
         phone.registerForResendIncallMute(mHandler, EVENT_RESEND_INCALL_MUTE, null);
-        phone.registerForMmiInitiate(mHandler, EVENT_MMI_INITIATE, null);
-        phone.registerForMmiComplete(mHandler, EVENT_MMI_COMPLETE, null);
+        phone.registerForMmiInitiate(mHandler, EVENT_MMI_INITIATE, phone);
+        phone.registerForMmiComplete(mHandler, EVENT_MMI_COMPLETE, phone);
         phone.registerForSuppServiceFailed(mHandler, EVENT_SUPP_SERVICE_FAILED, null);
         phone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
 
