@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -829,7 +830,6 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
 
     protected void onDataStateChanged(AsyncResult ar) {
         ArrayList<DataCallState> dataCallStates = (ArrayList<DataCallState>)(ar.result);
-        DataCallState dcState = null;
 
         if (ar.exception != null) {
             // This is probably "radio not available" or something
@@ -845,8 +845,8 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
             // Check for an active or dormant connection element in
             // the DATA_CALL_LIST array
             for (int index = 0; index < dataCallStates.size(); index++) {
-                connectionState = dataCallStates.get(index).active;
-                dcState = dataCallStates.get(index);
+                DataCallState dcState = dataCallStates.get(index);
+                connectionState = dcState.active;
                 if (connectionState != DATA_CONNECTION_ACTIVE_PH_LINK_INACTIVE) {
                     isActiveOrDormantConnectionPresent = true;
 
@@ -874,6 +874,13 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
                     }
 
                     break;
+                } else {
+                    /* Check if this was brought down due to a tethered call */
+                    if (FailCause.fromInt(dcState.status) == FailCause.TETHERED_CALL_ACTIVE) {
+                        // Mark apn as busy in a tethered call
+                        if (DBG) log("setTetheredCallOn for apn:" + mActiveApn.toString());
+                        mActiveApn.mTetheredCallOn = true;
+                    }
                 }
             }
 
@@ -995,6 +1002,11 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
     @Override
     protected boolean isConnected() {
         return (mState == DctConstants.State.CONNECTED);
+    }
+
+    protected void clearTetheredStateOnStatus() {
+        if (DBG) log("clearTetheredStateOnStatus()");
+        mActiveApn.mTetheredCallOn = false;
     }
 
     @Override
