@@ -35,7 +35,6 @@ import android.util.Log;
 
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.GsmAlphabet;
-import com.android.internal.telephony.IccUtils;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.SmsConstants;
 import com.android.internal.telephony.SMSDispatcher;
@@ -45,10 +44,11 @@ import com.android.internal.telephony.SmsMessageBase;
 import com.android.internal.telephony.SmsStorageMonitor;
 import com.android.internal.telephony.SmsUsageMonitor;
 import com.android.internal.telephony.TelephonyProperties;
-import com.android.internal.telephony.IccRecords;
-import com.android.internal.telephony.IccUtils;
-import com.android.internal.telephony.UiccCardApplication;
+import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.uicc.IccUtils;
+import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
+import com.android.internal.telephony.uicc.UsimServiceTable;
 
 import java.util.HashMap;
 import java.util.Iterator;

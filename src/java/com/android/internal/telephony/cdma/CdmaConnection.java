@@ -32,10 +32,8 @@ import android.text.TextUtils;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
 
-import com.android.internal.telephony.IccCardApplicationStatus.AppState;
-import com.android.internal.telephony.TelephonyProperties;
-import com.android.internal.telephony.RILConstants;
 import com.android.internal.telephony.uicc.UiccController;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
 
 /**
  * {@hide}
