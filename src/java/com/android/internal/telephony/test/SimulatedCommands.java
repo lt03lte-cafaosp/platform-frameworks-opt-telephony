@@ -1542,4 +1542,8 @@ public final class SimulatedCommands extends BaseCommands
             int retry, int messageRef, Message response){
         unimplemented(response);
     }
+
+    public void getDataCallProfile(int appType, Message response){
+        unimplemented(response);
+    }
 }
