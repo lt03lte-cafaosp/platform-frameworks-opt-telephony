@@ -39,8 +39,7 @@ public class DefaultPhoneNotifier implements PhoneNotifier {
     private static final boolean DBG = true;
     private ITelephonyRegistry mRegistry;
 
-    /*package*/
-    DefaultPhoneNotifier() {
+    protected DefaultPhoneNotifier() {
         mRegistry = ITelephonyRegistry.Stub.asInterface(ServiceManager.getService(
                     "telephony.registry"));
     }

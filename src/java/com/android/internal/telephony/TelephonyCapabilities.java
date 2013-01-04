@@ -122,7 +122,16 @@ public class TelephonyCapabilities {
      */
     public static boolean supportsConferenceCallManagement(Phone phone) {
         return ((phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM)
-                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP));
+                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP)
+                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS));
+    }
+
+    /**
+     * Return true if the current phone supports the ability to upgrade VO to VT call
+     * or downgrade VT to VO call
+     */
+    public static boolean supportsCallModify(Phone phone) {
+        return (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS);
     }
 
     /**
@@ -136,7 +145,8 @@ public class TelephonyCapabilities {
      */
     public static boolean supportsHoldAndUnhold(Phone phone) {
         return ((phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM)
-                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP));
+                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP)
+                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS));
     }
 
     /**
@@ -155,7 +165,8 @@ public class TelephonyCapabilities {
      */
     public static boolean supportsAnswerAndHold(Phone phone) {
         return ((phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM)
-                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP));
+                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP)
+                || (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS));
     }
 
     /**
