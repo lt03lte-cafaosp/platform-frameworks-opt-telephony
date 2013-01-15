@@ -5,6 +5,9 @@
  *
  * Copyright (C) 2007 The Android Open Source Project
  *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -61,6 +64,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.android.internal.telephony.MSimConstants.DEFAULT_SUBSCRIPTION;
 
 /**
  * (<em>Not for SDK use</em>)
@@ -1311,5 +1315,13 @@ public abstract class PhoneBase extends Handler implements Phone {
     public int getProposedConnectionType(Connection conn) throws CallStateException {
         throw new CallStateException("getProposedConnectionType is not supported in this phone "
                 + this);
+    }
+
+    /**
+     * Returns the subscription id.
+     * Always returns default subscription(ie., 0).
+     */
+    public int getSubscription() {
+        return DEFAULT_SUBSCRIPTION;
     }
 }

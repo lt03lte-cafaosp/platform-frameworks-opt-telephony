@@ -67,24 +67,24 @@ import com.android.internal.telephony.CommandsInterface;
  * and {@link com.android.internal.telephony.IccCardProxy}
  */
 public class UiccController extends Handler {
-    private static final boolean DBG = true;
-    private static final String LOG_TAG = "RIL_UiccController";
+    protected static final boolean DBG = true;
+    protected static final String LOG_TAG = "RIL_UiccController";
 
     public static final int APP_FAM_3GPP =  1;
     public static final int APP_FAM_3GPP2 = 2;
     public static final int APP_FAM_IMS   = 3;
 
-    private static final int EVENT_ICC_STATUS_CHANGED = 1;
-    private static final int EVENT_GET_ICC_STATUS_DONE = 2;
+    protected static final int EVENT_ICC_STATUS_CHANGED = 1;
+    protected static final int EVENT_GET_ICC_STATUS_DONE = 2;
 
-    private static final Object mLock = new Object();
-    private static UiccController mInstance;
+    protected static final Object mLock = new Object();
+    protected static UiccController mInstance;
 
-    private Context mContext;
+    protected Context mContext;
     private CommandsInterface mCi;
-    private UiccCard mUiccCard;
+    protected UiccCard mUiccCard;
 
-    private RegistrantList mIccChangedRegistrants = new RegistrantList();
+    protected RegistrantList mIccChangedRegistrants = new RegistrantList();
 
     public static UiccController make(Context c, CommandsInterface ci) {
         synchronized (mLock) {
@@ -213,6 +213,9 @@ public class UiccController extends Handler {
 
         if (DBG) log("Notifying IccChangedRegistrants");
         mIccChangedRegistrants.notifyRegistrants();
+    }
+
+    protected UiccController() {
     }
 
     private void log(String string) {
