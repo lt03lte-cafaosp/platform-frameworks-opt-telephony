@@ -209,7 +209,7 @@ public class CatService extends Handler implements AppInterface {
         }
     }
 
-    /**  
+    /**
      * This function validates the events in SETUP_EVENT_LIST which are currently
      * supported by the Android framework. In case of SETUP_EVENT_LIST has NULL events
      * or no events, all the events need to be reset.
@@ -803,6 +803,7 @@ public class CatService extends Handler implements AppInterface {
         ResponseData resp = null;
         boolean helpRequired = false;
         CommandDetails cmdDet = resMsg.getCmdDetails();
+        AppInterface.CommandType type = AppInterface.CommandType.fromInt(cmdDet.typeOfCommand);
 
         switch (resMsg.resCode) {
         case HELP_INFO_REQUIRED:
@@ -819,7 +820,7 @@ public class CatService extends Handler implements AppInterface {
         case PRFRMD_NAA_NOT_ACTIVE:
         case PRFRMD_TONE_NOT_PLAYED:
         case LAUNCH_BROWSER_ERROR:
-            switch (AppInterface.CommandType.fromInt(cmdDet.typeOfCommand)) {
+            switch (type) {
             case SET_UP_MENU:
                 helpRequired = resMsg.resCode == ResultCode.HELP_INFO_REQUIRED;
                 sendMenuSelection(resMsg.usersMenuSelection, helpRequired);
@@ -866,6 +867,20 @@ public class CatService extends Handler implements AppInterface {
                 return;
             }
             break;
+        case BACKWARD_MOVE_BY_USER:
+        case USER_NOT_ACCEPT:
+            // if the user dismissed the alert dialog for a
+            // setup call/open channel, consider that as the user
+            // rejecting the call. Use dedicated API for this, rather than
+            // sending a terminal response.
+            if (type == CommandType.SET_UP_CALL || type == CommandType.OPEN_CHANNEL) {
+                mCmdIf.handleCallSetupRequestFromSim(false, null);
+                mCurrntCmd = null;
+                return;
+            } else {
+                resp = null;
+            }
+            break;
         case TERMINAL_CRNTLY_UNABLE_TO_PROCESS:
             //For screenbusy case there will be addtional information in the terminal
             //response. And the value of the additional information byte is 0x01.
@@ -873,8 +888,6 @@ public class CatService extends Handler implements AppInterface {
             resMsg.additionalInfo = 0x01;
         case NO_RESPONSE_FROM_USER:
         case UICC_SESSION_TERM_BY_USER:
-        case BACKWARD_MOVE_BY_USER:
-        case USER_NOT_ACCEPT:
             resp = null;
             break;
         default:
