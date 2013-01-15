@@ -57,10 +57,10 @@ public class OperatorInfo implements Parcelable {
         return state;
     }
 
-    OperatorInfo(String operatorAlphaLong,
-                String operatorAlphaShort,
-                String operatorNumeric,
-                State state) {
+    public OperatorInfo(String operatorAlphaLong,
+            String operatorAlphaShort,
+            String operatorNumeric,
+            State state) {
 
         this.operatorAlphaLong = operatorAlphaLong;
         this.operatorAlphaShort = operatorAlphaShort;
@@ -71,9 +71,9 @@ public class OperatorInfo implements Parcelable {
 
 
     public OperatorInfo(String operatorAlphaLong,
-                String operatorAlphaShort,
-                String operatorNumeric,
-                String stateString) {
+            String operatorAlphaShort,
+            String operatorNumeric,
+            String stateString) {
         this (operatorAlphaLong, operatorAlphaShort,
                 operatorNumeric, rilStateToState(stateString));
     }
