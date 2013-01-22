@@ -395,6 +395,7 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
 
         String ipProto = SystemProperties.get("persist.telephony.cdma.protocol", "IP");
         String roamingIpProto = SystemProperties.get("persist.telephony.cdma.rproto", "IP");
+
         mActiveApn = (DataProfile)new DataProfileCdma(apnId, null, null, null, null,
                 RILConstants.SETUP_DATA_AUTH_PAP_CHAP, types, ipProto, roamingIpProto,
                 mPhone.getServiceState().getRadioTechnology());
@@ -509,7 +510,7 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
         if (mState == DctConstants.State.FAILED) {
             cleanUpAllConnections(null);
         }
-        
+
         sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA, Phone.REASON_SIM_LOADED));
     }
 
@@ -1000,6 +1001,11 @@ public final class CdmaDataConnectionTracker extends DataConnectionTracker {
     protected DataProfile fetchDunApn() {
         // TODO: TBD
         return null;
+    }
+
+    @Override
+    protected boolean disconnectOneLowerPriorityCall(String apnType) {
+        return false;
     }
 
     @Override
