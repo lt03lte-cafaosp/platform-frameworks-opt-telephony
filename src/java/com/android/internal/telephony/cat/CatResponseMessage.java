@@ -23,6 +23,8 @@ public class CatResponseMessage {
         String usersInput  = null;
         boolean usersYesNoSelection = false;
         boolean usersConfirm = false;
+        int eventValue = -1;
+        byte[] addedInfo = null;
 
         public CatResponseMessage(CatCmdMessage cmdMsg) {
             this.cmdDet = cmdMsg.mCmdDet;
@@ -38,6 +40,11 @@ public class CatResponseMessage {
 
         public void setInput(String input) {
             this.usersInput = input;
+        }
+
+        public void setEventDownload(int event, byte[] addedInfo) {
+            this.eventValue = event;
+            this.addedInfo = addedInfo;
         }
 
         public void setYesNo(boolean yesNo) {
