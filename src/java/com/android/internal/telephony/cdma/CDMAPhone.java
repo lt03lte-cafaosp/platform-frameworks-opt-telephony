@@ -2,6 +2,9 @@
  * Copyright (C) 2006 The Android Open Source Project
  * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -97,22 +100,23 @@ public class CDMAPhone extends PhoneBase {
     private static final int DEFAULT_ECM_EXIT_TIMER_VALUE = 300000;
 
     static final String VM_COUNT_CDMA = "vm_count_key_cdma";
-    private static final String VM_NUMBER_CDMA = "vm_number_key_cdma";
+    protected static final String VM_NUMBER_CDMA = "vm_number_key_cdma";
     private String mVmNumber = null;
 
     static final int RESTART_ECM_TIMER = 0; // restart Ecm timer
     static final int CANCEL_ECM_TIMER = 1; // cancel Ecm timer
 
     // Instance Variables
-    CdmaCallTracker mCT;
-    CdmaServiceStateTracker mSST;
-    CdmaSubscriptionSourceManager mCdmaSSM;
+    protected CdmaCallTracker mCT;
+    protected CdmaServiceStateTracker mSST;
+    protected CdmaSubscriptionSourceManager mCdmaSSM;
     ArrayList <CdmaMmiCode> mPendingMmis = new ArrayList<CdmaMmiCode>();
-    RuimPhoneBookInterfaceManager mRuimPhoneBookInterfaceManager;
-    int mCdmaSubscriptionSource = CdmaSubscriptionSourceManager.SUBSCRIPTION_SOURCE_UNKNOWN;
-    PhoneSubInfo mSubInfo;
-    EriManager mEriManager;
-    WakeLock mWakeLock;
+    protected RuimPhoneBookInterfaceManager mRuimPhoneBookInterfaceManager;
+    protected int mCdmaSubscriptionSource = CdmaSubscriptionSourceManager.SUBSCRIPTION_SOURCE_UNKNOWN;
+    protected PhoneSubInfo mSubInfo;
+    protected EriManager mEriManager;
+    protected WakeLock mWakeLock;
+    protected UiccCard mRuimCard = null;
 
     // mEriFileLoadedRegistrants are informed after the ERI text has been loaded
     private final RegistrantList mEriFileLoadedRegistrants = new RegistrantList();
@@ -123,14 +127,14 @@ public class CDMAPhone extends PhoneBase {
     // mEcmExitRespRegistrant is informed after the phone has been exited
     //the emergency callback mode
     //keep track of if phone is in emergency callback mode
-    private boolean mIsPhoneInEcmState;
+    protected boolean mIsPhoneInEcmState;
     private Registrant mEcmExitRespRegistrant;
     protected String mImei;
     protected String mImeiSv;
-    private String mEsn;
-    private String mMeid;
+    protected String mEsn;
+    protected String mMeid;
     // string to define how the carrier specifies its own ota sp number
-    private String mCarrierOtaSpNumSchema;
+    protected String mCarrierOtaSpNumSchema;
 
     // A runnable which is used to automatically exit from Ecm after a period of time.
     private Runnable mExitEcmRunnable = new Runnable() {
@@ -142,7 +146,7 @@ public class CDMAPhone extends PhoneBase {
 
     Registrant mPostDialHandler;
 
-    static String PROPERTY_CDMA_HOME_OPERATOR_NUMERIC = "ro.cdma.home.operator.numeric";
+    protected static String PROPERTY_CDMA_HOME_OPERATOR_NUMERIC = "ro.cdma.home.operator.numeric";
 
     // Constructors
     public CDMAPhone(Context context, CommandsInterface ci, PhoneNotifier notifier) {
@@ -843,7 +847,7 @@ public class CDMAPhone extends PhoneBase {
         return mIsPhoneInEcmState;
     }
 
-    void sendEmergencyCallbackModeChange(){
+    protected void sendEmergencyCallbackModeChange(){
         //Send an Intent
         Intent intent = new Intent(TelephonyIntents.ACTION_EMERGENCY_CALLBACK_MODE_CHANGED);
         intent.putExtra(PhoneConstants.PHONE_IN_ECM_STATE, mIsPhoneInEcmState);
@@ -948,6 +952,11 @@ public class CDMAPhone extends PhoneBase {
         AsyncResult ar;
         Message     onComplete;
 
+        if (!mIsTheCurrentActivePhone) {
+            Log.e(LOG_TAG, "Received message " + msg +
+                    "[" + msg.what + "] while being destroyed. Ignoring.");
+            return;
+        }
         switch(msg.what) {
             case EVENT_RADIO_AVAILABLE: {
                 mCM.getBasebandVersion(obtainMessage(EVENT_GET_BASEBAND_VERSION_DONE));
@@ -1056,14 +1065,17 @@ public class CDMAPhone extends PhoneBase {
         }
     }
 
+    protected UiccCardApplication getUiccCardApplication() {
+        return  mUiccController.getUiccCardApplication(UiccController.APP_FAM_3GPP2);
+    }
+
     @Override
     protected void onUpdateIccAvailability() {
         if (mUiccController == null ) {
             return;
         }
 
-        UiccCardApplication newUiccApplication =
-                mUiccController.getUiccCardApplication(UiccController.APP_FAM_3GPP2);
+        UiccCardApplication newUiccApplication = getUiccCardApplication();
 
         UiccCardApplication app = mUiccApplication.get();
         if (app != newUiccApplication) {
@@ -1140,7 +1152,7 @@ public class CDMAPhone extends PhoneBase {
     /**
      * {@inheritDoc}
      */
-    public final void setSystemProperty(String property, String value) {
+    public void setSystemProperty(String property, String value) {
         super.setSystemProperty(property, value);
     }
 
@@ -1398,7 +1410,7 @@ public class CDMAPhone extends PhoneBase {
     /**
      * Store the voicemail number in preferences
      */
-    private void storeVoiceMailNumber(String number) {
+    protected void storeVoiceMailNumber(String number) {
         // Update the preference value of voicemail number
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
         SharedPreferences.Editor editor = sp.edit();
@@ -1410,7 +1422,7 @@ public class CDMAPhone extends PhoneBase {
      * Sets PROPERTY_ICC_OPERATOR_ISO_COUNTRY property
      *
      */
-    private void setIsoCountryProperty(String operatorNumeric) {
+    protected void setIsoCountryProperty(String operatorNumeric) {
         if (TextUtils.isEmpty(operatorNumeric)) {
             setSystemProperty(PROPERTY_ICC_OPERATOR_ISO_COUNTRY, "");
         } else {
@@ -1465,6 +1477,10 @@ public class CDMAPhone extends PhoneBase {
     }
 
     public void prepareEri() {
+        if (mEriManager == null) {
+            Log.e(LOG_TAG, "Trying to access stale objects");
+            return;
+        }
         mEriManager.loadEriFile();
         if(mEriManager.isEriFileLoaded()) {
             // when the ERI file is loaded

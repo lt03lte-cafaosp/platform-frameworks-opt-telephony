@@ -5,6 +5,9 @@
  *
  * Copyright (C) 2007 The Android Open Source Project
  *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -1806,4 +1809,9 @@ public interface Phone {
      *         request exists.
      */
     public int getProposedConnectionType(Connection conn) throws CallStateException;
+
+    /*
+     * Returns the subscription id.
+     */
+    public int getSubscription();
 }

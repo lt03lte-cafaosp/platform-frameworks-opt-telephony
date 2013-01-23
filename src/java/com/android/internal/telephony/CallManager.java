@@ -4,6 +4,10 @@
  * for attribution purposes only.
  *
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (c) 2012 The Linux Foundation. All rights reserved.
+ *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +87,19 @@ public final class CallManager {
     private static final int EVENT_SUPP_SERVICE_FAILED = 117;
     private static final int EVENT_SERVICE_STATE_CHANGED = 118;
     private static final int EVENT_POST_DIAL_CHARACTER = 119;
+
+    // Maximum bit currently set for inCallAudioMode
+    private static final int MAX_IN_CALL_AUDIO_MODE_BIT = 7;
+    private static final String MODE2DDESCRIPTION[] = {
+            "CS_ACTIVE",
+            "CS_HOLD",
+            "<invalid-2>",
+            "<invalid-3>",
+            "IMS_ACTIVE",
+            "IMS_HOLD",
+            "<invalid-6>",
+            "<invalid-7>",
+    };
 
     // Singleton instance
     private static final CallManager INSTANCE = new CallManager();
@@ -382,7 +399,180 @@ public final class CallManager {
         return getFirstActiveRingingCall().getPhone();
     }
 
+    /**
+     * @return the phone associated with any call
+     */
+    public Phone getPhoneInCall() {
+        Phone phone = null;
+        if (!getFirstActiveRingingCall().isIdle()) {
+            phone = getFirstActiveRingingCall().getPhone();
+        } else if (!getActiveFgCall().isIdle()) {
+            phone = getActiveFgCall().getPhone();
+        } else {
+            // If BG call is idle, we return default phone
+            phone = getFirstActiveBgCall().getPhone();
+        }
+        return phone;
+    }
+
+    // Return the value that should be set based on the state
+    // of phone. This function should be called incrementally,
+    // and the net result will be that the "highest" of
+    // mode or the mode corresponding to phone will be returned.
+    // States are ordered as follows (low to high):
+    // MODE_NORMAL
+    // MODE_RINGTONE
+    // MODE_IN_COMMUNICATION
+    // MODE_IN_CALL
+    private int phoneAudioModeForSipPhone(int mode, SipPhone phone) {
+        int ret = AudioManager.MODE_NORMAL;
+
+        if (phone.getState() == PhoneConstants.State.OFFHOOK ||
+                mode == AudioManager.MODE_IN_COMMUNICATION) {
+            ret = AudioManager.MODE_IN_COMMUNICATION;
+        }
+
+        return ret;
+    }
+
+    private boolean isInCallModeActive(int inCallMode) {
+        boolean ret = false;
+
+        Phone fg = getFgPhone();
+        boolean sipactive = fg.getPhoneType() == PhoneConstants.PHONE_TYPE_SIP;
+
+        return ((inCallMode &
+                  (AudioManager.CS_ACTIVE | AudioManager.IMS_ACTIVE |
+                          AudioManager.CS_HOLD | AudioManager.IMS_HOLD)) != 0 && !sipactive);
+    }
+
+    private boolean hasActiveCall(Phone phone) {
+        boolean ret = false;
+        Call call = getFirstActiveCall(mForegroundCalls);
+        ret = call != null && call.getPhone().equals(phone);
+        Log.d(LOG_TAG, "hasActiveCall(" + phone + "): " + ret);
+        return ret;
+    }
+
+    private boolean hasHoldingCall(Phone phone) {
+        boolean ret = false;
+
+        for (Call call : getBackgroundCalls()) {
+            if (call.getPhone().equals(phone)) {
+                ret = !call.isIdle();
+                break;
+            }
+        }
+        Log.d(LOG_TAG, "hasHoldingCall(" + phone + "): " + ret);
+        return ret;
+    }
+
+    private int inCallAudioModeForPhone(Phone phone) {
+        int ret = 0;
+        boolean hasActiveCall = hasActiveCall(phone);
+        boolean hasHoldingCall = hasHoldingCall(phone);
+        boolean isFgPhone = getFgPhone().equals(phone);
+
+        Log.d(LOG_TAG, "inCallAudioModeForPhone( " + phone + " ): phoneState: " +
+                       phone.getState() + " hasActiveCall: " + hasActiveCall +
+                       " hasHoldingCall: " + hasHoldingCall +
+                       " isFgPhone: " + isFgPhone );
+
+        if (phone.getState() == PhoneConstants.State.OFFHOOK) {
+            if (isFgPhone && hasActiveCall){
+                switch(phone.getPhoneType()) {
+                    case PhoneConstants.PHONE_TYPE_SIP:
+                        Log.e(LOG_TAG, "inCallAudioModeForPhone is meaningless for SIP");
+                        break;
+                    case PhoneConstants.PHONE_TYPE_IMS:
+                        ret = AudioManager.IMS_ACTIVE;
+                        break;
+                    default:
+                        ret = AudioManager.CS_ACTIVE;
+                }
+            } else if (hasHoldingCall) {
+                switch(phone.getPhoneType()) {
+                    case PhoneConstants.PHONE_TYPE_SIP:
+                        Log.e(LOG_TAG, "inCallAudioModeForPhone is meaningless for SIP");
+                        break;
+                    case PhoneConstants.PHONE_TYPE_IMS:
+                        ret = AudioManager.IMS_HOLD;
+                        break;
+                    default:
+                        ret = AudioManager.CS_HOLD;
+                        break;
+                }
+            }
+        }
+        return ret;
+    }
+
+    private String inCallModeToString(int inCallMode)
+    {
+        String ret = "[";
+        boolean addOper = false;
+
+        for (int i = MAX_IN_CALL_AUDIO_MODE_BIT; i >= 0; i--) {
+            if ((inCallMode & (1 << i)) != 0) {
+                if (addOper) ret += "|";
+                ret += MODE2DDESCRIPTION[i];
+                addOper = true;
+            }
+        }
+        ret += "]";
+        return ret;
+    }
+
+    public void setAudioAndInCallMode() {
+        Context context = getContext();
+        if (context == null) return;
+        AudioManager audioManager = (AudioManager)
+                context.getSystemService(Context.AUDIO_SERVICE);
+
+        int mode = AudioManager.MODE_NORMAL;
+        int inCallMode = 0; // inCallMode is a bitmap. Clearing all bits
+
+        Log.d(LOG_TAG, "setAudioAndInCall state: " + getState());
+        switch (getState()) {
+            case RINGING:
+                mode = AudioManager.MODE_RINGTONE;
+                break;
+            case OFFHOOK: {
+                // For off-hook we need to set in-call mode to notify of the state
+                // of ims and cs.
+
+                for (Phone phone: mPhones) {
+                    if (phone instanceof SipPhone) {
+                        // enable IN_COMMUNICATION audio mode for sipPhone
+                        mode = phoneAudioModeForSipPhone(mode, (SipPhone) phone);
+                    } else {
+                        inCallMode |= inCallAudioModeForPhone(phone);
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if (isInCallModeActive(inCallMode)) {
+            Log.d(LOG_TAG, "Calling setInCallMode(" + inCallModeToString(inCallMode) + ")");
+            if (inCallMode != audioManager.getInCallMode()) {
+                audioManager.setInCallMode(inCallMode);
+            }
+        } else {
+            Log.d(LOG_TAG, "Calling setMode( " + mode + ")");
+            if (audioManager.getMode() != mode) audioManager.setMode(mode);
+        }
+    }
+
     public void setAudioMode() {
+        boolean useInCallMode = SystemProperties.getBoolean(
+                TelephonyProperties.CALLS_ON_IMS_ENABLED_PROPERTY, false);
+
+        if (useInCallMode) {
+            setAudioAndInCallMode();
+            return;
+        }
         Context context = getContext();
         if (context == null) return;
         AudioManager audioManager = (AudioManager)
@@ -461,8 +651,8 @@ public final class CallManager {
         phone.registerForDisplayInfo(mHandler, EVENT_DISPLAY_INFO, null);
         phone.registerForSignalInfo(mHandler, EVENT_SIGNAL_INFO, null);
         phone.registerForResendIncallMute(mHandler, EVENT_RESEND_INCALL_MUTE, null);
-        phone.registerForMmiInitiate(mHandler, EVENT_MMI_INITIATE, null);
-        phone.registerForMmiComplete(mHandler, EVENT_MMI_COMPLETE, null);
+        phone.registerForMmiInitiate(mHandler, EVENT_MMI_INITIATE, phone);
+        phone.registerForMmiComplete(mHandler, EVENT_MMI_COMPLETE, phone);
         phone.registerForSuppServiceFailed(mHandler, EVENT_SUPP_SERVICE_FAILED, null);
         phone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
 
