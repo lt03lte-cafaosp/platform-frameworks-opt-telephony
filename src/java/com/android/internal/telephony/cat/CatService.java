@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,34 +67,34 @@ class RilMessage {
 public class CatService extends Handler implements AppInterface {
 
     // Class members
-    private static IccRecords mIccRecords;
-    private static UiccCardApplication mUiccApplication;
+    protected static IccRecords mIccRecords;
+    protected static UiccCardApplication mUiccApplication;
 
     // Service members.
     // Protects singleton instance lazy initialization.
-    private static final Object sInstanceLock = new Object();
+    protected static final Object sInstanceLock = new Object();
     private static CatService sInstance;
-    private CommandsInterface mCmdIf;
-    private Context mContext;
-    private CatCmdMessage mCurrntCmd = null;
-    private CatCmdMessage mMenuCmd = null;
+    protected CommandsInterface mCmdIf;
+    protected Context mContext;
+    protected CatCmdMessage mCurrntCmd = null;
+    protected CatCmdMessage mMenuCmd = null;
 
-    private RilMessageDecoder mMsgDecoder = null;
-    private boolean mStkAppInstalled = false;
+    protected RilMessageDecoder mMsgDecoder = null;
+    protected boolean mStkAppInstalled = false;
 
     // Service constants.
-    static final int MSG_ID_SESSION_END              = 1;
-    static final int MSG_ID_PROACTIVE_COMMAND        = 2;
-    static final int MSG_ID_EVENT_NOTIFY             = 3;
-    static final int MSG_ID_CALL_SETUP               = 4;
+    protected static final int MSG_ID_SESSION_END              = 1;
+    protected static final int MSG_ID_PROACTIVE_COMMAND        = 2;
+    protected static final int MSG_ID_EVENT_NOTIFY             = 3;
+    protected static final int MSG_ID_CALL_SETUP               = 4;
     static final int MSG_ID_REFRESH                  = 5;
     static final int MSG_ID_RESPONSE                 = 6;
-    static final int MSG_ID_SIM_READY                = 7;
+    protected static final int MSG_ID_SIM_READY                = 7;
 
     static final int MSG_ID_RIL_MSG_DECODED          = 10;
 
     // Events to signal SIM presence or absent in the device.
-    private static final int MSG_ID_ICC_RECORDS_LOADED       = 20;
+    protected static final int MSG_ID_ICC_RECORDS_LOADED       = 20;
 
     private static final int DEV_ID_KEYPAD      = 0x01;
     private static final int DEV_ID_DISPLAY     = 0x02;
@@ -136,6 +137,10 @@ public class CatService extends Handler implements AppInterface {
         mStkAppInstalled = isStkAppInstalled();
 
         CatLog.d(this, "Running CAT service. STK app installed:" + mStkAppInstalled);
+    }
+
+    /* Intentionally added empty Constructor which is required for Multi SIM Functionaly */
+    protected CatService() {
     }
 
     public void dispose() {
@@ -383,6 +388,10 @@ public class CatService extends Handler implements AppInterface {
                 return;
         }
         mCurrntCmd = cmdMsg;
+        broadcastCatCmdIntent(cmdMsg);
+    }
+
+    protected void broadcastCatCmdIntent(CatCmdMessage cmdMsg) {
         Intent intent = new Intent(AppInterface.CAT_CMD_ACTION);
         intent.putExtra("STK CMD", cmdMsg);
         mContext.sendBroadcast(intent);
@@ -885,7 +894,7 @@ public class CatService extends Handler implements AppInterface {
         mCurrntCmd = null;
     }
 
-    private boolean isStkAppInstalled() {
+    protected boolean isStkAppInstalled() {
         Intent intent = new Intent(AppInterface.CAT_CMD_ACTION);
         PackageManager pm = mContext.getPackageManager();
         List<ResolveInfo> broadcastReceivers =
