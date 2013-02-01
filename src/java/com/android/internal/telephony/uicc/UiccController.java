@@ -76,6 +76,7 @@ public class UiccController extends Handler {
 
     protected static final int EVENT_ICC_STATUS_CHANGED = 1;
     protected static final int EVENT_GET_ICC_STATUS_DONE = 2;
+    private static final int EVENT_RADIO_UNAVAILABLE = 3;
 
     protected static final Object mLock = new Object();
     protected static UiccController mInstance;
@@ -178,9 +179,23 @@ public class UiccController extends Handler {
                     AsyncResult ar = (AsyncResult)msg.obj;
                     onGetIccCardStatusDone(ar);
                     break;
+                case EVENT_RADIO_UNAVAILABLE:
+                    if (DBG) log("EVENT_RADIO_UNAVAILABLE ");
+                    disposeCard();
+                    break;
                 default:
                     Log.e(LOG_TAG, " Unknown Event " + msg.what);
             }
+        }
+    }
+
+    // Destroys the card object
+    private synchronized void disposeCard() {
+        if (DBG) log("Disposing card");
+        if (mUiccCard != null) {
+            mUiccCard.dispose();
+            mUiccCard = null;
+            mIccChangedRegistrants.notifyRegistrants();
         }
     }
 
@@ -193,6 +208,7 @@ public class UiccController extends Handler {
         mCi.registerForOn(this, EVENT_ICC_STATUS_CHANGED, null);
         // This is needed so that we query for sim status in the case when we boot in APM
         mCi.registerForAvailable(this, EVENT_ICC_STATUS_CHANGED, null);
+        mCi.registerForNotAvailable(this, EVENT_RADIO_UNAVAILABLE, null);
     }
 
     private synchronized void onGetIccCardStatusDone(AsyncResult ar) {
@@ -207,9 +223,11 @@ public class UiccController extends Handler {
 
         if (mUiccCard == null) {
             //Create new card
+            if (DBG) log("Creating a new card");
             mUiccCard = new UiccCard(mContext, mCi, status);
         } else {
             //Update already existing card
+            if (DBG) log("Update already existing card");
             mUiccCard.update(mContext, mCi , status);
         }
 
