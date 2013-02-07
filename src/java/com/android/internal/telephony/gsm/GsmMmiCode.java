@@ -70,6 +70,11 @@ public final class GsmMmiCode extends Handler implements MmiCode {
     //Called line presentation
     static final String SC_CLIP    = "30";
     static final String SC_CLIR    = "31";
+    static final String SC_COLP    = "76";
+    static final String SC_COLR    = "77";
+
+    //Calling name presentation
+    static final String SC_CNAP    = "300";
 
     // Call Forwarding
     static final String SC_CFU     = "21";
@@ -134,6 +139,7 @@ public final class GsmMmiCode extends Handler implements MmiCode {
 
     private boolean isSsInfo = false;
 
+    private boolean isCallFwdRegister = false;
 
     State state = State.PENDING;
     CharSequence message;
@@ -508,6 +514,14 @@ public final class GsmMmiCode extends Handler implements MmiCode {
                 || sc.equals(SC_BA_MT));
     }
 
+    static boolean
+    isServiceCodeUnsupported(String sc) {
+        return sc != null &&
+                (sc.equals(SC_COLP)
+                || sc.equals(SC_COLR)
+                || sc.equals(SC_CNAP));
+    }
+
     static String
     scToBarringFacility(String sc) {
         if (sc == null) {
@@ -834,7 +848,12 @@ public final class GsmMmiCode extends Handler implements MmiCode {
                     int cfAction;
 
                     if (isActivate()) {
-                        cfAction = CommandsInterface.CF_ACTION_ENABLE;
+                        if (dialingNumber != null) {
+                            isCallFwdRegister = true;
+                            cfAction = CommandsInterface.CF_ACTION_REGISTRATION;
+                        } else {
+                            cfAction = CommandsInterface.CF_ACTION_ENABLE;
+                        }
                     } else if (isDeactivate()) {
                         cfAction = CommandsInterface.CF_ACTION_DISABLE;
                     } else if (isRegister()) {
@@ -960,6 +979,11 @@ public final class GsmMmiCode extends Handler implements MmiCode {
                 } else {
                     throw new RuntimeException ("Invalid or Unsupported MMI Code");
                 }
+            } else if (isServiceCodeUnsupported(sc)) {
+                Log.d(LOG_TAG,"Unsupported MMI code: " + sc);
+                state = State.FAILED;
+                message = context.getText(com.android.internal.R.string.unsupportedMmiCode);
+                phone.onMMIDone(this);
             } else if (poundString != null) {
                 sendUssd(poundString);
             } else {
@@ -1215,8 +1239,13 @@ public final class GsmMmiCode extends Handler implements MmiCode {
             }
         } else if (isActivate()) {
             state = State.COMPLETE;
-            sb.append(context.getText(
-                    com.android.internal.R.string.serviceEnabled));
+            if (isCallFwdRegister) {
+                sb.append(context.getText(com.android.internal.R.string.serviceRegistered));
+                isCallFwdRegister = false;
+            } else {
+                sb.append(context.getText(
+                        com.android.internal.R.string.serviceEnabled));
+            }
             // Record CLIR setting
             if (sc.equals(SC_CLIR)) {
                 phone.saveClirSetting(CommandsInterface.CLIR_INVOCATION);
