@@ -56,6 +56,7 @@ import android.util.Log;
 import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
 import com.android.internal.telephony.gsm.SuppServiceNotification;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.PersoSubState;
 import com.android.internal.telephony.uicc.IccCardStatus;
 import com.android.internal.telephony.uicc.IccIoResult;
 import com.android.internal.telephony.uicc.IccRefreshResponse;
@@ -943,7 +944,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
 
-        rr.mp.writeInt(1);
+        // Hardware/ril and ril.java functionality is not matching for network personalization.
+        // Google by default will support Network personalization so hard coding to the same.
+        rr.mp.writeInt(PersoSubState.PERSOSUBSTATE_SIM_NETWORK.ordinal());
         rr.mp.writeString(netpin);
 
         send(rr);
