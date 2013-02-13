@@ -1015,6 +1015,15 @@ public final class GsmMmiCode extends Handler implements MmiCode {
                         if (sc.equals(SC_PUK) || sc.equals(SC_PUK2)) {
                             sb.append(context.getText(
                                     com.android.internal.R.string.badPuk));
+                            // Get the No. of attempts remaining to unlock PUK1 from the result
+                            if (ar.result != null && (((int[]) ar.result).length != 0)) {
+                                int pukAttemptsRemaining = ((int[])ar.result)[0];
+                                if (pukAttemptsRemaining >= 0) {
+                                    sb.append(context.getText(
+                                        com.android.internal.R.string.pinpuk_attempts));
+                                    sb.append(pukAttemptsRemaining);
+                                }
+                            }
                         } else {
                             sb.append(context.getText(
                                     com.android.internal.R.string.badPin));
@@ -1029,6 +1038,11 @@ public final class GsmMmiCode extends Handler implements MmiCode {
                     sb.append("\n");
                     sb.append(context.getText(
                             com.android.internal.R.string.needPuk2));
+                } else if (err == CommandException.Error.REQUEST_NOT_SUPPORTED) {
+                    if (sc.equals(SC_PIN)) {
+                        sb.append(context.getText(
+                                com.android.internal.R.string.enablePin));
+                    }
                 } else if (err == CommandException.Error.FDN_CHECK_FAILURE) {
                     Log.i(LOG_TAG, "FDN_CHECK_FAILURE");
                     sb.append(context.getText(com.android.internal.R.string.mmiFdnError));
