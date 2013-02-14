@@ -165,9 +165,9 @@ public class UiccCard {
 
     protected void createAndUpdateCatService() {
         if (mUiccApplications.length > 0 && mUiccApplications[0] != null) {
-            // Initialize or Reinitialize CatService
-            mCatService = CatService.getInstance(mCi,
-                    mContext, this);
+            if (mCatService == null)
+                // Initialize or Reinitialize CatService
+                mCatService = CatService.getInstance(mCi, mContext, this);
         } else {
             if (mCatService != null) {
                 mCatService.dispose();
