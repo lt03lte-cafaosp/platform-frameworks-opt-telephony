@@ -250,7 +250,7 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
     }
 
     @Override
-    public void setVoiceMessageWaiting(int line, int countWaiting) {
+    public void setVoiceMessageWaiting(int line, int countWaiting, Message onComplete) {
         // Not applicable to Isim
     }
 
@@ -262,5 +262,9 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
     @Override
     protected void loge(String s) {
         if (DBG) Log.e(LOG_TAG, "[ISIM] " + s);
+    }
+
+    public int getVoiceMessageCount() {
+        return 0; // Not applicable to Isim
     }
 }
