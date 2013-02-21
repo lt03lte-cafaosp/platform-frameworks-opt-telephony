@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
@@ -47,8 +47,10 @@ import com.android.internal.telephony.SmsMessageBase;
 import com.android.internal.telephony.SmsStorageMonitor;
 import com.android.internal.telephony.SmsUsageMonitor;
 import com.android.internal.telephony.TelephonyProperties;
+import com.android.internal.telephony.uicc.IccConstants;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.IccUtils;
+import com.android.internal.telephony.uicc.SIMRecords;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.uicc.UsimServiceTable;
@@ -83,6 +85,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         mImsSMSDispatcher = imsSMSDispatcher;
         mDataDownloadHandler = new UsimDataDownloadHandler(mCm);
         mCm.setOnNewGsmSms(this, EVENT_NEW_SMS, null);
+        mCm.setOnSmsOnSim(this, EVENT_SMS_ON_ICC, null);
         mCm.setOnSmsStatus(this, EVENT_NEW_SMS_STATUS_REPORT, null);
         mCm.setOnNewGsmBroadcastSms(this, EVENT_NEW_BROADCAST_SMS, null);
         mUiccController = UiccController.getInstance();
@@ -93,8 +96,12 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     @Override
     public void dispose() {
         mCm.unSetOnNewGsmSms(this);
+        mCm.unSetOnSmsOnSim(this);
         mCm.unSetOnSmsStatus(this);
         mCm.unSetOnNewGsmBroadcastSms(this);
+        if (mIccRecords.get() != null) {
+            mIccRecords.get().unregisterForNewSms(this);
+        }
     }
 
     @Override
@@ -138,6 +145,12 @@ public class GsmSMSDispatcher extends SMSDispatcher {
 
         case EVENT_ICC_CHANGED:
             onUpdateIccAvailability();
+            break;
+
+        case EVENT_SMS_ON_ICC:
+            if (mIccRecords.get() != null) {
+                ((SIMRecords)(mIccRecords.get())).handleSmsOnIcc((AsyncResult) msg.obj);
+            }
             break;
 
         default:
