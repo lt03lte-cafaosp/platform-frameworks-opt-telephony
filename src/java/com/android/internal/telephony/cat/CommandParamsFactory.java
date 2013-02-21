@@ -237,7 +237,7 @@ public class CommandParamsFactory extends Handler {
                  ** received proactive command as valid (sending RESULT OK) */
                 return ResultCode.OK;
             }
-            return ResultCode.PRFRMD_ICON_NOT_DISPLAYED;
+            return ResultCode.OK;
         }
         switch(mIconLoadState) {
         case LOAD_SINGLE_ICON:
