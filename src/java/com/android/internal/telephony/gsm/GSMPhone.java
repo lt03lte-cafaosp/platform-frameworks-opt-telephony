@@ -104,9 +104,9 @@ public class GSMPhone extends PhoneBase {
     public static final String VM_NUMBER = "vm_number_key";
     // Key used to read/write the SIM IMSI used for storing the voice mail
     public static final String VM_SIM_IMSI = "vm_sim_imsi_key";
-
     // Key used to read/write if Call Forwarding is enabled
     public static final String CF_ENABLED = "cf_enabled_key";
+
     // Event constant for checking if Call Forwarding is enabled
     private static final int CHECK_CALLFORWARDING_STATUS = 75;
 
@@ -1342,7 +1342,7 @@ public class GSMPhone extends PhoneBase {
                 updateCurrentCarrierInProvider();
 
                 // Check if this is a different SIM than the previous one. If so unset the
-                // voice mail number.
+                // voice mail number and the call forwarding flag.
                 String imsi = getVmSimImsi();
                 String imsiFromSIM = getSubscriberId();
                 if (imsi != null && imsiFromSIM != null && !imsiFromSIM.equals(imsi)) {
