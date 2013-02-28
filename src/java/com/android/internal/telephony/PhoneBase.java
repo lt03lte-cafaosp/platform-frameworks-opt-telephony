@@ -203,6 +203,9 @@ public abstract class PhoneBase extends Handler implements Phone {
     protected final RegistrantList mCallModifyRegistrants
             = new RegistrantList();
 
+    protected final RegistrantList mAvpUpgradeFailureRegistrants
+            = new RegistrantList();
+
     protected final RegistrantList mSimRecordsLoadedRegistrants
             = new RegistrantList();
 
@@ -1312,6 +1315,18 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
         throw new CallStateException(
                 "unregisterForModifyCallRequest is not supported in this phone " + this);
+    }
+
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException {
+        throw new CallStateException("registerForAvpUpgradeFailure is not supported in this phone "
+                + this);
+    }
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException {
+        throw new CallStateException(
+                "unregisterForAvpUpgradeFailure is not supported in this phone "
+                        + this);
     }
 
     public void changeConnectionType(Message msg, Connection conn,
