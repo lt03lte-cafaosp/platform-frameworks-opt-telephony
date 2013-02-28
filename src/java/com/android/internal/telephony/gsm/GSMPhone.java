@@ -73,6 +73,7 @@ import com.android.internal.telephony.test.SimulatedRadioControl;
 import com.android.internal.telephony.uicc.IccFileHandler;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.IccVmNotSupportedException;
+import com.android.internal.telephony.uicc.SIMRecords;
 import com.android.internal.telephony.uicc.UiccCard;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
@@ -113,6 +114,9 @@ public class GSMPhone extends PhoneBase {
     SimPhoneBookInterfaceManager mSimPhoneBookIntManager;
     PhoneSubInfo mSubInfo;
 
+    /** EONS enabled flag. */
+    private boolean mEonsEnabled =
+            SystemProperties.getBoolean(TelephonyProperties.PROPERTY_EONS_ENABLED, true);
 
     Registrant mPostDialHandler;
 
@@ -976,7 +980,13 @@ public class GSMPhone extends PhoneBase {
 
     public void
     getAvailableNetworks(Message response) {
-        mCM.getAvailableNetworks(response);
+        Message msg;
+        if (mEonsEnabled) {
+            msg = obtainMessage(EVENT_GET_NETWORKS_DONE,response);
+        } else {
+            msg = response;
+        }
+        mCM.getAvailableNetworks(msg);
     }
 
     /**
@@ -1315,6 +1325,36 @@ public class GSMPhone extends PhoneBase {
                 if (onComplete != null) {
                     AsyncResult.forMessage(onComplete, ar.result, ar.exception);
                     onComplete.sendToTarget();
+                }
+                break;
+
+            case EVENT_GET_NETWORKS_DONE:
+                ArrayList<OperatorInfo> eonsNetworkNames = null;
+
+                IccRecords iccRecords = mIccRecords.get();
+                ar = (AsyncResult)msg.obj;
+                if (ar.exception == null && iccRecords != null) {
+                    eonsNetworkNames =
+                            ((SIMRecords)iccRecords).getEonsForAvailableNetworks(
+                            (ArrayList<OperatorInfo>)ar.result);
+                }
+
+                if (iccRecords == null && ar.exception == null) {
+                    Log.w(LOG_TAG, "getEonsForAvailableNetworks() aborted. icc absent?");
+                }
+
+                if (eonsNetworkNames != null) {
+                    Log.i(LOG_TAG, "[EONS] Populated EONS for available networks.");
+                } else {
+                    eonsNetworkNames = (ArrayList<OperatorInfo>)ar.result;
+                }
+
+                onComplete = (Message) ar.userObj;
+                if (onComplete != null) {
+                    AsyncResult.forMessage(onComplete, eonsNetworkNames, ar.exception);
+                    onComplete.sendToTarget();
+                } else {
+                    Log.e(LOG_TAG, "[EONS] In EVENT_GET_NETWORKS_DONE, onComplete is null!");
                 }
                 break;
 
