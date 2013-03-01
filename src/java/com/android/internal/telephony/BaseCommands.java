@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
@@ -96,6 +96,8 @@ public abstract class BaseCommands implements CommandsInterface {
     protected Registrant mRingRegistrant;
     protected Registrant mRestrictedStateRegistrant;
     protected Registrant mGsmBroadcastSmsRegistrant;
+    protected Registrant mCatCcAlphaRegistrant;
+    protected Registrant mSSRegistrant;
 
     // Preferred network type received from PhoneFactory.
     // This is used when establishing a connection to the
@@ -399,6 +401,22 @@ public abstract class BaseCommands implements CommandsInterface {
 
     public void unSetOnCallRing(Handler h) {
         mRingRegistrant.clear();
+    }
+
+    public void setOnSS(Handler h, int what, Object obj) {
+        mSSRegistrant = new Registrant (h, what, obj);
+    }
+
+    public void unSetOnSS(Handler h) {
+        mSSRegistrant.clear();
+    }
+
+    public void setOnCatCcAlphaNotify(Handler h, int what, Object obj) {
+        mCatCcAlphaRegistrant = new Registrant (h, what, obj);
+    }
+
+    public void unSetOnCatCcAlphaNotify(Handler h) {
+        mCatCcAlphaRegistrant.clear();
     }
 
     public void registerForInCallVoicePrivacyOn(Handler h, int what, Object obj) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
  *
@@ -128,6 +128,7 @@ public abstract class PhoneBase extends Handler implements Phone {
     protected static final int EVENT_SET_NETWORK_AUTOMATIC          = 28;
     protected static final int EVENT_ICC_RECORD_EVENTS              = 29;
     protected static final int EVENT_ICC_CHANGED                    = 30;
+    protected static final int EVENT_SS                             = 31;
 
     // Key used to read/write current CLIR setting
     public static final String CLIR_KEY = "clir_key";
