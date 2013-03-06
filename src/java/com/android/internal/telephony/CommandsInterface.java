@@ -1685,5 +1685,18 @@ public interface CommandsInterface {
      *          Callback message contains the information of SUCCESS/FAILURE.
     */
     public void setSubscriptionMode (int subscriptionMode, Message result);
-
+    
+    //add for stk cc alpha notify merge from 8x25q start
+    /**
+     * Sets the handler for Alpha Notification during STK Call Control.
+     * Unlike the register* methods, there's only one notification handler
+     *
+     * @param h Handler for notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    void setOnCatCcAlphaNotify(Handler h, int what, Object obj);
+    
+    void unSetOnCatCcAlphaNotify(Handler h);
+    //add for stk cc alpha notify merge from 8x25q end
 }

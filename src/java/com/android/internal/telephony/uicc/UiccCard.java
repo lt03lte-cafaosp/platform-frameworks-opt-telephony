@@ -367,7 +367,11 @@ public class UiccCard {
         }
         return count;
     }
-
+    //merge from 8x25q start
+    public CatService getCatService() {
+        return mCatService;
+    }
+    //merge from 8x25q end
     protected void log(String msg) {
         Log.d(LOG_TAG, msg);
     }

@@ -2674,6 +2674,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: ret =  responseInts(p); break;
             case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: ret =  responseVoid(p); break;
             case RIL_UNSOL_TETHERED_MODE_STATE_CHANGED: ret = responseInts(p); break;
+            case RIL_UNSOL_STK_CC_ALPHA_NOTIFY: ret =  responseString(p); break;//add for stk cc alpha notify merge from 8x25q
             case RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED: ret =  responseInts(p); break;
 
             default:
@@ -3050,7 +3051,18 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                     }
                 }
                 break;
-
+                
+            //add for stk cc alpha notify merge from 8x25q start
+            case RIL_UNSOL_STK_CC_ALPHA_NOTIFY:
+                if (RILJ_LOGD) unsljLogRet(response, ret);
+            
+                if (mCatCcAlphaRegistrant != null) {
+                    mCatCcAlphaRegistrant.notifyRegistrant(
+                                        new AsyncResult (null, ret, null));
+                }
+                break;
+            //add for stk cc alpha notify merge from 8x25q end
+            
             case RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED:
                 if (RILJ_LOGD) unsljLogRet(response, ret);
 
@@ -3881,6 +3893,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: return "UNSOL_VOICE_RADIO_TECH_CHANGED";
             case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED";
             case RIL_UNSOL_TETHERED_MODE_STATE_CHANGED: return "RIL_UNSOL_TETHERED_MODE_STATE_CHANGED";
+            case RIL_UNSOL_STK_CC_ALPHA_NOTIFY: return "UNSOL_STK_CC_ALPHA_NOTIFY";//add for stk cc alpha notify merge from 8x25q
             case RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED:
                     return "RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED";
             default: return "<unknown response>";
