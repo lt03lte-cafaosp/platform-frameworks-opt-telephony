@@ -1371,6 +1371,7 @@ public abstract class PhoneBase extends Handler implements Phone {
     public abstract void setUimLoaderStatus(int state) ;
     
     public abstract int getUimLoaderStatus() ;
-    //Interface add for usim phonebook end  
+    //Interface add for usim phonebook end 
+     
 
 }
