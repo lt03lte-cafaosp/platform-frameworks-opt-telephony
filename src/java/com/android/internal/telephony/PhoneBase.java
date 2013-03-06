@@ -1342,4 +1342,16 @@ public abstract class PhoneBase extends Handler implements Phone {
     public int getSubscription() {
         return DEFAULT_SUBSCRIPTION;
     }
+    public void getCallBarringOption(String facility, String password, Message onComplete){
+        logUnexpectedCdmaMethodCall("getCallBarringOption");
+    }
+
+    public void setCallBarringOption(String facility, boolean lockState, String password, Message onComplete){
+        logUnexpectedCdmaMethodCall("setCallBarringOption");
+    }    
+
+    public void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result){
+        logUnexpectedCdmaMethodCall("requestChangeCbPsw");
+    }
+	
 }
