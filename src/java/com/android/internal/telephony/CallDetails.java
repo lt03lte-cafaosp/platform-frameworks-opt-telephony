@@ -45,22 +45,28 @@ public class CallDetails {
                                                   * directions
                                                   */
 
-    public static final int CALL_TYPE_VS_TX = 1; /*
-                                                  * Videoshare call-audio in
-                                                  * both directions &
-                                                  * transmitting video in uplink
+    public static final int CALL_TYPE_VT_TX = 1; /*
+                                                  * PS Video telephony call: one
+                                                  * way TX video, two way audio
                                                   */
 
-    public static final int CALL_TYPE_VS_RX = 2; /*
-                                                  * Videoshare call-audio in
-                                                  * both directions & receiving
-                                                  * video in downlink
+    public static final int CALL_TYPE_VT_RX = 2; /*
+                                                  * Video telephony call: one
+                                                  * way RX video, two way audio
                                                   */
 
     public static final int CALL_TYPE_VT = 3; /*
-                                               * Video call-audio & video in
-                                               * both directions
+                                               * Video telephony call: two way
+                                               * video, two way audio
                                                */
+
+    public static final int CALL_TYPE_VT_NODIR = 4; /*
+                                                     * Video telephony call: no
+                                                     * direction, two way audio,
+                                                     * intermediate state in a
+                                                     * video call till video
+                                                     * link is setup
+                                                     */
 
     public static final int CALL_TYPE_UNKNOWN = 10; /*
                                                      * Unknown Call type, may be
