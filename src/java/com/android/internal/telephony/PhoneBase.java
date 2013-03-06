@@ -1342,4 +1342,15 @@ public abstract class PhoneBase extends Handler implements Phone {
     public int getSubscription() {
         return DEFAULT_SUBSCRIPTION;
     }
+
+    //merge from 8x25q start     
+    public String getCardType() {
+        UiccCardApplication uiccCardApplication = mUiccApplication.get();
+        if (uiccCardApplication == null)
+            return "UNKNOWN";
+
+        return uiccCardApplication.getCardType();
+    }
+    //merge from 8x25q end    
+    
 }

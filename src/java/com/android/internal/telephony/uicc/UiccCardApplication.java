@@ -794,4 +794,24 @@ public class UiccCardApplication {
     private void loge(String msg) {
         Log.e(LOG_TAG, msg);
     }
+    //merge from 8x25q start     
+    public String getCardType() {
+        switch (getType()) {
+            case APPTYPE_UNKNOWN:
+                return "UNKNOWN";
+            case APPTYPE_SIM:
+                return "SIM";
+            case APPTYPE_USIM:
+                return "USIM";
+            case APPTYPE_RUIM:
+                return "RUIM";
+            case APPTYPE_CSIM:
+                return "CSIM";
+            case APPTYPE_ISIM:
+                return "ISIM";
+            default:
+                return "UNKNOWN";
+        }
+    }
+    //merge from 8x25q end    
 }

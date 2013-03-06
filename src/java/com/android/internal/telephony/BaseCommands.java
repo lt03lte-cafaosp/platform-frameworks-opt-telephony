@@ -96,7 +96,8 @@ public abstract class BaseCommands implements CommandsInterface {
     protected Registrant mRingRegistrant;
     protected Registrant mRestrictedStateRegistrant;
     protected Registrant mGsmBroadcastSmsRegistrant;
-
+    protected Registrant mCatCcAlphaRegistrant;//add for stk cc alpha notify merge from 8x25q
+    
     // Preferred network type received from PhoneFactory.
     // This is used when establishing a connection to the
     // vendor ril so it starts up in the correct mode.
@@ -669,7 +670,17 @@ public abstract class BaseCommands implements CommandsInterface {
 
     protected void onRadioAvailable() {
     }
+    
+    //add for stk cc alpha notify merge from 8x25q start
+    public void setOnCatCcAlphaNotify(Handler h, int what, Object obj) {
+        mCatCcAlphaRegistrant = new Registrant (h, what, obj);
+    }
 
+    public void unSetOnCatCcAlphaNotify(Handler h) {
+        mCatCcAlphaRegistrant.clear();
+    }
+    //add for stk cc alpha notify merge from 8x25q end
+    
     /**
      * {@inheritDoc}
      */

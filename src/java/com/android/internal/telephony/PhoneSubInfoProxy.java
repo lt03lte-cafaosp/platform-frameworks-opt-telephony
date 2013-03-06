@@ -130,4 +130,12 @@ public class PhoneSubInfoProxy extends IPhoneSubInfo.Stub {
     protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         mPhoneSubInfo.dump(fd, pw, args);
     }
+    //merge from 8x25q start     
+    /**
+     * @hide
+     */
+    public String getCardType() {
+        return mPhoneSubInfo.getCardType();
+    }
+    //merge from 8x25q end    
 }
