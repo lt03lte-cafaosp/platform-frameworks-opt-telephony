@@ -1819,4 +1819,7 @@ public interface Phone {
      * Returns the subscription id.
      */
     public int getSubscription();
+	void getCallBarringOption(String facility, String password, Message onComplete);
+    void setCallBarringOption(String facility, boolean lockState, String password, Message onComplete);    
+    void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result); 
 }

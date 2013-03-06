@@ -1343,6 +1343,20 @@ public abstract class PhoneBase extends Handler implements Phone {
         return DEFAULT_SUBSCRIPTION;
     }
 
+    public void getCallBarringOption(String facility, String password, Message onComplete){
+        logUnexpectedCdmaMethodCall("getCallBarringOption");
+    }
+
+    public void setCallBarringOption(String facility, boolean lockState, String password, Message onComplete){
+        logUnexpectedCdmaMethodCall("setCallBarringOption");
+    }    
+
+    public void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result){
+        logUnexpectedCdmaMethodCall("requestChangeCbPsw");
+    }
+	
+
+
     //merge from 8x25q start     
     public String getCardType() {
         UiccCardApplication uiccCardApplication = mUiccApplication.get();
@@ -1352,6 +1366,7 @@ public abstract class PhoneBase extends Handler implements Phone {
         return uiccCardApplication.getCardType();
     }
     //merge from 8x25q end    
+<<<<<<< HEAD
     
 	
     //Interface add for usim phonebook start
@@ -1360,4 +1375,7 @@ public abstract class PhoneBase extends Handler implements Phone {
     public abstract int getUimLoaderStatus() ;
     //Interface add for usim phonebook end
 
+=======
+   
+>>>>>>> c487d7b4013a1f0f13d0eff61bd9be6ecda64726
 }
