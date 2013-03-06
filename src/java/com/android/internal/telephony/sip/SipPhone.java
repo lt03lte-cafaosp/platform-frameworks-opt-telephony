@@ -936,4 +936,13 @@ public class SipPhone extends SipPhoneBase {
             }
         }
     }
+    
+    //Interface add for usim phonebook start
+    public void setUimLoaderStatus(int state) {
+    }
+
+    public int getUimLoaderStatus() {
+        return -1;
+    }
+    //Interface add for usim phonebook end
 }

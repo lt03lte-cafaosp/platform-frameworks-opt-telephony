@@ -17,7 +17,7 @@
 package com.android.internal.telephony;
 
 import com.android.internal.telephony.uicc.AdnRecord;
-
+import android.content.ContentValues;
 
 
 /** Interface for applications to access the ICC phone book.
@@ -64,9 +64,8 @@ interface IIccPhoneBook {
      * @return true for success
      */
     boolean updateAdnRecordsInEfBySearch(int efid,
-            String oldTag, String oldPhoneNumber,
-            String newTag, String newPhoneNumber,
-            String pin2);
+            in ContentValues values,
+            String pin2);        
 
     /**
      * Update an ADN-like EF record by record index
@@ -97,5 +96,21 @@ interface IIccPhoneBook {
      *            recordSizes[2]  is the number of records in the EF file
      */
     int[] getAdnRecordsSize(int efid);
+    
+    //Interface add for usim phonebook start
+    boolean updateUsimAdnRecordsInEfByIndex(int efid, String newTag,
+            String newPhoneNumber, in String[] anrNumbers, in String[] emails, int index,
+            String pin2);
+    
+    int getAdnCount();
+    
+    void setUimLoaderStatus(int state);
+    
+    int getUimLoaderStatus();
+    
+    int getSpareAnrCount();
+    
+    int getSpareEmailCount();
+    //Interface add for usim phonebook end
 
 }

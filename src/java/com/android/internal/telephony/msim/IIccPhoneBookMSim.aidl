@@ -21,7 +21,7 @@
 package com.android.internal.telephony.msim;
 
 import com.android.internal.telephony.uicc.AdnRecord;
-
+import android.content.ContentValues;
 
 
 /** Interface for applications to access the ICC phone book.
@@ -96,6 +96,22 @@ interface IIccPhoneBookMSim {
             String pin2, int subscription);
 
     /**
+     * Update an ADN-like EF record by record index of a subscription
+     *
+     * This is useful for iteration the whole ADN file, such as write the whole
+     * phone book or erase/format the whole phonebook
+     *
+     * @param subscription user preferred subscription
+     * @param efid must be one among EF_ADN, EF_FDN, and EF_SDN
+     * @param values to be stored
+     * @param pin2 required to update EF_FDN, otherwise must be null
+     * @return true for success
+     */
+    boolean updateAdnRecordsInEfBySearchOnSubscription(int efid,
+            in ContentValues values,
+            String pin2, int subscription);        
+
+    /**
      * Get the max munber of records in efid
      *
      * @param efid the EF id of a ADN-like SIM
@@ -106,5 +122,21 @@ interface IIccPhoneBookMSim {
      *            recordSizes[2]  is the number of records in the EF file
      */
     int[] getAdnRecordsSize(int efid, int subscription);
+    
+    //Interface add for usim phonebook start
+    boolean updateUsimAdnRecordsInEfByIndex(int sub,int efid, String newTag,
+            String newPhoneNumber, in String[] anrNumbers, in String[] emails, int index,
+            String pin2);
+    
+    int getAdnCount(int sub);
+    
+    void setUimLoaderStatus(int sub,int state);
+    
+    int getUimLoaderStatus(int sub);
+    
+    int getSpareAnrCount(int sub);
+    
+    int getSpareEmailCount(int sub);
+    //Interface add for usim phonebook end
 
 }

@@ -16,12 +16,14 @@
 
 package com.android.internal.telephony;
 
+import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.ServiceManager;
+import android.text.TextUtils;
 
 import com.android.internal.telephony.uicc.AdnRecord;
 import com.android.internal.telephony.uicc.AdnRecordCache;
@@ -32,6 +34,7 @@ import com.android.internal.telephony.uicc.IccRecords;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.HashMap;
 
 /**
  * SimPhoneBookInterfaceManager to provide an inter-process communication to
@@ -193,6 +196,51 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
         return success;
     }
 
+    public boolean
+    updateAdnRecordsInEfBySearch (int efid,
+            ContentValues values, String pin2) {
+
+
+        if (phone.getContext().checkCallingOrSelfPermission(
+                android.Manifest.permission.WRITE_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED) {
+            throw new SecurityException(
+                    "Requires android.permission.WRITE_CONTACTS permission");
+        }
+
+        String oldTag = values.getAsString(IccProvider.STR_TAG);
+        String newTag = values.getAsString(IccProvider.STR_NEW_TAG);
+        String oldPhoneNumber = values.getAsString(IccProvider.STR_NUMBER);
+        String newPhoneNumber = values.getAsString(IccProvider.STR_NEW_NUMBER);
+        String oldEmail = values.getAsString(IccProvider.STR_EMAILS);
+        String newEmail = values.getAsString(IccProvider.STR_NEW_EMAILS);
+        String oldAnr = values.getAsString(IccProvider.STR_ANRS);
+        String newAnr = values.getAsString(IccProvider.STR_NEW_ANRS);
+        String[] oldEmailArray = TextUtils.isEmpty(oldEmail)? null: getStringArray(oldEmail);
+        String[] newEmailArray = TextUtils.isEmpty(newEmail)? null: getStringArray(newEmail);
+        String[] oldAnrArray = TextUtils.isEmpty(oldAnr)? null: getStringArray(oldAnr);
+        String[] newAnrArray = TextUtils.isEmpty(newAnr)? null: getStringArray(newAnr);
+        efid = updateEfForIccType(efid);
+
+        if (DBG) logd("updateAdnRecordsInEfBySearch: efid=" + efid +
+                ", values = " + values + ", pin2=" + pin2);
+        synchronized(mLock) {
+            checkThread();
+            success = false;
+            AtomicBoolean status = new AtomicBoolean(false);
+            Message response = mBaseHandler.obtainMessage(EVENT_UPDATE_DONE, status);
+            AdnRecord oldAdn = new AdnRecord(oldTag, oldPhoneNumber, oldEmailArray, oldAnrArray);
+            AdnRecord newAdn = new AdnRecord(newTag, newPhoneNumber, newEmailArray, newAnrArray);
+            if (adnCache != null) {
+                adnCache.updateAdnBySearch(efid, oldAdn, newAdn, pin2, response);
+                waitForResult(status);
+            } else {
+                logd("Failure while trying to update by search due to uninitialised adncache");
+            }
+        }
+        return success;
+    }
+
     /**
      * Update an ADN-like EF record by record index
      *
@@ -297,6 +345,12 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
         }
     }
 
+    private String[] getStringArray(String str) {
+        if (str != null)
+            return str.split(",");
+        return null;
+    }
+
     protected void waitForResult(AtomicBoolean status) {
         while (!status.get()) {
             try {
@@ -316,5 +370,56 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
         }
         return efid;
     }
+    
+    //Interface add for usim phonebook
+    public int getSpareAnrCount() {
+        return adnCache.getSpareAnrCount();
+    }
+    
+    public int getSpareEmailCount() {
+        return adnCache.getSpareEmailCount();
+    }
+    
+    public boolean updateUsimAdnRecordsInEfByIndex(int efid, String newTag,
+            String newPhoneNumber, String[] anrNumbers, String[] emails, int index, String pin2) {
+
+        if (phone.getContext().checkCallingOrSelfPermission(
+                android.Manifest.permission.WRITE_CONTACTS)
+                != PackageManager.PERMISSION_GRANTED) {
+            throw new SecurityException(
+                    "Requires android.permission.WRITE_CONTACTS permission");
+        }
+
+        if (DBG) logd("updateAdnRecordsInEfByIndex: efid=" + efid +
+                " Index=" + index + " ==> " +
+                "("+ newTag + "," + newPhoneNumber + ")"+ " pin2=" + pin2);
+        synchronized(mLock) {
+            checkThread();
+            success = false;
+            AtomicBoolean status = new AtomicBoolean(false);
+            Message response = mBaseHandler.obtainMessage(EVENT_UPDATE_DONE, status);
+            AdnRecord newAdn = new AdnRecord(newTag, newPhoneNumber, emails, anrNumbers);
+            efid = updateEfForIccType(efid); 
+            if (adnCache != null) {
+                adnCache.updateUsimAdnByIndex(efid, newAdn, index, pin2, response);
+                waitForResult(status);
+            } else {
+                logd("Failure while trying to update by index due to uninitialised adncache");
+            }
+        }
+        return success;
+    }
+    
+    public int getAdnCount() {
+        if (phone.getCurrentUiccAppType() == AppType.APPTYPE_USIM) {
+            return adnCache.getUsimAdnCount();
+        }
+        return adnCache.getAdnCount();
+    }
+    
+    public abstract void setUimLoaderStatus(int state) ;
+    
+    public abstract int getUimLoaderStatus() ;
+    //Interface add for usim phonebook end
 }
 
