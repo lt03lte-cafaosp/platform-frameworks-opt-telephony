@@ -79,5 +79,15 @@ public class RuimPhoneBookInterfaceManager extends IccPhoneBookInterfaceManager 
     protected void loge(String msg) {
         Log.e(LOG_TAG, "[RuimPbInterfaceManager] " + msg);
     }
+    
+    //Interface add for usim phonebook start
+    public void setUimLoaderStatus(int state) {
+        phone.setUimLoaderStatus(state);
+    }
+
+    public int getUimLoaderStatus() {
+        return phone.getUimLoaderStatus();
+    }
+    //Interface add for usim phonebook end
 }
 

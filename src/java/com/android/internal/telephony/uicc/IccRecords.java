@@ -450,4 +450,10 @@ public abstract class IccRecords extends Handler implements IccConstants {
         return !mContext.getResources().getBoolean(
                 com.android.internal.R.bool.skip_radio_power_off_on_sim_refresh_reset);
     }
+    
+    //Interface add for usim phonebook start
+    public abstract void setUimLoaderStatus(int state) ;
+    
+    public abstract int getUimLoaderStatus() ;
+    //Interface add for usim phonebook end
 }

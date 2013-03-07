@@ -51,6 +51,8 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
 
     private static final int TAG_ISIM_VALUE = 0x80;     // From 3GPP TS 31.103
 
+    int mUimLoadDone = -1;//Variable add for usim phonebook
+
     public IsimUiccRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
 
@@ -267,4 +269,14 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
     public int getVoiceMessageCount() {
         return 0; // Not applicable to Isim
     }
+    
+    //Interface add for usim phonebook start
+    public void setUimLoaderStatus(int state) {
+        mUimLoadDone = state;
+    }
+
+    public int getUimLoaderStatus() {
+        return mUimLoadDone;
+    }
+    //Interface add for usim phonebook end
 }
