@@ -26,6 +26,8 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += $(call all-java-files-under, src/java)
 
+LOCAL_JAVA_LIBRARIES := com.qrd.plugin.feature_query
+
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := telephony-common
 
