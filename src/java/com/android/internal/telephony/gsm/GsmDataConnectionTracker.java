@@ -2427,7 +2427,7 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
         /*Cursor cursor = mPhone.getContext().getContentResolver().query(
                 PREFERAPN_NO_UPDATE_URI, new String[] { "_id", "name", "apn" },
                 null, null, Telephony.Carriers.DEFAULT_SORT_ORDER);*/
-
+        int radioTech = mPhone.getServiceState().getRadioTechnology();
         Cursor cursor;
         if(mPhone.getSubscription()==SUB1)
         {
@@ -2464,6 +2464,33 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
         if (cursor != null) {
             cursor.close();
+        }
+
+        if (mAllApns != null) {
+          for (DataProfile p:mAllApns) {
+            if (p.canHandleType(mRequestedApnType)) {
+              if (p.bearer == 0 || p.bearer == radioTech) {
+                if((p.apn.equals("3gnet"))||(p.apn.equals("cmnet"))){
+                  log("preferred apn : " +p.toString());
+                  setPreferredApn(p.id);
+                  return p;
+                }
+              }
+            }
+          }
+
+          for (DataProfile p:mAllApns) {
+            if (p.canHandleType(mRequestedApnType)) {
+              if (p.bearer == 0 || p.bearer == radioTech) {
+                log("preferred apn not found, will set the first apn in apn list: " +p.toString());
+                setPreferredApn(p.id);
+                return p;
+              }
+            }
+          }
+        }
+        else {
+          loge("mAllApns is empty!");
         }
 
         log("getPreferredApn: X not found");
