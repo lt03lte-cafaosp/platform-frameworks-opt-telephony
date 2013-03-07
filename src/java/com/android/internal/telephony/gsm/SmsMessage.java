@@ -448,6 +448,65 @@ public class SmsMessage extends SmsMessageBase {
         return ret;
     }
 
+
+    /**
+     * Get an SMS-SUBMIT PDU for a data message to a destination address &amp; port
+     *
+     * @param scAddress Service Centre address. null == use default
+     * @param destinationAddress the address of the destination for the message
+     * @param destinationPort the port to deliver the message to at the
+     *        destination
+     * @param data the data for the message
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, int destinationPort, int originationPort, byte[] data,
+            boolean statusReportRequested) {
+
+        SmsHeader.PortAddrs portAddrs = new SmsHeader.PortAddrs();
+        portAddrs.destPort = destinationPort;
+        portAddrs.origPort = originationPort; //0
+        portAddrs.areEightBits = false;
+
+        SmsHeader smsHeader = new SmsHeader();
+        smsHeader.portAddrs = portAddrs;
+
+        byte[] smsHeaderData = SmsHeader.toByteArray(smsHeader);
+
+        if ((data.length + smsHeaderData.length + 1) > MAX_USER_DATA_BYTES) {
+            Log.e(LOG_TAG, "SMS data message may only contain "
+                    + (MAX_USER_DATA_BYTES - smsHeaderData.length - 1) + " bytes");
+            return null;
+        }
+
+        SubmitPdu ret = new SubmitPdu();
+        ByteArrayOutputStream bo = getSubmitPduHead(
+                scAddress, destinationAddress, (byte) 0x41, // MTI = SMS-SUBMIT,
+                                                            // TP-UDHI = true
+                statusReportRequested, ret);
+
+        // TP-Data-Coding-Scheme
+        // No class, 8 bit data
+        bo.write(0x04);
+
+        // (no TP-Validity-Period)
+
+        // Total size
+        bo.write(data.length + smsHeaderData.length + 1);
+
+        // User data header
+        bo.write(smsHeaderData.length);
+        bo.write(smsHeaderData, 0, smsHeaderData.length);
+
+        // User data
+        bo.write(data, 0, data.length);
+
+        ret.encodedMessage = bo.toByteArray();
+        return ret;
+    }
+
     /**
      * Create the beginning of a SUBMIT PDU.  This is the part of the
      * SUBMIT PDU that is common to the two versions of {@link #getSubmitPdu},

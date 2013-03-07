@@ -240,6 +240,58 @@ public class MSimSmsManager {
     }
 
     /**
+      * Send a data based SMS to a specific application port.
+      *
+      * @param destinationAddress the address to send the message to
+      * @param scAddress is the service center address or null to use
+      *  the current default SMSC
+      * @param destinationPort the port to deliver the message to
+      * @param originalPort the original port
+      * @param data the body of the message to send
+      * @param sentIntent if not NULL this <code>PendingIntent</code> is
+      *  broadcast when the message is successfully sent, or failed.
+      *  The result code will be <code>Activity.RESULT_OK</code> for success,
+      *  or one of these errors:<br>
+      *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+      *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+      *  <code>RESULT_ERROR_NULL_PDU</code><br>
+      *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+      *  the extra "errorCode" containing a radio technology specific value,
+      *  generally only useful for troubleshooting.<br>
+      *  The per-application based SMS control checks sentIntent. If sentIntent
+      *  is NULL the caller will be checked against all unknown applications,
+      *  which cause smaller number of SMS to be sent in checking period.
+      * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+      *  broadcast when the message is delivered to the recipient.  The
+      *  raw pdu of the status report is in the extended data ("pdu").
+      *  @param subscription on which the SMS has to be sent.
+      *
+      * @throws IllegalArgumentException if destinationAddress or data are empty
+      */
+     public void sendDataMessage(
+             String destinationAddress, String scAddress, short destinationPort, short originalPort,
+             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent, int subscription) {
+         if (TextUtils.isEmpty(destinationAddress)) {
+             throw new IllegalArgumentException("Invalid destinationAddress");
+         }
+    
+         if (data == null || data.length == 0) {
+             throw new IllegalArgumentException("Invalid message data");
+         }
+    
+         try {
+             ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+             if (iccISms != null) {
+                 iccISms.sendDataWithOrgPort(destinationAddress, scAddress, destinationPort & 0xFFFF, originalPort & 0xFFFF,
+                         data, sentIntent, deliveryIntent, subscription);
+             }
+         } catch (RemoteException ex) {
+             // ignore it
+         }
+     }
+
+
+    /**
      * Get the default instance of the MSimSmsManager
      *
      * @return the default instance of the MSimSmsManager
@@ -284,6 +336,40 @@ public class MSimSmsManager {
         }
 
         return success;
+    }
+	
+    /**
+     * Copy a raw SMS PDU to the ICC, and return the index on ICC
+     * ICC (Integrated Circuit Card) is the card of the device.
+     * For example, this can be the SIM or USIM for GSM.
+     *
+     * @param smsc the SMSC for this message, or NULL for the default SMSC
+     * @param pdu the raw PDU to store
+     * @param status message status (STATUS_ON_ICC_READ, STATUS_ON_ICC_UNREAD,
+     *               STATUS_ON_ICC_SENT, STATUS_ON_ICC_UNSENT)
+     * @return index of ICC, -1 means copy failed
+     * @throws IllegalArgumentException if pdu is NULL
+     *
+     * {@hide}
+     */	
+    public int copyMessageToIccGetIndex(byte[] smsc, byte[] pdu, int status,
+            int subscription){
+        int index = -1;
+
+        if (null == pdu) {
+            throw new IllegalArgumentException("pdu is NULL");
+        }
+        try {
+            ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (iccISms != null) {
+                index = iccISms.copyMessageToIccEfGetIndex(status, pdu,
+                                  smsc, subscription);
+           }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+
+        return index;
     }
 
     /**
@@ -553,6 +639,108 @@ public class MSimSmsManager {
             return DEFAULT_SUB;
         }
     }
+    /**
+     * Get the Capacitance count of sms on Icc card 
+     *
+     * @return the Capacitance count of sms on Icc card
+     * @hide
+     */
+    public static int getSmsCapCountOnIcc(int subscription) 
+    {
+        int ret = -1;
+        try 
+        {
+            ISmsMSim simISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (simISms != null) 
+            {            
+                ret = simISms.getSmsCapCountOnIcc(subscription);
+            }
+            else
+            {
+            }
+        }
+        catch (RemoteException ex) 
+        {
+            //ignore it
+        }
+        return ret;
+    }
+    
+    /**
+     * Process reduce long sms overtime in raw table
+     *
+     * @return 
+     * @hide
+     */
+    public void processCachedLongSms()
+    {
+        try 
+        {
+            ISmsMSim simISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+
+            if ( simISms != null) {
+                simISms.processCachedLongSms();
+            }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+    }
+	
+    /**
+     * get gsm sms center
+     *
+     * @return the sms center or null
+     * @hide
+     */
+        public String getGsmSmsCenter(int subscription) 
+        {
+            String ret = null;
+            try 
+            {
+                ISmsMSim simISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+                if (simISms != null) 
+                {           
+                    return simISms.getGsmSmsCenter(subscription);
+                }
+                else
+                {
+                }
+            }
+            catch (RemoteException ex) 
+            {
+                //ignore it
+            }
+            return ret;
+        }
+    
+	
+    /**
+     * set gsm sms center
+     *
+     * @return true if set successfully.
+     * @hide
+     */	
+        public boolean setGsmSmsCenter(String center, int subscription) 
+        {
+            boolean ret = false;
+            try 
+            {
+                ISmsMSim simISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+                if (simISms != null) 
+                {       
+                    return simISms.setGsmSmsCenter(center, subscription);
+                }
+                else
+                {
+                }
+            }
+            catch (RemoteException ex) 
+            {
+                //ignore it
+            }
+            return ret;
+        }
+
 
     // see SmsMessage.getStatusOnIcc
 

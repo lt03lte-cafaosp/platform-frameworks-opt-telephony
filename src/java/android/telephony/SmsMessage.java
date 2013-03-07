@@ -476,6 +476,35 @@ public class SmsMessage {
     }
 
     /**
+     * Get an SMS-SUBMIT PDU for a data message to a destination address &amp; port.
+     * This method will not attempt to use any GSM national language 7 bit encodings.
+     *
+     * @param scAddress Service Centre address. null == use default
+     * @param destinationAddress the address of the destination for the message
+     * @param destinationPort the port to deliver the message to at the
+     *        destination
+     * @param data the data for the message
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, short destinationPort, short orginationPort, byte[] data,
+            boolean statusReportRequested) {
+        SubmitPduBase spb;
+
+        if (useCdmaFormatForMoSms()) {
+            spb = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, destinationPort, orginationPort, data, statusReportRequested);
+        } else {
+            spb = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, destinationPort, orginationPort, data, statusReportRequested);
+        }
+
+        return new SubmitPdu(spb);
+    }
+
+    /**
      * Returns the address of the SMS service center that relayed this message
      * or null if there is none.
      */

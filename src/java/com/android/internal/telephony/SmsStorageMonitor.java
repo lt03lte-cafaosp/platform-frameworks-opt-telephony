@@ -55,7 +55,8 @@ public final class SmsStorageMonitor extends Handler {
     private boolean mReportMemoryStatusPending;
 
     final CommandsInterface mCm;                            // accessed from inner class
-    boolean mStorageAvailable = true;                       // accessed from inner class
+    private boolean mStorageAvailable = true;                       // accessed from inner class
+    private boolean mStorageNearlyFull = false;                       // accessed from inner class
 
     /**
      * Hold the wake lock for 5 seconds, which should be enough time for
@@ -81,6 +82,8 @@ public final class SmsStorageMonitor extends Handler {
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_DEVICE_STORAGE_FULL);
         filter.addAction(Intent.ACTION_DEVICE_STORAGE_NOT_FULL);
+        filter.addAction(Intent.ACTION_DEVICE_STORAGE_NEARLY_FULL);
+        filter.addAction(Intent.ACTION_DEVICE_STORAGE_NOT_NEARLY_FULL);
         mContext.registerReceiver(mResultReceiver, filter);
     }
 
@@ -147,6 +150,10 @@ public final class SmsStorageMonitor extends Handler {
         return mStorageAvailable;
     }
 
+    public boolean isStorageNearlyFull() {
+        return mStorageNearlyFull;
+    }
+
     private final BroadcastReceiver mResultReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -156,6 +163,10 @@ public final class SmsStorageMonitor extends Handler {
             } else if (intent.getAction().equals(Intent.ACTION_DEVICE_STORAGE_NOT_FULL)) {
                 mStorageAvailable = true;
                 mCm.reportSmsMemoryStatus(true, obtainMessage(EVENT_REPORT_MEMORY_STATUS_DONE));
+            } else if (intent.getAction().equals(Intent.ACTION_DEVICE_STORAGE_NEARLY_FULL)) {
+                mStorageNearlyFull = true;
+            } else if (intent.getAction().equals(Intent.ACTION_DEVICE_STORAGE_NOT_NEARLY_FULL)) {
+                mStorageNearlyFull = false;
             }
         }
     };

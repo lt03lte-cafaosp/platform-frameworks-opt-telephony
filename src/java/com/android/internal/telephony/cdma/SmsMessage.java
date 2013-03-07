@@ -355,6 +355,46 @@ public class SmsMessage extends SmsMessageBase {
     }
 
     /**
+     * Get an SMS-SUBMIT PDU for a data message to a destination address and port.
+     *
+     * @param scAddr Service Centre address. null == use default
+     * @param destAddr the address of the destination for the message
+     * @param destPort the port to deliver the message to at the
+     *        destination
+     * @param orgPort the original port
+     * @param data the data for the message
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static SubmitPdu getSubmitPdu(String scAddr, String destAddr, int destPort, int orgPort,
+            byte[] data, boolean statusReportRequested) {
+
+        /**
+         * TODO(cleanup): this is not a general-purpose SMS creation
+         * method, but rather something specialized to messages
+         * containing OCTET encoded (meaning non-human-readable) user
+         * data.  The name should reflect that, and not just overload.
+         */
+
+        SmsHeader.PortAddrs portAddrs = new SmsHeader.PortAddrs();
+        portAddrs.destPort = destPort;
+        portAddrs.origPort = orgPort;//0
+        portAddrs.areEightBits = false;
+
+        SmsHeader smsHeader = new SmsHeader();
+        smsHeader.portAddrs = portAddrs;
+
+        UserData uData = new UserData();
+        uData.userDataHeader = smsHeader;
+        uData.msgEncoding = UserData.ENCODING_OCTET;
+        uData.msgEncodingSet = true;
+        uData.payload = data;
+
+        return privateGetSubmitPdu(destAddr, statusReportRequested, uData);
+    }
+
+    /**
      * Get an SMS-SUBMIT PDU for a data message to a destination address &amp; port
      *
      * @param destAddr the address of the destination for the message

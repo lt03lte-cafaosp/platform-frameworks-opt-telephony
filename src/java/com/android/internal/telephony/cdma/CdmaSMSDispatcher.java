@@ -83,6 +83,7 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
     public CdmaSMSDispatcher(PhoneBase phone, SmsStorageMonitor storageMonitor,
             SmsUsageMonitor usageMonitor, ImsSMSDispatcher imsSMSDispatcher) {
         super(phone, storageMonitor, usageMonitor);
+        mSubscription = phone.getSubscription();
         mImsSMSDispatcher = imsSMSDispatcher;
         mCm.setOnNewCdmaSms(this, EVENT_NEW_SMS, null);
         Log.d(TAG, "CdmaSMSDispatcher created");
@@ -312,7 +313,20 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
         SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
                 scAddr, destAddr, destPort, data, (deliveryIntent != null));
-        HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, data, pdu);
+        HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, 0, data, pdu);
+        SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
+                getFormat());
+        sendSubmitPdu(tracker);
+    }
+
+
+    /** {@inheritDoc} */
+    @Override
+    protected void sendData(String destAddr, String scAddr, int destPort, int orgPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
+                scAddr, destAddr, destPort, orgPort, data, (deliveryIntent != null));
+        HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, orgPort, data, pdu);
         SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
                 getFormat());
         sendSubmitPdu(tracker);
@@ -566,4 +580,13 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
     public String getImsSmsFormat() {
         return mImsSMSDispatcher.getImsSmsFormat();
     }
+    
+    protected void processCachedLongSmsWhenBoot()
+    {
+        deleteLongSmsPartOverTimeOnRaw();
+    }
+
+    
+    protected void getGsmSmsCenter()
+    { }
 }

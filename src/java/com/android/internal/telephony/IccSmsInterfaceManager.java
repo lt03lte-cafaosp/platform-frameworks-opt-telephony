@@ -64,8 +64,11 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     private static final int EVENT_UPDATE_DONE = 2;
     private static final int EVENT_SET_BROADCAST_ACTIVATION_DONE = 3;
     private static final int EVENT_SET_BROADCAST_CONFIG_DONE = 4;
+    private static final int EVENT_WRITE_TO_CARD_DONE = 5;
+  
     private static final int SMS_CB_CODE_SCHEME_MIN = 0;
     private static final int SMS_CB_CODE_SCHEME_MAX = 255;
+    private int mWriteIndex = -1;   /* Store for index of copy ICC */
 
     protected PhoneBase mPhone;
     protected Context mContext;
@@ -84,6 +87,25 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                         mLock.notifyAll();
                     }
                     break;
+                    
+                case EVENT_WRITE_TO_CARD_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    synchronized (mLock) {
+                        mSuccess = (ar.exception == null);
+                        if (mSuccess) {
+                            int[] ints = (int[])ar.result;
+                            if (ints.length != 0) {
+                                mWriteIndex = ints[0];
+                                Log.w(LOG_TAG, "EVENT_WRITE_TO_CARD_DONE mWriteIndex = " + mWriteIndex);
+                            } 
+                            else {
+                                Log.e(LOG_TAG, "Bogus index response");
+                            }
+                        }
+                        mLock.notifyAll();
+                    }                
+                    break;
+                    
                 case EVENT_LOAD_DONE:
                     ar = (AsyncResult)msg.obj;
                     synchronized (mLock) {
@@ -269,6 +291,43 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     }
 
     /**
+     * Copy a raw SMS PDU to the Icc.
+     *
+     * @param pdu the raw PDU to store
+     * @param status message status (STATUS_ON_ICC_READ, STATUS_ON_ICC_UNREAD,
+     *               STATUS_ON_ICC_SENT, STATUS_ON_ICC_UNSENT)
+     * @return index on ICC, -1 means copy failed.
+     *
+     */
+    public int copyMessageToIccEfGetIndex(int status, byte[] pdu, byte[] smsc) {
+        //NOTE smsc not used in RUIM
+        if (DBG) log("copyMessageToIccEf: status=" + status + " ==> " +
+                "pdu=("+ Arrays.toString(pdu) +
+                "), smsm=(" + Arrays.toString(smsc) +")");
+        enforceReceiveAndSend("Copying message to Icc");
+        synchronized(mLock) {
+            mWriteIndex = -1;//for store index on ICC         
+            Message response = mHandler.obtainMessage(EVENT_WRITE_TO_CARD_DONE);
+
+            //RIL_REQUEST_WRITE_SMS_TO_SIM vs RIL_REQUEST_CDMA_WRITE_SMS_TO_RUIM
+            if (PhoneConstants.PHONE_TYPE_GSM == mPhone.getPhoneType()) {
+                mPhone.mCM.writeSmsToSim(status, IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), response);
+            } else {
+                mPhone.mCM.writeSmsToRuim(status, IccUtils.bytesToHexString(pdu),
+                        response);
+            }
+
+            try {
+                mLock.wait();
+            } catch (InterruptedException e) {
+                log("interrupted while trying to update by index");
+            }
+        }
+        return mWriteIndex;
+    }
+
+    /**
      * Retrieves all messages currently stored on Icc.
      *
      * @return list of SmsRawData of all sms on Icc
@@ -338,6 +397,46 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                 sentIntent + " deliveryIntent=" + deliveryIntent);
         }
         mDispatcher.sendData(destAddr, scAddr, destPort, data, sentIntent, deliveryIntent);
+    }
+
+
+    /**
+     * Send a data based SMS to a specific application port.
+     *
+     * @param destAddr the address to send the message to
+     * @param scAddr is the service center address or null to use
+     *  the current default SMSC
+     * @param destPort the port to deliver the message to
+     * @param orgPort the org port 
+     * @param data the body of the message to send
+     * @param sentIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is successfully sent, or failed.
+     *  The result code will be <code>Activity.RESULT_OK<code> for success,
+     *  or one of these errors:<br>
+     *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+     *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+     *  <code>RESULT_ERROR_NULL_PDU</code><br>
+     *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+     *  the extra "errorCode" containing a radio technology specific value,
+     *  generally only useful for troubleshooting.<br>
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applications,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     */
+    public void sendDataWithOrgPort(String destAddr, String scAddr, int destPort, int orgPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        mContext.enforceCallingPermission(
+                "android.permission.SEND_SMS",
+                "Sending SMS message");
+        if (Log.isLoggable("SMS", Log.VERBOSE)) {
+            log("sendData: destAddr=" + destAddr + " scAddr=" + scAddr + " destPort=" +
+                destPort + " data='"+ HexDump.toHexString(data)  + "' sentIntent=" +
+                sentIntent + " deliveryIntent=" + deliveryIntent);
+        }
+        mDispatcher.sendData(destAddr, scAddr, destPort, orgPort, data, sentIntent, deliveryIntent);
     }
 
     /**
@@ -775,4 +874,37 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     public String getImsSmsFormat() {
         return mDispatcher.getImsSmsFormat();
     }
+    public int getSmsCapCountOnIcc() 
+    {
+        IccFileHandler fh = mPhone.getIccFileHandler();		
+        if (fh == null) {
+            //shouldn't really happen, as messages are marked as read, only
+            //after importing it from icc.
+            Log.e(LOG_TAG, "getSmsCapCountOnIcc - aborting, no icc card present.");
+            return -1;
+        }    
+        if (DBG) log("getSmsCapCountOnIcc: ");        
+        int numberOnIcc = fh.getSmsCapCountOnIcc();	
+		Log.d(LOG_TAG,"wangshuang-->getSmsCapCountOnIcc().numberOnIcc="+numberOnIcc);
+        return numberOnIcc;
+    }
+
+    public int processCachedLongSms()
+    {  
+        mDispatcher.processCachedLongSmsWhenBoot();
+        return 1;
+    }
+
+    public String getGsmSmsCenter() 
+    {
+        mDispatcher.getGsmSmsCenter();
+        return "";
+    }    
+
+    public boolean setGsmSmsCenter(String center)
+    {    
+        mPhone.mCM.setSmscAddress(center, null);
+        return true;
+    }
+
 }

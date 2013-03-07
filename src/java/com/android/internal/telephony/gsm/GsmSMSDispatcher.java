@@ -23,7 +23,10 @@ package com.android.internal.telephony.gsm;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncResult;
 import android.os.Message;
 import android.os.SystemProperties;
@@ -52,6 +55,9 @@ import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.uicc.UsimServiceTable;
+import com.android.internal.telephony.MSimConstants;
+
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -77,9 +83,33 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     /** Handler for SMS-PP data download messages to UICC. */
     private final UsimDataDownloadHandler mDataDownloadHandler;
 
+    private final IntentFilter mLongSmsAlarmFilter = new IntentFilter(INTENT_LONG_SMS_OVERTIME_ACTION);
+
+    /** Receiver for long sms alarm action **/
+    private final BroadcastReceiver mLongSmsAlarmReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (INTENT_LONG_SMS_OVERTIME_ACTION.equals(intent.getAction())) {
+                
+                int alarmSubId = intent.getIntExtra("subscription", MSimConstants.SUB1);
+                int msgRef = intent.getIntExtra("messageRef", 0);
+                String address = intent.getStringExtra("address");
+                
+                Log.w(TAG, "INTENT_LONG_SMS_OVERTIME_ACTION onReceive alarmSubId = "
+                            + alarmSubId + ";mSubscription = " + mSubscription);    
+
+                if(alarmSubId == mSubscription){
+                    deleteSpecLongSmsOnRaw(msgRef, address);
+                }                
+                
+            }
+        }
+    };
+
     public GsmSMSDispatcher(PhoneBase phone, SmsStorageMonitor storageMonitor,
             SmsUsageMonitor usageMonitor, ImsSMSDispatcher imsSMSDispatcher) {
         super(phone, storageMonitor, usageMonitor);
+        mSubscription = phone.getSubscription();
         mImsSMSDispatcher = imsSMSDispatcher;
         mDataDownloadHandler = new UsimDataDownloadHandler(mCm);
         mCm.setOnNewGsmSms(this, EVENT_NEW_SMS, null);
@@ -88,6 +118,11 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
         Log.d(TAG, "GsmSMSDispatcher created");
+        //register receiver for receive long sms alarm 
+        if (FeatureQuery.FEATURE_SMS_DISCARD_BROKEN_LONG_SMS){
+            mContext.registerReceiver(mLongSmsAlarmReceiver, mLongSmsAlarmFilter);
+        }
+
     }
 
     @Override
@@ -284,12 +319,29 @@ public class GsmSMSDispatcher extends SMSDispatcher {
 
     /** {@inheritDoc} */
     @Override
-    protected void sendData(String destAddr, String scAddr, int destPort,
+    protected void sendData(String destAddr, String scAddr, int destPort, 
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
         SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
                 scAddr, destAddr, destPort, data, (deliveryIntent != null));
         if (pdu != null) {
-            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, data, pdu);
+            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, 0, data, pdu);
+            SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
+                    getFormat());
+            sendRawPdu(tracker);
+        } else {
+            Log.e(TAG, "GsmSMSDispatcher.sendData(): getSubmitPdu() returned null");
+        }
+    }
+
+
+    /** {@inheritDoc} */
+    @Override
+    protected void sendData(String destAddr, String scAddr, int destPort, int orgPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
+                scAddr, destAddr, destPort, orgPort, data, (deliveryIntent != null));
+        if (pdu != null) {
+            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, orgPort, data, pdu);
             SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
                     getFormat());
             sendRawPdu(tracker);
@@ -609,5 +661,17 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     @Override
     public String getImsSmsFormat() {
         return mImsSMSDispatcher.getImsSmsFormat();
+    }
+
+    protected void processCachedLongSmsWhenBoot()
+    {
+        deleteLongSmsPartOverTimeOnRaw();
+    }
+
+    
+    protected void getGsmSmsCenter()
+    {
+        Message msg = obtainMessage(EVENT_GET_SMS_CENTER_OVER);        
+        mCm.getSmscAddress(msg);
     }
 }
