@@ -622,6 +622,7 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                     int psc = -1;
                     if (states.length > 0) {
                         try {
+                            int type = 0;
                             regState = Integer.parseInt(states[0]);
                             if (states.length >= 3) {
                                 if (states[1] != null && states[1].length() > 0) {
@@ -631,6 +632,14 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                                     cid = Integer.parseInt(states[2], 16);
                                 }
                             }
+
+                            // states[3] (if present) is the current radio technology
+                            if (states.length >= 4 && states[3] != null) {
+                                type = Integer.parseInt(states[3]);
+                                log("newSS.setVoiceRadioTechnology" + type);
+                                newSS.setVoiceRadioTechnology(type);
+                            }
+
                             if (states.length > 14) {
                                 if (states[14] != null && states[14].length() > 0) {
                                     psc = Integer.parseInt(states[14], 16);
