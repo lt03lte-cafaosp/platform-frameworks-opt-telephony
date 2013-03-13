@@ -35,6 +35,9 @@ public abstract class SmsMessageBase {
     /** {@hide} The address of the sender */
     protected SmsAddress originatingAddress;
 
+    /** {@hide} The address of the receiver , only used in GSM message */
+    protected SmsAddress recipientAddress;
+
     /** {@hide} The message body as a string. May be null if the message isn't text */
     protected String messageBody;
 
@@ -86,6 +89,8 @@ public abstract class SmsMessageBase {
     /** TP-Message-Reference - Message Reference of sent message. @hide */
     public int messageRef;
 
+    /** { @hide } */
+    protected boolean isInternationalAddress;
     // TODO(): This class is duplicated in SmsMessage.java. Refactor accordingly.
     public static abstract class SubmitPduBase  {
         public byte[] encodedScAddress; // Null if not applicable.
@@ -93,6 +98,17 @@ public abstract class SmsMessageBase {
 
         public String toString() {
             return "SubmitPdu: encodedScAddress = "
+                    + Arrays.toString(encodedScAddress)
+                    + ", encodedMessage = "
+                    + Arrays.toString(encodedMessage);
+        }
+    }
+    public static abstract class DeliveryPduBase  {
+        public byte[] encodedScAddress; // Null if not applicable.
+        public byte[] encodedMessage;
+    
+        public String toString() {
+            return "DeliveryPduBase: encodedScAddress = "
                     + Arrays.toString(encodedScAddress)
                     + ", encodedMessage = "
                     + Arrays.toString(encodedMessage);
@@ -120,6 +136,14 @@ public abstract class SmsMessageBase {
     }
 
     /**
+     * {@hide}
+     * Returns return if the address is an international number, else false.
+     */
+    public boolean isInternationalAddress() {
+        return isInternationalAddress;
+    }
+
+    /**
      * Returns the originating address, or email from address if this message
      * was from an email gateway. Returns null if originating address
      * unavailable.
@@ -130,6 +154,19 @@ public abstract class SmsMessageBase {
         } else {
             return getOriginatingAddress();
         }
+    }
+
+    /**
+     * {@hide}
+     * Returns the receiver address of this SMS message in String
+     * form or null if unavailable
+     */
+    public String getRecipientAddress() {
+        if (recipientAddress == null) {
+            return null;
+        }
+
+        return recipientAddress.getAddressString();
     }
 
     /**

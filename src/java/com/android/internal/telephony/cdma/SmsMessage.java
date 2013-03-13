@@ -31,6 +31,7 @@ import com.android.internal.telephony.SmsHeader;
 import com.android.internal.telephony.SmsMessageBase;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.cdma.sms.BearerData;
+import com.android.internal.telephony.cdma.sms.BearerData.TimeStamp;
 import com.android.internal.telephony.cdma.sms.CdmaSmsAddress;
 import com.android.internal.telephony.cdma.sms.CdmaSmsSubaddress;
 import com.android.internal.telephony.cdma.sms.SmsEnvelope;
@@ -100,6 +101,8 @@ public class SmsMessage extends SmsMessageBase {
     public static class SubmitPdu extends SubmitPduBase {
     }
 
+    public static class DeliveryPdu extends DeliveryPduBase {
+    }
     /**
      * Create an SmsMessage from a raw PDU.
      * Note: In CDMA the PDU is just a byte representation of the received Sms.
@@ -635,8 +638,10 @@ public class SmsMessage extends SmsMessageBase {
                             numberType = addrBis.read(3);
                             addr.ton = numberType;
 
-                            if (addr.numberMode == CdmaSmsAddress.NUMBER_MODE_NOT_DATA_NETWORK)
+                            if (addr.numberMode == CdmaSmsAddress.NUMBER_MODE_NOT_DATA_NETWORK) {
                                 addr.numberPlan = addrBis.read(4);
+                                isInternationalAddress = (addr.numberPlan == CdmaSmsAddress.NUMBERING_PLAN_ISDN_TELEPHONY);
+                            }
                         }
 
                         addr.numberOfDigits = addrBis.read(8);
@@ -1060,4 +1065,148 @@ public class SmsMessage extends SmsMessageBase {
     ArrayList<CdmaSmsCbProgramData> getSmsCbProgramData() {
         return mBearerData.serviceCategoryProgramData;
     }
+
+
+        /**
+        * Get an SMS-DELIVER PDU for a destination address and a message
+        *
+        * @param scAddress Service Centre address.  Null means use default.
+        * @return a <code>SubmitPdu</code> containing the encoded SC
+        *   address, if applicable, and the encoded message.
+        *   Returns null on encode error.
+        */
+        public static DeliveryPdu getDeliveryPdu(String scAddress,
+                        String destinationAddress, String message,
+                        boolean statusReportRequested, byte[] date) 
+        {
+            return getDeliveryPdu(scAddress, destinationAddress, message, 
+            statusReportRequested, null, date);
+        }
+    
+        /**
+        * Get an SMS-SUBMIT PDU for a destination address and a message
+        *
+        * @param scAddress Service Centre address.  Null means use default.
+        * @return a <code>SubmitPdu</code> containing the encoded SC
+        * address, if applicable, and the encoded message.
+        * Returns null on encode error.
+        * @hide
+        */
+                      
+        public static DeliveryPdu getDeliveryPdu(String scAddress,
+            String destinationAddress, String message,
+            boolean statusReportRequested, SmsHeader header, byte[] date) 
+        {
+            Log.d(LOG_TAG, "getDeliverPdu in cdma destinationAddress = " 
+                + destinationAddress + ";message = " + message
+                + ";statusReportRequested = " + statusReportRequested
+                + ";scAddress = " + scAddress);        
+            // Perform null parameter checks.
+            if (destinationAddress == null) {
+                return null;
+            }
+    /*
+            if (message == null)
+            {
+                return getDeliverPduEmptyMessage(scAddress,
+                destinationAddress, statusReportRequested, header, date);
+            }
+    */
+            UserData uData = new UserData();
+            uData.payloadStr = message;
+            uData.userDataHeader = header;
+            return privateGetDeliveryPdu(destinationAddress, false, uData, date);
+        }
+
+    /**
+     * Creates BearerData and Envelope from parameters for a Submit SMS.
+     * @return byte stream for SubmitPdu.
+     */
+    private static DeliveryPdu privateGetDeliveryPdu(String destAddrStr, boolean statusReportRequested,
+            UserData userData, byte[] date) {
+        Log.d(LOG_TAG, "privateGetDeliverPdu in cdma.");
+
+        /**
+         * TODO(cleanup): give this function a more meaningful name.
+         */
+
+        /**
+         * TODO(cleanup): Make returning null from the getSubmitPdu
+         * variations meaningful -- clean up the error feedback
+         * mechanism, and avoid null pointer exceptions.
+         */
+
+        CdmaSmsAddress origAddr = CdmaSmsAddress.parse(destAddrStr);
+        if (origAddr == null) return null;
+
+        BearerData bearerData = new BearerData();
+        bearerData.messageType = BearerData.MESSAGE_TYPE_DELIVER;
+
+        bearerData.messageId = getNextMessageId();
+        bearerData.deferredDeliveryTimeAbsolute = TimeStamp.fromByteArray(date);
+
+        bearerData.deliveryAckReq = statusReportRequested;
+        bearerData.userAckReq = false;
+        bearerData.readAckReq = false;
+        bearerData.reportReq = false;
+
+        bearerData.userData = userData;
+
+        byte[] encodedBearerData = BearerData.encode(bearerData);
+        if (Log.isLoggable(LOGGABLE_TAG, Log.VERBOSE)) 
+        {
+            Log.d(LOG_TAG, "MO (encoded) BearerData = " + bearerData);
+        }
+        if (encodedBearerData == null) return null;
+
+        int teleservice = bearerData.hasUserDataHeader ?
+                SmsEnvelope.TELESERVICE_WEMT : SmsEnvelope.TELESERVICE_WMT;
+
+        SmsEnvelope envelope = new SmsEnvelope();
+        envelope.messageType = SmsEnvelope.MESSAGE_TYPE_POINT_TO_POINT;
+        envelope.teleService = teleservice;
+        envelope.origAddress = origAddr;
+        envelope.bearerReply = RETURN_ACK;
+        envelope.bearerData = encodedBearerData;
+
+        /**
+         * TODO(cleanup): envelope looks to be a pointless class, get
+         * rid of it.  Also -- most of the envelope fields set here
+         * are ignored, why?
+         */
+
+        try {
+            /**
+             * TODO(cleanup): reference a spec and get rid of the ugly comments
+             */
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(100);
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeInt(envelope.teleService);
+            dos.writeInt(0); //servicePresent
+            dos.writeInt(0); //serviceCategory
+            dos.write(origAddr.digitMode);
+            dos.write(origAddr.numberMode);
+            dos.write(origAddr.ton); // number_type
+            dos.write(origAddr.numberPlan);
+            dos.write(origAddr.numberOfDigits);
+            dos.write(origAddr.origBytes, 0, origAddr.origBytes.length); // digits
+            // Subaddress is not supported.
+            dos.write(0); //subaddressType
+            dos.write(0); //subaddr_odd
+            dos.write(0); //subaddr_nbr_of_digits
+            dos.write(encodedBearerData.length);
+            dos.write(encodedBearerData, 0, encodedBearerData.length);
+            dos.close();
+
+            DeliveryPdu pdu = new DeliveryPdu();
+            pdu.encodedMessage = baos.toByteArray();
+            pdu.encodedScAddress = null;
+            return pdu;
+        } catch(IOException ex) {
+            Log.e(LOG_TAG, "creating SubmitPdu failed: " + ex);
+        }
+        return null;
+    }
+
+  
 }
