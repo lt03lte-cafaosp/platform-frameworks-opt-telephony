@@ -78,7 +78,7 @@ public class SmsMessage extends SmsMessageBase {
     private boolean forSubmit;
 
     /** The address of the receiver. */
-    private GsmSmsAddress recipientAddress;
+    //private GsmSmsAddress recipientAddress;
 
     /** Time when SMS-SUBMIT was delivered from SC to MSE. */
     private long dischargeTimeMillis;
@@ -1161,6 +1161,7 @@ public class SmsMessage extends SmsMessageBase {
         if (scAddress != null) {
             if (false) Log.d(LOG_TAG, "SMS SC address: " + scAddress);
         }
+        if (false) Log.d(LOG_TAG, "SMS PDU " + IccUtils.bytesToHexString(pdu));
 
         // TODO(mkf) support reply path, user data header indicator
 
@@ -1176,6 +1177,9 @@ public class SmsMessage extends SmsMessageBase {
         case 3: //GSM 03.40 9.2.3.1: MTI == 3 is Reserved.
                 //This should be processed in the same way as MTI == 0 (Deliver)
             parseSmsDeliver(p, firstByte);
+            break;
+        case 1:
+            parseSmsSubmit(p, firstByte);
             break;
         case 2:
             parseSmsStatusReport(p, firstByte);
@@ -1239,6 +1243,53 @@ public class SmsMessage extends SmsMessageBase {
         }
     }
 
+    private void parseSmsSubmit(PduParser p, int firstByte) {
+        replyPathPresent = (firstByte & 0x80) == 0x80;
+
+        // TP-Message-Reference
+        messageRef = p.getByte();
+        // TP-Recipient-Address
+        recipientAddress = p.getAddress();
+
+        if (recipientAddress != null) {
+            if (true) Log.v(LOG_TAG, "SMS originating address: "
+                    + recipientAddress.address);
+        }
+
+        // TP-Protocol-Identifier (TP-PID)
+        // TS 23.040 9.2.3.9
+        protocolIdentifier = p.getByte();
+
+        // TP-Data-Coding-Scheme
+        // see TS 23.038
+        dataCodingScheme = p.getByte();
+
+        if (true) {
+            Log.v(LOG_TAG, "SMS TP-PID:" + protocolIdentifier
+                    + " data coding scheme: " + dataCodingScheme);
+        }
+
+        int validityPeriodFormat = firstByte & 0x18;
+        
+        if (validityPeriodFormat != 0)
+        {
+            int validityPeriod = p.getByte();
+            Log.v(LOG_TAG, "SMS validityPeriod = " + validityPeriod);
+        }
+        else
+        {
+           parseValidityPeriod(p, validityPeriodFormat);
+        }
+
+        boolean hasUserDataHeader = (firstByte & 0x40) == 0x40;
+
+        parseUserData(p, hasUserDataHeader);
+
+        // parse the timestamp (if there are more bytes)
+        if (p.moreDataPresent() && p.getByte() == 0x07) {
+                scTimeMillis = p.getSCTimestampMillis();
+        }
+    }
     private void parseSmsDeliver(PduParser p, int firstByte) {
         replyPathPresent = (firstByte & 0x80) == 0x80;
 
@@ -1269,6 +1320,31 @@ public class SmsMessage extends SmsMessageBase {
         boolean hasUserDataHeader = (firstByte & 0x40) == 0x40;
 
         parseUserData(p, hasUserDataHeader);
+    }
+
+    private void parseValidityPeriod(PduParser p, int validityPeriodFormat) {
+        // TODO: make this parse has real meaning.
+        switch (validityPeriodFormat) {
+            case 0: { // TP-VP field not present
+                break;
+            }
+            case 2: { // TP VP field present - relative format
+                p.getByte();
+                break;
+            }
+            case 1: { // TP-VP field present - enhanced format
+                for (int i = 0; i < 7; i++) {
+                    p.getByte();
+                }
+                break;
+            }
+            case 3: { // TP VP field present - absolute format
+                for (int i = 0; i < 7; i++) {
+                    p.getByte();
+                }
+                break;
+            }
+        }
     }
 
     /**

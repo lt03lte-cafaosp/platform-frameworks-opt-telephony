@@ -35,6 +35,9 @@ public abstract class SmsMessageBase {
     /** {@hide} The address of the sender */
     protected SmsAddress originatingAddress;
 
+    /** {@hide} The address of the receiver , only used in GSM message */
+    protected SmsAddress recipientAddress;
+
     /** {@hide} The message body as a string. May be null if the message isn't text */
     protected String messageBody;
 
@@ -141,6 +144,19 @@ public abstract class SmsMessageBase {
         } else {
             return getOriginatingAddress();
         }
+    }
+
+    /**
+     * {@hide}
+     * Returns the receiver address of this SMS message in String
+     * form or null if unavailable
+     */
+    public String getRecipientAddress() {
+        if (recipientAddress == null) {
+            return null;
+        }
+
+        return recipientAddress.getAddressString();
     }
 
     /**

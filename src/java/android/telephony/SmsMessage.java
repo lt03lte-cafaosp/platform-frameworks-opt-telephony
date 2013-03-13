@@ -621,6 +621,24 @@ public class SmsMessage {
     }
 
     /**
+     * {@hide}
+     * Returns the recipient address,  Returns null if recipient address
+     * unavailable. Only used in GSM sms message.
+     */
+    public String getRecipientddress() {
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.getRecipientAddress();
+        }
+    }
+
+
+    /**
      * Returns the message body as a String, if it exists and is text based.
      * @return message body is there is one, otherwise null
      */
