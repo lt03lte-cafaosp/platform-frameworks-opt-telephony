@@ -578,7 +578,7 @@ public class SmsMessage {
      */
     public static DeliveryPdu getDeliveryPdu(String scAddress,
             String destinationAddress, String message, boolean statusReportRequested, 
-			byte[] header, byte[] date, int subscription) {
+            byte[] header, byte[] date, int subscription) {
         DeliveryPduBase spb;
 
         int activePhone = TelephonyManager.getDefault().isMultiSimEnabled() ?
