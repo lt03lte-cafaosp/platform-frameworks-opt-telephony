@@ -98,6 +98,17 @@ public abstract class SmsMessageBase {
                     + Arrays.toString(encodedMessage);
         }
     }
+    public static abstract class DeliveryPduBase  {
+        public byte[] encodedScAddress; // Null if not applicable.
+        public byte[] encodedMessage;
+    
+        public String toString() {
+            return "DeliveryPduBase: encodedScAddress = "
+                    + Arrays.toString(encodedScAddress)
+                    + ", encodedMessage = "
+                    + Arrays.toString(encodedMessage);
+        }
+    }
 
     /**
      * Returns the address of the SMS service center that relayed this message

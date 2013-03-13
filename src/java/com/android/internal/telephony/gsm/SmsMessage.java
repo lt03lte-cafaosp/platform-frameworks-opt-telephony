@@ -31,6 +31,8 @@ import com.android.internal.telephony.SmsMessageBase;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 import static com.android.internal.telephony.SmsConstants.MessageClass;
 import static com.android.internal.telephony.SmsConstants.ENCODING_UNKNOWN;
@@ -97,6 +99,9 @@ public class SmsMessage extends SmsMessageBase {
     private int mVoiceMailCount = 0;
 
     public static class SubmitPdu extends SubmitPduBase {
+    }
+
+    public static class DeliveryPdu extends DeliveryPduBase {
     }
 
     /**
@@ -348,6 +353,172 @@ public class SmsMessage extends SmsMessageBase {
     }
 
     /**
+     * Get an SMS-SUBMIT PDU for a destination address and a message using the
+     * specified encoding.
+     *
+     * @param scAddress Service Centre address.  Null means use default.
+     * @param encoding Encoding defined by constants in
+     *        com.android.internal.telephony.SmsConstants.ENCODING_*
+     * @param languageTable
+     * @param languageShiftTable
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     * @hide
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, String message,
+            boolean statusReportRequested, byte[] header, int encoding,
+            int languageTable, int languageShiftTable, long date) {
+
+        // Perform null parameter checks.
+        if (message == null || destinationAddress == null) {
+            return null;
+        }
+
+        if (encoding == ENCODING_UNKNOWN) {
+            // Find the best encoding to use
+            TextEncodingDetails ted = calculateLength(message, false);
+            encoding = ted.codeUnitSize;
+            languageTable = ted.languageTable;
+            languageShiftTable = ted.languageShiftTable;
+
+            if (encoding == ENCODING_7BIT &&
+                    (languageTable != 0 || languageShiftTable != 0)) {
+                if (header != null) {
+                    SmsHeader smsHeader = SmsHeader.fromByteArray(header);
+                    if (smsHeader.languageTable != languageTable
+                            || smsHeader.languageShiftTable != languageShiftTable) {
+                        Log.w(LOG_TAG, "Updating language table in SMS header: "
+                                + smsHeader.languageTable + " -> " + languageTable + ", "
+                                + smsHeader.languageShiftTable + " -> " + languageShiftTable);
+                        smsHeader.languageTable = languageTable;
+                        smsHeader.languageShiftTable = languageShiftTable;
+                        header = SmsHeader.toByteArray(smsHeader);
+                    }
+                } else {
+                    SmsHeader smsHeader = new SmsHeader();
+                    smsHeader.languageTable = languageTable;
+                    smsHeader.languageShiftTable = languageShiftTable;
+                    header = SmsHeader.toByteArray(smsHeader);
+                }
+            }
+        }
+
+        SubmitPdu ret = new SubmitPdu();
+        // MTI = SMS-SUBMIT, UDHI = header != null
+        byte mtiByte = (byte)(0x01 | (header != null ? 0x40 : 0x00));
+        ByteArrayOutputStream bo = getSubmitPduHead(
+                scAddress, destinationAddress, mtiByte,
+                statusReportRequested, ret);
+
+        // User Data (and length)
+        byte[] userData;
+        try {
+            if (encoding == ENCODING_7BIT) {
+                userData = GsmAlphabet.stringToGsm7BitPackedWithHeader(message, header,
+                        languageTable, languageShiftTable);
+            } else { //assume UCS-2
+                try {
+                    userData = encodeUCS2(message, header);
+                } catch(UnsupportedEncodingException uex) {
+                    Log.e(LOG_TAG,
+                            "Implausible UnsupportedEncodingException ",
+                            uex);
+                    return null;
+                }
+            }
+        } catch (EncodeException ex) {
+            // Encoding to the 7-bit alphabet failed. Let's see if we can
+            // send it as a UCS-2 encoded message
+            try {
+                userData = encodeUCS2(message, header);
+                encoding = ENCODING_16BIT;
+            } catch(UnsupportedEncodingException uex) {
+                Log.e(LOG_TAG,
+                        "Implausible UnsupportedEncodingException ",
+                        uex);
+                return null;
+            }
+        }
+
+        if (encoding == ENCODING_7BIT) {
+            if ((0xff & userData[0]) > MAX_USER_DATA_SEPTETS) {
+                // Message too long
+                Log.e(LOG_TAG, "Message too long (" + (0xff & userData[0]) + " septets)");
+                return null;
+            }
+            // TP-Data-Coding-Scheme
+            // Default encoding, uncompressed
+            // To test writing messages to the SIM card, change this value 0x00
+            // to 0x12, which means "bits 1 and 0 contain message class, and the
+            // class is 2". Note that this takes effect for the sender. In other
+            // words, messages sent by the phone with this change will end up on
+            // the receiver's SIM card. You can then send messages to yourself
+            // (on a phone with this change) and they'll end up on the SIM card.
+            bo.write(0x00);
+        } else { // assume UCS-2
+            if ((0xff & userData[0]) > MAX_USER_DATA_BYTES) {
+                // Message too long
+                Log.e(LOG_TAG, "Message too long (" + (0xff & userData[0]) + " bytes)");
+                return null;
+            }
+            // TP-Data-Coding-Scheme
+            // UCS-2 encoding, uncompressed
+            bo.write(0x08);
+        }
+
+        // (no TP-Validity-Period)
+        bo.write(userData, 0, userData.length);
+
+        // add timestamp to the pdu's tail.
+        byte[] timestamp = getTimestamp(date);
+        bo.write(TIMESTAMP_LENGTH);
+        bo.write(timestamp, 0, timestamp.length);
+        
+        ret.encodedMessage = bo.toByteArray();
+        return ret;
+    }
+    
+    private static final int TIMESTAMP_LENGTH = 7;
+    private static byte[] getTimestamp(long time) {
+        // See TS 23.040 9.2.3.11
+        byte[] timestamp = new byte[TIMESTAMP_LENGTH];
+        SimpleDateFormat sdf = new SimpleDateFormat("yyMMddkkmmss:Z", Locale.US);
+        String[] date = sdf.format(time).split(":");
+        // generate timezone value
+        String timezone = date[date.length - 1];
+        String signMark = timezone.substring(0, 1);
+        int hour = Integer.parseInt(timezone.substring(1, 3));
+        int min = Integer.parseInt(timezone.substring(3));
+        int timezoneValue = hour * 4 + min / 15;
+        // append timezone value to date[0] (time string)
+        String timestampStr = date[0] + timezoneValue;
+
+        int digitCount = 0;
+        for (int i = 0; i < timestampStr.length(); i++) {
+            char c = timestampStr.charAt(i);
+            int shift = ((digitCount & 0x01) == 1) ? 4 : 0;
+            timestamp[(digitCount >> 1)] |= (byte)((charToBCD(c) & 0x0F) << shift);
+            digitCount++;
+        }
+
+        if (signMark.equals("-")) {
+            timestamp[timestamp.length - 1] = (byte) (timestamp[timestamp.length - 1] | 0x08);
+        }
+
+        return timestamp;
+    }
+    private static int charToBCD(char c) {
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        } else {
+            throw new RuntimeException ("invalid char for BCD " + c);
+        }
+    }
+
+
+    /**
      * Packs header and UCS-2 encoded message. Includes TP-UDL & TP-UDHL if necessary
      *
      * @return
@@ -388,6 +559,22 @@ public class SmsMessage extends SmsMessageBase {
             boolean statusReportRequested) {
 
         return getSubmitPdu(scAddress, destinationAddress, message, statusReportRequested, null);
+    }
+
+    /**
+     * Get an SMS-SUBMIT PDU for a destination address and a message
+     *
+     * @param scAddress Service Centre address.  Null means use default.
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, String message,
+            boolean statusReportRequested, long date) {
+            
+        return getSubmitPdu(scAddress, destinationAddress, message, statusReportRequested, null,
+                ENCODING_UNKNOWN, 0, 0, date);
     }
 
     /**
@@ -1355,4 +1542,212 @@ public class SmsMessage extends SmsMessageBase {
         }
         return mVoiceMailCount;
     }
+
+    /**
+     * Get an SMS-DELIVER PDU for a destination address and a message
+     *
+     * @param scAddress Service Centre address.  Null means use default.
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *   address, if applicable, and the encoded message.
+     *   Returns null on encode error.
+     */
+        public static DeliveryPdu getDeliveryPdu(String scAddress,
+            String destinationAddress, String message,
+            boolean statusReportRequested, byte[] date) 
+        {
+            return getDeliveryPdu(scAddress, destinationAddress, message, 
+                statusReportRequested, null, date);
+        }
+    
+    /**
+       * Get an SMS-SUBMIT PDU for a destination address and a message
+       *
+       * @param scAddress Service Centre address.  Null means use default.
+       * @return a <code>SubmitPdu</code> containing the encoded SC
+       * address, if applicable, and the encoded message.
+       * Returns null on encode error.
+       * @hide
+       */
+        public static DeliveryPdu getDeliveryPdu(String scAddress,
+            String destinationAddress, String message,
+            boolean statusReportRequested, byte[] header, byte[] date) 
+        {
+            // Perform null parameter checks.
+            if (destinationAddress == null) 
+            {
+                return null;
+            }    
+            if (message == null)
+            {
+                return getDeliveryPduEmptyMessage(scAddress,
+                destinationAddress, statusReportRequested, header, date);
+            }
+    
+            DeliveryPdu ret = new DeliveryPdu();
+            // MTI = SMS-DELIVER
+            byte mtiByte = (byte)(0x00);
+            ByteArrayOutputStream bo = getDeliveryPduHead(
+            scAddress, destinationAddress, mtiByte,
+            statusReportRequested, ret);
+    
+            try 
+            {
+                // First, try encoding it with the GSM alphabet
+    
+                // User Data (and length)
+                byte[] userData = GsmAlphabet.stringToGsm7BitPackedWithHeader(message, header, 0, 0);
+    
+                if ((0xff & userData[0]) > MAX_USER_DATA_SEPTETS) {
+                    // Message too long
+                    return null;
+                }
+    
+                // TP-Data-Coding-Scheme
+                // Default encoding, uncompressed
+                bo.write(0x00);
+    
+                // (TP-SCTS) to do
+                bo.write(date, 0, date.length);
+    
+                bo.write(userData, 0, userData.length);
+            } 
+            catch (EncodeException ex) 
+            {
+                byte[] userData, textPart;
+                // Encoding to the 7-bit alphabet failed. Let's see if we can
+                // send it as a UCS-2 encoded message
+                try 
+                {
+                    textPart = message.getBytes("utf-16be");
+                } 
+                catch (UnsupportedEncodingException uex) 
+                {
+                    Log.e(LOG_TAG,
+                    "Implausible UnsupportedEncodingException ", uex);
+                    return null;
+                }
+    
+                if (header != null) 
+                {
+                    userData = new byte[header.length + textPart.length];
+                    System.arraycopy(header, 0, userData, 0, header.length);
+                    System.arraycopy(textPart, 0, userData, header.length, textPart.length);
+                }
+                else 
+                {
+                    userData = textPart;
+                }
+    
+                if (userData.length > MAX_USER_DATA_BYTES) 
+                {
+                    // Message too long
+                    return null;
+                }
+    
+                // TP-Data-Coding-Scheme
+                // Class 3, UCS-2 encoding, uncompressed
+                bo.write(0x08);
+                // (TP-SCTS) to do
+                bo.write(date, 0, date.length);
+                // TP-UDL
+                bo.write(userData.length);
+                bo.write(userData, 0, userData.length);
+            }
+    
+            ret.encodedMessage = bo.toByteArray();
+            return ret;
+        }
+    
+        /**
+        * Get an SMS-DELIVERY PDU for a destination address and a empty message
+        *
+        * @param scAddress Service Centre address.  Null means use default.
+        * @return a <code>SubmitPdu</code> containing the encoded SC
+        *         address, if applicable, and the encoded message.
+        *         Returns null on encode error.
+        * @hide
+        */
+        private static DeliveryPdu getDeliveryPduEmptyMessage(String scAddress,
+            String destinationAddress,
+            boolean statusReportRequested, 
+            byte[] header, byte[] date) 
+        {
+            // Perform null parameter checks.
+            if (destinationAddress == null) 
+            {
+                return null;
+            }
+    
+            DeliveryPdu ret = new DeliveryPdu();
+            // MTI = SMS-DELIVER
+            byte mtiByte = (byte)(0x00);
+            ByteArrayOutputStream bo = getDeliveryPduHead(
+              scAddress, destinationAddress, mtiByte,
+              statusReportRequested, ret);    
+    
+            // TP-Data-Coding-Scheme
+            // Default encoding, uncompressed
+            bo.write(0x00);
+            // (TP-SCTS) to do
+            bo.write(date, 0, date.length);
+            bo.write(0x00);    
+            ret.encodedMessage = bo.toByteArray();
+            return ret;
+        }
+    
+        /**
+        * Create the beginning of a Deliver PDU.  This is the part of the
+        * SUBMIT PDU that is common to the two versions of {@link #getDeliverPdu},
+        * one of which takes a byte array and the other of which takes a
+        * <code>String</code>.
+        *
+        * @param scAddress Service Centre address. null == use default
+        * @param destinationAddress the address of the destination for the message
+        * @param mtiByte
+        * @param ret <code>DeliverPdu</code> containing the encoded SC
+        *  address, if applicable, and the encoded message
+        */
+        private static ByteArrayOutputStream getDeliveryPduHead(
+            String scAddress, String destinationAddress, byte mtiByte,
+            boolean statusReportRequested, DeliveryPdu ret) 
+        {
+            ByteArrayOutputStream bo = new ByteArrayOutputStream(
+            MAX_USER_DATA_BYTES + 40);
+    
+            // SMSC address with length octet, or 0
+            if (scAddress == null) {
+            ret.encodedScAddress = null;
+            } else {
+            ret.encodedScAddress = PhoneNumberUtils.networkPortionToCalledPartyBCDWithLength(
+            scAddress);
+            }
+    
+            // TP-Message-Type-Indicator (and friends)
+            if (statusReportRequested) {
+                // Set TP-Status-Report-Request bit.
+                mtiByte |= 0x20;
+                Log.d(LOG_TAG, "SMS status report requested");
+            }
+            bo.write(mtiByte);
+    
+            //space for TP-Message-Reference
+            //bo.write(0); //zzw noted
+    
+            byte[] daBytes;
+    
+            daBytes = PhoneNumberUtils.networkPortionToCalledPartyBCD(destinationAddress);
+    
+            // destination address length in BCD digits, ignoring TON byte and pad
+            // TODO Should be better.
+            bo.write((daBytes.length - 1) * 2
+            - ((daBytes[daBytes.length - 1] & 0xf0) == 0xf0 ? 1 : 0));
+    
+            // destination address
+            bo.write(daBytes, 0, daBytes.length);
+    
+            // TP-Protocol-Identifier
+            bo.write(0);
+            return bo;
+        }
+
 }
