@@ -369,7 +369,7 @@ public class SmsMessage extends SmsMessageBase {
     public static SubmitPdu getSubmitPdu(String scAddress,
             String destinationAddress, String message,
             boolean statusReportRequested, byte[] header, int encoding,
-            int languageTable, int languageShiftTable, long date) {
+            int languageTable, int languageShiftTable, byte[] date) {
 
         // Perform null parameter checks.
         if (message == null || destinationAddress == null) {
@@ -472,9 +472,10 @@ public class SmsMessage extends SmsMessageBase {
         bo.write(userData, 0, userData.length);
 
         // add timestamp to the pdu's tail.
-        byte[] timestamp = getTimestamp(date);
-        bo.write(TIMESTAMP_LENGTH);
-        bo.write(timestamp, 0, timestamp.length);
+        //byte[] timestamp = getTimestamp(date);
+        //bo.write(TIMESTAMP_LENGTH);
+        //bo.write(timestamp, 0, timestamp.length);
+        bo.write(date, 0, date.length);
         
         ret.encodedMessage = bo.toByteArray();
         return ret;
@@ -571,9 +572,9 @@ public class SmsMessage extends SmsMessageBase {
      */
     public static SubmitPdu getSubmitPdu(String scAddress,
             String destinationAddress, String message,
-            boolean statusReportRequested, long date) {
+            boolean statusReportRequested, byte[] header, byte[] date) {
             
-        return getSubmitPdu(scAddress, destinationAddress, message, statusReportRequested, null,
+        return getSubmitPdu(scAddress, destinationAddress, message, statusReportRequested, header,
                 ENCODING_UNKNOWN, 0, 0, date);
     }
 

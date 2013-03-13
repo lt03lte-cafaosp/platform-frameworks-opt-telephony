@@ -532,7 +532,7 @@ public class SmsMessage {
      * { @hide }
      */
     public static SubmitPdu getSubmitPdu(String scAddress,
-            String destinationAddress, String message, boolean statusReportRequested, long date, int subscription) {
+            String destinationAddress, String message, boolean statusReportRequested, byte[] date, int subscription) {
         SubmitPduBase spb;
 
         int activePhone = TelephonyManager.getDefault().isMultiSimEnabled() ?
