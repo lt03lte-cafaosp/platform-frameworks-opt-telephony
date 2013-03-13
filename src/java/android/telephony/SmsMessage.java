@@ -617,7 +617,32 @@ public class SmsMessage {
      * unavailable.
      */
     public String getDisplayOriginatingAddress() {
-        return mWrappedSmsMessage.getDisplayOriginatingAddress();
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.getDisplayOriginatingAddress();
+        }
+    }
+
+    /**
+     * {@hide}
+     * Returns return if the address is an international number, else false.
+     */
+    public boolean isInternationalAddress() {
+    
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return false; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.isInternationalAddress();
+        }
     }
 
     /**

@@ -89,6 +89,8 @@ public abstract class SmsMessageBase {
     /** TP-Message-Reference - Message Reference of sent message. @hide */
     public int messageRef;
 
+    /** { @hide } */
+    protected boolean isInternationalAddress;
     // TODO(): This class is duplicated in SmsMessage.java. Refactor accordingly.
     public static abstract class SubmitPduBase  {
         public byte[] encodedScAddress; // Null if not applicable.
@@ -131,6 +133,14 @@ public abstract class SmsMessageBase {
         }
 
         return originatingAddress.getAddressString();
+    }
+
+    /**
+     * {@hide}
+     * Returns return if the address is an international number, else false.
+     */
+    public boolean isInternationalAddress() {
+        return isInternationalAddress;
     }
 
     /**
