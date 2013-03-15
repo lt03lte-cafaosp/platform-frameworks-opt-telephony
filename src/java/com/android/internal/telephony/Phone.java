@@ -1772,6 +1772,20 @@ public interface Phone {
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException;
 
     /**
+     * When upgrade to video call and remote party does not support AVPF, IMS
+     * Phone retries upgrade request and this function registers for the failure
+     * indication
+     * @param h The handler that will receive the message
+     * @param what The message to send
+     * @param obj User object to send with the message
+     * @throws CallStateException
+     */
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException;
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException;
+
+    /**
      * Request a modification to a current connection This will send an
      * indication to the remote party with new call details, which the remote
      * party can agree to or reject. Used to upgrade/downgrade IMS call.
