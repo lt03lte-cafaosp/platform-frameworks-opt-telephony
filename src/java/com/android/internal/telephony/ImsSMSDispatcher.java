@@ -76,7 +76,8 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     public void dispose() {
         mCm.unregisterForOn(this);
         mCm.unregisterForImsNetworkStateChanged(this);
-        mPhone.mIccRecords.get().unregisterForNewSms(this);
+        mCdmaDispatcher.dispose();
+        mGsmDispatcher.dispose();
     }
 
     /**
