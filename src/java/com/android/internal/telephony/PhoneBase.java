@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
  *
@@ -128,6 +128,7 @@ public abstract class PhoneBase extends Handler implements Phone {
     protected static final int EVENT_SET_NETWORK_AUTOMATIC          = 28;
     protected static final int EVENT_ICC_RECORD_EVENTS              = 29;
     protected static final int EVENT_ICC_CHANGED                    = 30;
+    protected static final int EVENT_SS                             = 31;
 
     // Key used to read/write current CLIR setting
     public static final String CLIR_KEY = "clir_key";
@@ -201,6 +202,9 @@ public abstract class PhoneBase extends Handler implements Phone {
             = new RegistrantList();
 
     protected final RegistrantList mCallModifyRegistrants
+            = new RegistrantList();
+
+    protected final RegistrantList mAvpUpgradeFailureRegistrants
             = new RegistrantList();
 
     protected final RegistrantList mSimRecordsLoadedRegistrants
@@ -736,7 +740,7 @@ public abstract class PhoneBase extends Handler implements Phone {
     @Override
     public String getIccSerialNumber() {
         IccRecords r = mIccRecords.get();
-        return (r != null) ? r.iccid : "";
+        return (r != null) ? r.iccid : null;
     }
 
     @Override
@@ -1312,6 +1316,18 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
         throw new CallStateException(
                 "unregisterForModifyCallRequest is not supported in this phone " + this);
+    }
+
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException {
+        throw new CallStateException("registerForAvpUpgradeFailure is not supported in this phone "
+                + this);
+    }
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException {
+        throw new CallStateException(
+                "unregisterForAvpUpgradeFailure is not supported in this phone "
+                        + this);
     }
 
     public void changeConnectionType(Message msg, Connection conn,

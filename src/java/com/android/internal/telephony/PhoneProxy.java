@@ -1053,6 +1053,15 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.unregisterForModifyCallRequest(h);
     }
 
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException {
+        mActivePhone.registerForAvpUpgradeFailure(h, what, obj);
+    }
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException {
+        mActivePhone.unregisterForAvpUpgradeFailure(h);
+    }
+
     public int getSubscription() {
         return mActivePhone.getSubscription();
     }

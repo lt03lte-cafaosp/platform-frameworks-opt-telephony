@@ -96,6 +96,7 @@ public class CatService extends Handler implements AppInterface {
     static final int MSG_ID_REFRESH                  = 5;
     static final int MSG_ID_RESPONSE                 = 6;
     protected static final int MSG_ID_SIM_READY                = 7;
+    static final int MSG_ID_ALPHA_NOTIFY                       = 8;
 
     static final int MSG_ID_RIL_MSG_DECODED          = 10;
 
@@ -138,6 +139,7 @@ public class CatService extends Handler implements AppInterface {
 
         mCmdIf.registerForIccRefresh(this, MSG_ID_ICC_REFRESH, null);
 
+        mCmdIf.setOnCatCcAlphaNotify(this, MSG_ID_ALPHA_NOTIFY, null);
         mIccRecords = ir;
         mUiccApplication = ca;
 
@@ -181,6 +183,8 @@ public class CatService extends Handler implements AppInterface {
         sInstance = null;
         mhandlerThread.quit();
         mhandlerThread = null;
+        mCmdIf.unSetOnCatCcAlphaNotify(this);
+
         this.removeCallbacksAndMessages(null);
     }
 
@@ -798,6 +802,19 @@ public class CatService extends Handler implements AppInterface {
                 CatLog.d(this, "IccRefresh Message is null");
             }
             break;
+        case MSG_ID_ALPHA_NOTIFY:
+            CatLog.d(this, "Received STK CC Alpha message from card");
+            if (msg.obj != null) {
+                AsyncResult ar = (AsyncResult) msg.obj;
+                if (ar != null && ar.result != null) {
+                    broadcastAlphaMessage((String)ar.result);
+                } else {
+                    CatLog.d(this, "STK Alpha message: ar.result is null");
+                }
+            } else {
+                CatLog.d(this, "STK Alpha message: msg.obj is null");
+            }
+            break;
         default:
             throw new AssertionError("Unrecognized CAT command: " + msg.what);
         }
@@ -826,6 +843,13 @@ public class CatService extends Handler implements AppInterface {
         CatLog.d(this, "Sending Card Status: "
                 + cardState + " " + "cardStatus: " + cardStatus);
 
+        mContext.sendBroadcast(intent);
+    }
+
+    private void broadcastAlphaMessage(String alphaString) {
+        CatLog.d(this, "Broadcasting STK Alpha message from card: " + alphaString);
+        Intent intent = new Intent(AppInterface.CAT_ALPHA_NOTIFY_ACTION);
+        intent.putExtra(AppInterface.ALPHA_STRING, alphaString);
         mContext.sendBroadcast(intent);
     }
 

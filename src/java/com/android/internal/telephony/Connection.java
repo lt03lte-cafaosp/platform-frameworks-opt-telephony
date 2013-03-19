@@ -17,6 +17,7 @@
 package com.android.internal.telephony;
 
 import android.util.Log;
+import com.android.internal.telephony.CallStateException;
 
 /**
  * {@hide}
@@ -56,6 +57,9 @@ public abstract class Connection {
         CS_RESTRICTED_NORMAL,           /* call was blocked by restricted normal voice access */
         CS_RESTRICTED_EMERGENCY,        /* call was blocked by restricted emergency voice access */
         UNOBTAINABLE_NUMBER,            /* Unassigned number (3GPP TS 24.008 table 10.5.123) */
+        DIAL_MODIFIED_TO_USSD,          /* Stk Call Control modified DIAL request to USSD request */
+        DIAL_MODIFIED_TO_SS,            /* Stk Call Control modified DIAL request to SS request */
+        DIAL_MODIFIED_TO_DIAL,          /* Stk Call Control modified DIAL request to DIAL with modified data */
         CDMA_LOCKED_UNTIL_POWER_CYCLE,  /* MS is locked until next power cycle */
         CDMA_DROP,
         CDMA_INTERCEPT,                 /* INTERCEPT order received, MS state idle entered */
@@ -291,6 +295,16 @@ public abstract class Connection {
      * @return UUSInfo containing the UUS userdata.
      */
     public abstract UUSInfo getUUSInfo();
+
+    /**
+     * Gets connection index associated with connection.
+     * @return index or exception if unavailable or phone
+     * does not support this API
+     */
+
+    public int getIndex() throws CallStateException {
+        throw new CallStateException("Connection index not assigned");
+    }
 
     /**
      * Build a human representation of a connection instance, suitable for debugging.
