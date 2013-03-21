@@ -65,6 +65,7 @@ public final class RuimRecords extends IccRecords {
 
     private String mPrlVersion;
     private boolean mRecordsRequired = false;
+    int mUimLoadDone = -1;//Variable add for usim phonebook
     // From CSIM application
     private byte[] mEFpl = null;
     private byte[] mEFli = null;
@@ -841,4 +842,15 @@ public final class RuimRecords extends IccRecords {
             SystemProperties.set(key, val);
         }
     }
+    
+    //Interface add for usim phonebook start
+    public void setUimLoaderStatus(int state) {
+        mUimLoadDone = state;
+    }
+
+    public int getUimLoaderStatus() {
+        return mUimLoadDone;
+    }
+    //Interface add for usim phonebook end
+    
 }

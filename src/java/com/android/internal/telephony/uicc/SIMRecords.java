@@ -183,6 +183,10 @@ public class SIMRecords extends IccRecords {
 
     private static final int EVENT_SET_MWIS_DONE = 39;
     private static final int EVENT_SET_CPHS_MWIS_DONE = 40;
+	    
+    int mUimLoadDone = -1;//Variable add for usim phonebook
+    
+
     // ***** Constructor
 
     public SIMRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
@@ -1799,4 +1803,14 @@ public class SIMRecords extends IccRecords {
             SystemProperties.set(key, val);
         }
     }
+    
+    //Interface add for usim phonebook start
+    public void setUimLoaderStatus(int state) {
+        mUimLoadDone = state;
+    }
+
+    public int getUimLoaderStatus() {
+        return mUimLoadDone;
+    }
+    //Interface add for usim phonebook end
 }

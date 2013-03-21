@@ -307,6 +307,12 @@ public class IccCardProxy extends Handler implements IccCard {
             }
             return;
         }
+        //when sub deactivated, add deactivated state
+        if (TelephonyManager.getDefault().isMultiSimEnabled() && mUiccApplication == null &&
+            mUiccCard != null && mUiccCard.getCardState() == CardState.CARDSTATE_PRESENT) {
+            setExternalState(State.CARD_DEACTIVATED);
+            return;
+        }
 
         if (mUiccCard.getCardState() == CardState.CARDSTATE_ERROR) {
             setExternalState(State.CARD_IO_ERROR);
@@ -449,6 +455,7 @@ public class IccCardProxy extends Handler implements IccCard {
             case NOT_READY: return IccCardConstants.INTENT_VALUE_ICC_NOT_READY;
             case PERM_DISABLED: return IccCardConstants.INTENT_VALUE_ICC_LOCKED;
             case CARD_IO_ERROR: return IccCardConstants.INTENT_VALUE_ICC_CARD_IO_ERROR;
+            case CARD_DEACTIVATED: return IccCardConstants.INTENT_VALUE_ICC_DEACTIVATED;
             default: return IccCardConstants.INTENT_VALUE_ICC_UNKNOWN;
         }
     }
@@ -464,6 +471,7 @@ public class IccCardProxy extends Handler implements IccCard {
             case NETWORK_LOCKED: return IccCardConstants.INTENT_VALUE_LOCKED_NETWORK;
             case PERM_DISABLED: return IccCardConstants.INTENT_VALUE_ABSENT_ON_PERM_DISABLED;
             case CARD_IO_ERROR: return IccCardConstants.INTENT_VALUE_ICC_CARD_IO_ERROR;
+            case CARD_DEACTIVATED: return IccCardConstants.INTENT_VALUE_ICC_DEACTIVATED;
             default: return null;
        }
     }
@@ -761,7 +769,14 @@ public class IccCardProxy extends Handler implements IccCard {
             return false;
         }
     }
-
+    //merge from 8x25q start     
+    public String getCardType() {
+        if (mUiccApplication != null) {
+            return mUiccApplication.getCardType();
+        }
+        return "UNKNOWN";
+    }
+    //merge from 8x25q end    
     protected void log(String s) {
         Log.d(LOG_TAG, s);
     }

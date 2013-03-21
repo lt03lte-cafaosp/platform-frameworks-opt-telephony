@@ -1722,5 +1722,20 @@ public class GSMPhone extends PhoneBase {
         }
         return countVoiceMessages;
     }
+	
+    //Interface add for usim phonebook start
+    public void setUimLoaderStatus(int state) {
+        IccRecords r = mIccRecords.get();
+        if(r != null)
+            r.setUimLoaderStatus(state);
+    }
+
+    public int getUimLoaderStatus() {
+        IccRecords r = mIccRecords.get();
+        if(r != null)
+            return r.getUimLoaderStatus();
+        return -1;
+    }
+    //Interface add for usim phonebook end
 
 }

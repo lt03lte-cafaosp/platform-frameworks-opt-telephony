@@ -16,6 +16,7 @@
 
 package com.android.internal.telephony;
 
+import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.os.AsyncResult;
 import android.os.Handler;
@@ -30,7 +31,7 @@ import com.android.internal.telephony.uicc.AdnRecord;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.HashMap;
 
 /**
  * SimPhoneBookInterfaceManager to provide an inter-process communication to
@@ -62,6 +63,14 @@ public class IccPhoneBookInterfaceManagerProxy extends IIccPhoneBook.Stub {
     }
 
     public boolean
+    updateAdnRecordsInEfBySearch (int efid,
+            ContentValues values,
+            String pin2) throws android.os.RemoteException {
+        return mIccPhoneBookInterfaceManager.updateAdnRecordsInEfBySearch(
+                efid, values, pin2);
+    }
+
+    public boolean
     updateAdnRecordsInEfByIndex(int efid, String newTag,
             String newPhoneNumber, int index, String pin2) throws android.os.RemoteException {
         return mIccPhoneBookInterfaceManager.updateAdnRecordsInEfByIndex(efid,
@@ -75,4 +84,32 @@ public class IccPhoneBookInterfaceManagerProxy extends IIccPhoneBook.Stub {
     public List<AdnRecord> getAdnRecordsInEf(int efid) throws android.os.RemoteException {
         return mIccPhoneBookInterfaceManager.getAdnRecordsInEf(efid);
     }
+    
+    //Interface add for usim phonebook start
+    public int getSpareAnrCount() {
+        return mIccPhoneBookInterfaceManager.getSpareAnrCount();
+    }
+    
+    public int getSpareEmailCount() {
+        return mIccPhoneBookInterfaceManager.getSpareEmailCount();
+    }
+    
+    public boolean updateUsimAdnRecordsInEfByIndex(int efid, String newTag,
+            String newPhoneNumber, String[] anrNumbers, String[] emails, int index, String pin2) throws android.os.RemoteException {
+        return mIccPhoneBookInterfaceManager.updateUsimAdnRecordsInEfByIndex(efid,
+                newTag, newPhoneNumber, anrNumbers, emails, index, pin2);
+    }
+    
+    public void setUimLoaderStatus(int state) {
+        mIccPhoneBookInterfaceManager.setUimLoaderStatus(state);
+    }
+    
+    public int getUimLoaderStatus() {
+        return mIccPhoneBookInterfaceManager.getUimLoaderStatus();
+    }
+    
+    public int getAdnCount() {
+        return mIccPhoneBookInterfaceManager.getAdnCount();
+    }
+    //Interface add for usim phonebook end
 }
