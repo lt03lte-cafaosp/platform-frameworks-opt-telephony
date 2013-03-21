@@ -202,5 +202,13 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
         pw.println("  Phone Type = " + mPhone.getPhoneName());
         pw.println("  Device ID = " + mPhone.getDeviceId());
     }
-
+    //merge from 8x25q start     
+    /**
+     * @hide
+     */
+    public String getCardType() {
+        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        return ((PhoneBase)mPhone).getCardType();
+    }
+    //merge from 8x25q end    
 }
