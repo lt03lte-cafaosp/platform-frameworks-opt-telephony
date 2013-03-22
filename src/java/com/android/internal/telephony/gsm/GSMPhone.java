@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
@@ -162,6 +162,7 @@ public class GSMPhone extends PhoneBase {
         mCM.setOnUSSD(this, EVENT_USSD, null);
         mCM.setOnSuppServiceNotification(this, EVENT_SSN, null);
         mSST.registerForNetworkAttached(this, EVENT_REGISTERED_TO_NETWORK, null);
+        mCM.setOnSS(this, EVENT_SS, null);
 
         if (false) {
             try {
@@ -223,6 +224,7 @@ public class GSMPhone extends PhoneBase {
             mSST.unregisterForNetworkAttached(this); //EVENT_REGISTERED_TO_NETWORK
             mCM.unSetOnUSSD(this);
             mCM.unSetOnSuppServiceNotification(this);
+            mCM.unSetOnSS(this);
 
             mPendingMMIs.clear();
 
@@ -899,12 +901,12 @@ public class GSMPhone extends PhoneBase {
     @Override
     public String getMsisdn() {
         IccRecords r = mIccRecords.get();
-        return (r != null) ? r.getMsisdnNumber() : "";
+        return (r != null) ? r.getMsisdnNumber() : null;
     }
 
     public String getLine1AlphaTag() {
         IccRecords r = mIccRecords.get();
-        return (r != null) ? r.getMsisdnAlphaTag() : "";
+        return (r != null) ? r.getMsisdnAlphaTag() : null;
     }
 
     public void setLine1Number(String alphaTag, String number, Message onComplete) {
@@ -1119,7 +1121,7 @@ public class GSMPhone extends PhoneBase {
          * The exception is cancellation of an incoming USSD-REQUEST, which is
          * not on the list.
          */
-        if (mPendingMMIs.remove(mmi) || mmi.isUssdRequest()) {
+        if (mPendingMMIs.remove(mmi) || mmi.isUssdRequest() || mmi.isSsInfo()) {
             mMmiCompleteRegistrants.notifyRegistrants(
                 new AsyncResult(null, mmi, null));
         }
@@ -1363,6 +1365,16 @@ public class GSMPhone extends PhoneBase {
                     AsyncResult.forMessage(onComplete, ar.result, ar.exception);
                     onComplete.sendToTarget();
                 }
+                break;
+
+            case EVENT_SS:
+                ar = (AsyncResult)msg.obj;
+                Log.d(LOG_TAG, "Event EVENT_SS received");
+                // SS data is already being handled through MMI codes.
+                // So, this result if processed as MMI response would help
+                // in re-using the existing functionality.
+                GsmMmiCode mmi = new GsmMmiCode(this, mUiccApplication.get());
+                mmi.processSsData(ar);
                 break;
 
              default:
