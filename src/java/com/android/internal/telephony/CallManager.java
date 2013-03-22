@@ -34,6 +34,7 @@ import android.os.Message;
 import android.os.RegistrantList;
 import android.os.Registrant;
 import android.os.SystemProperties;
+import android.telephony.MSimTelephonyManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.util.Log;
@@ -488,6 +489,7 @@ public final class CallManager {
 
     private int inCallAudioModeForPhone(Phone phone) {
         int ret = 0;
+        int sub = 0;
         boolean hasActiveCall = hasActiveCall(phone);
         boolean hasHoldingCall = hasHoldingCall(phone);
         boolean isFgPhone = getFgPhone().equals(phone);
@@ -499,6 +501,7 @@ public final class CallManager {
                        " hasHoldingCall: " + hasHoldingCall +
                        " isFgPhone: " + isFgPhone + " voiceModemIndex: " + voiceModemIndex);
 
+        sub =  phone.getSubscription();
         if (phone.getState() == PhoneConstants.State.OFFHOOK) {
             if (isFgPhone && hasActiveCall){
                 switch(phone.getPhoneType()) {
@@ -512,7 +515,8 @@ public final class CallManager {
                         if (voiceModemIndex != LOCAL_MODEM) {
                             ret = AudioManager.CS_ACTIVE_SESSION2;
                         } else {
-                            ret = AudioManager.CS_ACTIVE;
+                            ret = (sub == MSimConstants.SUB2) ? AudioManager.CS_ACTIVE_SESSION2:
+                                          AudioManager.CS_ACTIVE;
                         }
                 }
             } else if (hasHoldingCall) {
@@ -527,7 +531,8 @@ public final class CallManager {
                         if (voiceModemIndex != LOCAL_MODEM) {
                             ret = AudioManager.CS_HOLD_SESSION2;
                         } else {
-                            ret = AudioManager.CS_HOLD;
+                            ret = (sub == MSimConstants.SUB2) ? AudioManager.CS_HOLD_SESSION2:
+                                          AudioManager.CS_HOLD;
                         }
                         break;
                 }
@@ -599,6 +604,7 @@ public final class CallManager {
     public void setAudioMode() {
         boolean useInCallMode = SystemProperties.getBoolean(
                 TelephonyProperties.CALLS_ON_IMS_ENABLED_PROPERTY, false)
+                || MSimTelephonyManager.getDefault().isMultiSimEnabled()
                 || mBaseband.equals(SGLTE) || mBaseband.equals(SGLTE_TYPE2);
 
         Log.d(LOG_TAG, "setAudioMode useInCallMode = " + useInCallMode + ", Baseband = "
