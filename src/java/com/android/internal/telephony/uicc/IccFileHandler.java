@@ -98,6 +98,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     protected final CommandsInterface mCi;
     protected final UiccCardApplication mParentApp;
     protected final String mAid;
+	protected int mSmsCountOnIcc = -1;
 
     static class LoadLinearFixedContext {
 
@@ -224,6 +225,14 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     public void loadEFLinearFixed(int fileid, int recordNum, Message onLoaded) {
         loadEFLinearFixed(fileid, getEFPath(fileid), recordNum, onLoaded);
     }
+    /*
+    * To get sms On icc according to sub, Cindy
+    */
+    public int getSmsCapCountOnIcc()
+    {
+        Log.d("ICC", "getSmsCapCountOnIcc() =  " + mSmsCountOnIcc);
+        return mSmsCountOnIcc;
+    }
 
     /**
      * Load a image instance record from a SIM Linear Fixed EF-IMG
@@ -300,6 +309,9 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
      *
      */
     public void loadEFLinearFixedAll(int fileid, String path, Message onLoaded) {
+        if (fileid == EF_SMS) {
+             mSmsCountOnIcc = -1;
+        }	
         Message response = obtainMessage(EVENT_GET_RECORD_SIZE_DONE,
                         new LoadLinearFixedContext(fileid, path, onLoaded));
 
@@ -605,7 +617,11 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                        + (data[RESPONSE_DATA_FILE_SIZE_2] & 0xff);
 
                 lc.countRecords = size / lc.recordSize;
-
+                if (fileid == EF_SMS)
+                {
+                    mSmsCountOnIcc = lc.countRecords;
+                    Log.w("SMS", "z464 s_SmsCountOnIcc = " + mSmsCountOnIcc);
+                }
                  if (lc.loadAll) {
                      lc.results = new ArrayList<byte[]>(lc.countRecords);
                  } else if (lc.loadPart) {

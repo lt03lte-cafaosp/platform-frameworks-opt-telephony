@@ -18,6 +18,7 @@
 package com.android.internal.telephony;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
@@ -70,6 +71,8 @@ import com.android.internal.telephony.EventLogTags;
 import com.android.internal.telephony.GsmAlphabet.TextEncodingDetails;
 import com.android.internal.util.HexDump;
 
+import com.qrd.plugin.feature_query.FeatureQuery;
+
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -98,6 +101,10 @@ public abstract class SMSDispatcher extends Handler {
     /** Permission required to send SMS to short codes without user confirmation. */
     private static final String SEND_SMS_NO_CONFIRMATION_PERMISSION =
             "android.permission.SEND_SMS_NO_CONFIRMATION";
+
+    /** Long sms alarm action **/
+    protected static final String INTENT_LONG_SMS_OVERTIME_ACTION = 
+        "com.android.internal.telephony.gsm.LONG_SMS_OVERTIME";
 
     /** Query projection for checking for duplicate message segments. */
     private static final String[] PDU_PROJECTION = new String[] {
@@ -157,6 +164,7 @@ public abstract class SMSDispatcher extends Handler {
     // other
     protected static final int EVENT_NEW_ICC_SMS = 13;
     protected static final int EVENT_ICC_CHANGED = 14;
+    protected static final int EVENT_GET_SMS_CENTER_OVER = 15;
 
     protected PhoneBase mPhone;
     protected final Context mContext;
@@ -173,6 +181,8 @@ public abstract class SMSDispatcher extends Handler {
     private static final int MAX_SEND_RETRIES = 3;
     /** Delay before next send attempt on a failed SMS, in milliseconds. */
     private static final int SEND_RETRY_DELAY = 2000;
+    /** If can't receive all parts of a long sms , will be delete in raw table over this time , in milliseconds. */
+    private static final int LONG_SMS_OVERTIME_MILSECONDS = 48*60*60*1000;    
     /** single part SMS */
     private static final int SINGLE_PART_SMS = 1;
     /** Message sending queue limit */
@@ -208,6 +218,8 @@ public abstract class SMSDispatcher extends Handler {
     protected boolean mSmsSendDisabled;
 
     protected int mRemainingMessages = -1;
+
+    protected int mSubscription = MSimConstants.SUB1;
 
     protected static int getNextConcatenatedRef() {
         sConcatenatedRef += 1;
@@ -403,6 +415,29 @@ public abstract class SMSDispatcher extends Handler {
             mPendingTrackerCount--;
             break;
         }
+
+        case EVENT_GET_SMS_CENTER_OVER:
+            Log.w(TAG, "EVENT_GET_SMS_CENTER_OVER z460"); 
+            {
+                String smsCenter = "";
+                ar = (AsyncResult)msg.obj;
+                if (ar.exception == null) 
+                {
+                    //0x91=145,+
+                    smsCenter = (String) ar.result;//"+8613800532500",145
+                    Log.w(TAG, "z467 smsCenter = " + smsCenter);                    
+                    Intent intent = new Intent("com.android.mms.GET_GSM_SMS_CENTER_OVER");
+                    intent.putExtra("GSM_SMS_CENTER", smsCenter);
+                    intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, String.valueOf(mPhone.getSubscription()));
+                    mWakeLock.acquire(WAKE_LOCK_TIMEOUT);
+                    mContext.sendBroadcast(intent, "android.permission.RECEIVE_SMS");                    
+                }
+                else 
+                { 
+                    Log.w(TAG, "Cannot load Sms center");
+                }
+            }
+            break;        
         }
     }
 
@@ -604,7 +639,7 @@ public abstract class SMSDispatcher extends Handler {
             if (smsHeader != null && smsHeader.portAddrs != null) {
                 if (smsHeader.portAddrs.destPort == SmsHeader.PORT_WAP_PUSH) {
                     // GSM-style WAP indication
-                    return mWapPush.dispatchWapPdu(sms.getUserData());
+                    return mWapPush.dispatchWapPdu(sms.getUserData(), sms.getOriginatingAddress());
                 } else {
                     // The message was sent to a port, so concoct a URI for it.
                     dispatchPortAddressedPdus(pdus, smsHeader.portAddrs.destPort);
@@ -709,6 +744,12 @@ public abstract class SMSDispatcher extends Handler {
                     values.put("destination_port", destPort);
                 }
                 mResolver.insert(mRawUri, values);
+
+                //set long sms overtime alarm
+                if((FeatureQuery.FEATURE_SMS_DISCARD_BROKEN_LONG_SMS)
+                        &&(cursorCount == 0)){
+                    setLongSmsOverTimeAlarm(referenceNumber, address);
+                }
                 return Intents.RESULT_SMS_HANDLED;
             }
 
@@ -760,7 +801,7 @@ public abstract class SMSDispatcher extends Handler {
             // Dispatch the PDU to applications
             if (destPort == SmsHeader.PORT_WAP_PUSH) {
                 // Handle the PUSH
-                return mWapPush.dispatchWapPdu(datagram);
+                return mWapPush.dispatchWapPdu(datagram, address);
             } else {
                 pdus = new byte[1][];
                 pdus[0] = datagram;
@@ -781,7 +822,7 @@ public abstract class SMSDispatcher extends Handler {
                     output.write(data, 0, data.length);
                 }
                 // Handle the PUSH
-                return mWapPush.dispatchWapPdu(output.toByteArray());
+                return mWapPush.dispatchWapPdu(output.toByteArray(), address);
             } else {
                 // The messages were sent to a port, so concoct a URI for it
                 dispatchPortAddressedPdus(pdus, destPort);
@@ -846,6 +887,36 @@ public abstract class SMSDispatcher extends Handler {
      *  raw pdu of the status report is in the extended data ("pdu").
      */
     protected abstract void sendData(String destAddr, String scAddr, int destPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent);
+
+    /**
+     * Send a data based SMS to a specific application port.
+     *
+     * @param destAddr the address to send the message to
+     * @param scAddr is the service center address or null to use
+     *  the current default SMSC
+     * @param destPort the port to deliver the message to
+     * @param orgPort the original port
+     * @param data the body of the message to send
+     * @param sentIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is successfully sent, or failed.
+     *  The result code will be <code>Activity.RESULT_OK<code> for success,
+     *  or one of these errors:<br>
+     *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+     *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+     *  <code>RESULT_ERROR_NULL_PDU</code><br>
+     *  <code>RESULT_ERROR_NO_SERVICE</code><br>.
+     *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+     *  the extra "errorCode" containing a radio technology specific value,
+     *  generally only useful for troubleshooting.<br>
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applications,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     */
+    protected abstract void sendData(String destAddr, String scAddr, int destPort, int orgPort,
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent);
 
     /**
@@ -1453,11 +1524,12 @@ public abstract class SMSDispatcher extends Handler {
     }
 
     protected HashMap SmsTrackerMapFactory(String destAddr, String scAddr,
-            int destPort, byte[] data, SmsMessageBase.SubmitPduBase pdu) {
+            int destPort, int orgPort, byte[] data, SmsMessageBase.SubmitPduBase pdu) {
         HashMap<String, Object> map = new HashMap<String, Object>();
         map.put("destAddr", destAddr);
         map.put("scAddr", scAddr);
         map.put("destPort", Integer.valueOf(destPort));
+        map.put("orgPort", Integer.valueOf(orgPort));
         map.put("data", data);
         map.put("smsc", pdu.encodedScAddress);
         map.put("pdu", pdu.encodedMessage);
@@ -1583,4 +1655,67 @@ public abstract class SMSDispatcher extends Handler {
     public abstract boolean isIms();
 
     public abstract String getImsSmsFormat();
+
+    /**
+     * Delete overtime long sms part on raw table.
+     */
+    protected int deleteLongSmsPartOverTimeOnRaw(){
+        int count = 0;
+        //Delete long sms part which
+        StringBuilder where = new StringBuilder("date < ");
+        where.append(System.currentTimeMillis() - LONG_SMS_OVERTIME_MILSECONDS);
+
+        //where.append(" AND count =");
+        //where.append(count);
+        count = mResolver.delete(mRawUri, where.toString(), null);
+        Log.d(TAG, "deleteStaleLongSmsPartOnRaw count = " + count);
+        return count;
+    }
+
+    /**
+     * Delete overtime sms part on raw table with the same referenceNumber and sender.
+     */
+    protected int deleteSpecLongSmsOnRaw(int referenceNumber, String address){
+        int count = 0;
+        // Lookup all other related parts
+        StringBuilder where = new StringBuilder("reference_number =");
+        where.append(referenceNumber);
+
+        //where.append(" AND sub_id =");
+        //where.append(mSubId);
+        
+        where.append(" AND address = ?");        
+        String[] whereArgs = new String[] {address};
+        count = mResolver.delete(mRawUri, where.toString(), whereArgs);
+        Log.d(TAG, "deleteLongSmsOnRaw count = " + count);
+        return count;
+    }
+
+    /**
+     * Set long sms overtime alarm.
+     */
+    private void setLongSmsOverTimeAlarm(int msgRef, String address)
+    {
+        // When the alarm goes off, we want to broadcast an Intent to our
+        // BroadcastReceiver.  Here we make an Intent with an explicit class
+        // name to have our own receiver instantiated and called, and then create an
+        // IntentSender to have the intent executed as a broadcast.
+        // We want the alarm to go off shortestInterval seconds from now.           
+        // Schedule the alarm!
+        Intent intent = new Intent(INTENT_LONG_SMS_OVERTIME_ACTION);
+        intent.putExtra("subscription", mPhone.getSubscription());   
+        intent.putExtra("messageRef", msgRef); 
+        intent.putExtra("address", address);
+        AlarmManager am =
+            (AlarmManager) mPhone.getContext().getSystemService(Context.ALARM_SERVICE);
+        PendingIntent sender = PendingIntent.getBroadcast(
+                mPhone.getContext(), 0, intent, 0);
+        am.set(AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + LONG_SMS_OVERTIME_MILSECONDS,
+                sender);
+    } 
+    
+    protected abstract void processCachedLongSmsWhenBoot();
+    
+    protected abstract void getGsmSmsCenter();
 }

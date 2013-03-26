@@ -48,6 +48,7 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     public ImsSMSDispatcher(PhoneBase phone, SmsStorageMonitor storageMonitor,
             SmsUsageMonitor usageMonitor) {
         super(phone, storageMonitor, usageMonitor);
+        mSubscription = -1;
 
         initDispatchers(phone, storageMonitor, usageMonitor);
 
@@ -171,6 +172,19 @@ public class ImsSMSDispatcher extends SMSDispatcher {
         }
     }
 
+
+    @Override
+    protected void sendData(String destAddr, String scAddr, int destPort, int orgPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        if (isCdmaMo()) {
+            mCdmaDispatcher.sendData(destAddr, scAddr, destPort, orgPort,
+                    data, sentIntent, deliveryIntent);
+        } else {
+            mGsmDispatcher.sendData(destAddr, scAddr, destPort, orgPort,
+                    data, sentIntent, deliveryIntent);
+        }
+    }
+
     @Override
     protected void sendMultipartText(String destAddr, String scAddr,
             ArrayList<String> parts, ArrayList<PendingIntent> sentIntents,
@@ -269,16 +283,17 @@ public class ImsSMSDispatcher extends SMSDispatcher {
             Log.d(TAG, "sms failed was data");
             byte[] data = (byte[])map.get("data");
             Integer destPort = (Integer)map.get("destPort");
+            Integer orgPort = (Integer)map.get("orgPort");
 
             if (isCdmaFormat(newFormat)) {
-                Log.d(TAG, "old format (gsm) ==> new format (cdma)");
+                Log.d(TAG, "old format (gsm) ==> new format (cdma), destPort = " + destPort + ", orgPort = " + orgPort);
                 pdu = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(
-                            scAddr, destAddr, destPort.intValue(), data,
+                            scAddr, destAddr, destPort.intValue(), orgPort.intValue(), data,
                             (tracker.mDeliveryIntent != null));
             } else {
-                Log.d(TAG, "old format (cdma) ==> new format (gsm)");
+                Log.d(TAG, "old format (cdma) ==> new format (gsm), , destPort = " + destPort + ", orgPort = " + orgPort);
                 pdu = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(
-                            scAddr, destAddr, destPort.intValue(), data,
+                            scAddr, destAddr, destPort.intValue(), orgPort.intValue(), data,
                             (tracker.mDeliveryIntent != null));
             }
         }
@@ -349,5 +364,28 @@ public class ImsSMSDispatcher extends SMSDispatcher {
      */
     private boolean isCdmaFormat(String format) {
         return (mCdmaDispatcher.getFormat().equals(format));
+    }
+
+    protected void processCachedLongSmsWhenBoot(){
+        Log.d(TAG, "processCachedLongSmsWhenBoot");
+        if (isCdmaMo()) {
+            mCdmaDispatcher.processCachedLongSmsWhenBoot();
+        } 
+        else {
+            mGsmDispatcher.processCachedLongSmsWhenBoot();
+        }
+    }
+    
+    protected void getGsmSmsCenter()
+    {
+        Log.d(TAG, "getGsmSmsCenter");
+        if (isCdmaMo()) 
+        {
+            Log.e(TAG, "Error! is cdma , no sms center.");
+        } 
+        else 
+        {
+            mGsmDispatcher.getGsmSmsCenter();
+        }
     }
 }

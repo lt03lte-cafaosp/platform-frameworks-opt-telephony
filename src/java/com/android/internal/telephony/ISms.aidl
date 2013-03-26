@@ -68,6 +68,22 @@ interface ISms {
     boolean copyMessageToIccEf(int status, in byte[] pdu, in byte[] smsc);
 
     /**
+     * Copy a raw SMS PDU to the ICC, and return the index on ICC
+     * ICC (Integrated Circuit Card) is the card of the device.
+     * For example, this can be the SIM or USIM for GSM.
+     *
+     * @param smsc the SMSC for this message, or NULL for the default SMSC
+     * @param pdu the raw PDU to store
+     * @param status message status (STATUS_ON_ICC_READ, STATUS_ON_ICC_UNREAD,
+     *               STATUS_ON_ICC_SENT, STATUS_ON_ICC_UNSENT)
+     * @return index of ICC, -1 means copy failed
+     *
+     * @throws IllegalArgumentException if pdu is NULL
+     * {@hide}
+     */
+    int copyMessageToIccEfGetIndex(int status, in byte[] pdu, in byte[] smsc);
+
+    /**
      * Send a data SMS.
      *
      * @param smsc the SMSC to send the message through, or NULL for the
@@ -91,6 +107,33 @@ interface ISms {
      *  raw pdu of the status report is in the extended data ("pdu").
      */
     void sendData(in String destAddr, in String scAddr, in int destPort,
+            in byte[] data, in PendingIntent sentIntent, in PendingIntent deliveryIntent);
+
+    
+    /**
+     * Send a data SMS.
+     *
+     * @param smsc the SMSC to send the message through, or NULL for the
+     *  default SMSC
+     * @param data the body of the message to send
+     * @param sentIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is sucessfully sent, or failed.
+     *  The result code will be <code>Activity.RESULT_OK<code> for success,
+     *  or one of these errors:<br>
+     *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+     *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+     *  <code>RESULT_ERROR_NULL_PDU</code><br>
+     *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+     *  the extra "errorCode" containing a radio technology specific value,
+     *  generally only useful for troubleshooting.<br>
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applicaitons,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     */
+    void sendDataWithOrgPort(in String destAddr, in String scAddr, in int destPort, in int orgPort,
             in byte[] data, in PendingIntent sentIntent, in PendingIntent deliveryIntent);
 
     /**
@@ -285,4 +328,32 @@ interface ISms {
      * @see #isImsSmsSupported()
      */
     String getImsSmsFormat();
+    /**
+     * Get the Capacitance count of sms on Icc card.
+     *
+     */
+    int getSmsCapCountOnIcc();
+    /**
+     * Process reduce long sms overtime in raw table
+     *
+     * @return 
+     * @hide
+     */
+    int processCachedLongSms();
+
+    /**
+     * get gsm sms center
+     *
+     * @return the sms center or null
+     * @hide
+     */
+    String getGsmSmsCenter();
+
+    /**
+     * set gsm sms center
+     *
+     * @return true if set successfully.
+     * @hide
+     */
+    boolean setGsmSmsCenter(String center);
 }

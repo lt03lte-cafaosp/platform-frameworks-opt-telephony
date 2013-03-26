@@ -27,6 +27,7 @@ import android.provider.Telephony.Sms.Intents;
 import android.util.Log;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.text.TextUtils;
 
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.MSimConstants;
@@ -125,7 +126,6 @@ public class WapPushOverSms {
         mWapConn.bindWapPushManager();
     }
 
-
     /**
      * Dispatches inbound messages that are in the WAP PDU format. See
      * wap-230-wsp-20010705-a section 8 for details on the WAP PDU format.
@@ -135,7 +135,22 @@ public class WapPushOverSms {
      *         {@link Activity#RESULT_OK} if the message has been broadcast
      *         to applications
      */
-    public int dispatchWapPdu(byte[] pdu) {
+    public int dispatchWapPdu(byte[] pdu) 
+    {
+        return dispatchWapPdu(pdu, "");
+    }
+
+    /**
+     * Dispatches inbound messages that are in the WAP PDU format. See
+     * wap-230-wsp-20010705-a section 8 for details on the WAP PDU format.
+     *
+     * @param pdu The WAP PDU, made up of one or more SMS PDUs
+     * @param address the originating address
+     * @return a result code from {@link Telephony.Sms.Intents}, or
+     *         {@link Activity#RESULT_OK} if the message has been broadcast
+     *         to applications
+     */
+    public int dispatchWapPdu(byte[] pdu, String address) {
 
         if (false) Log.d(LOG_TAG, "Rx: " + IccUtils.bytesToHexString(pdu));
 
@@ -235,6 +250,10 @@ public class WapPushOverSms {
                             pduDecoder.getContentParameters());
                     intent.putExtra(MSimConstants.SUBSCRIPTION_KEY,
                             mSmsDispatcher.mPhone.getSubscription());
+                    if (!TextUtils.isEmpty(address)){
+                        Log.d(LOG_TAG,"wapPushMan-------------- putExtra  address = " + address);
+                        intent.putExtra("address", address);
+                    }
 
                     int procRet = wapPushMan.processMessage(wapAppId, contentType, intent);
                     if (false) Log.v(LOG_TAG, "procRet:" + procRet);
@@ -273,6 +292,10 @@ public class WapPushOverSms {
         intent.putExtra("data", intentData);
         intent.putExtra("contentTypeParameters", pduDecoder.getContentParameters());
         intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, mSmsDispatcher.mPhone.getSubscription());
+        if (!TextUtils.isEmpty(address)){
+            Log.d(LOG_TAG,"-------------- putExtra  address = " + address);
+            intent.putExtra("address", address);
+        }
 
         mSmsDispatcher.dispatch(intent, permission);
 
