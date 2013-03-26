@@ -141,6 +141,9 @@ public abstract class PhoneBase extends Handler implements Phone {
     // Key used to read/write the ID for storing the voice mail
     public static final String VM_ID = "vm_id_key";
 
+    //Telephony System Property used to indicate a multimode target
+    public static final String PROPERTY_MULTIMODE_CDMA = "ro.config.multimode_cdma";
+
     /* Instance Variables */
     public CommandsInterface mCM;
     private int mVmCount = 0;
@@ -202,6 +205,9 @@ public abstract class PhoneBase extends Handler implements Phone {
             = new RegistrantList();
 
     protected final RegistrantList mCallModifyRegistrants
+            = new RegistrantList();
+
+    protected final RegistrantList mAvpUpgradeFailureRegistrants
             = new RegistrantList();
 
     protected final RegistrantList mSimRecordsLoadedRegistrants
@@ -1177,6 +1183,12 @@ public abstract class PhoneBase extends Handler implements Phone {
         }
     }
 
+    public boolean isManualNetSelAllowed() {
+        // This function should be overridden in GsmPhone.
+        // Not implemented in CdmaPhone and SIPPhone.
+        return false;
+    }
+
     public boolean isCspPlmnEnabled() {
         // This function should be overridden by the class GSMPhone.
         // Not implemented in CDMAPhone.
@@ -1313,6 +1325,18 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
         throw new CallStateException(
                 "unregisterForModifyCallRequest is not supported in this phone " + this);
+    }
+
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException {
+        throw new CallStateException("registerForAvpUpgradeFailure is not supported in this phone "
+                + this);
+    }
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException {
+        throw new CallStateException(
+                "unregisterForAvpUpgradeFailure is not supported in this phone "
+                        + this);
     }
 
     public void changeConnectionType(Message msg, Connection conn,

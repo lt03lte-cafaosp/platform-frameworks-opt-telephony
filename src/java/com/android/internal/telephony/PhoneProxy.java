@@ -1008,6 +1008,10 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.unsetOnEcbModeExitResponse(h);
     }
 
+    public boolean isManualNetSelAllowed() {
+        return mActivePhone.isManualNetSelAllowed();
+    }
+
     public boolean isCspPlmnEnabled() {
         return mActivePhone.isCspPlmnEnabled();
     }
@@ -1051,6 +1055,15 @@ public class PhoneProxy extends Handler implements Phone {
 
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
         mActivePhone.unregisterForModifyCallRequest(h);
+    }
+
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException {
+        mActivePhone.registerForAvpUpgradeFailure(h, what, obj);
+    }
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException {
+        mActivePhone.unregisterForAvpUpgradeFailure(h);
     }
 
     public int getSubscription() {

@@ -1721,6 +1721,12 @@ public interface Phone {
      */
     boolean isCspPlmnEnabled();
 
+    /* Checks if manual network selection is allowed
+     * @return true if manual network selection is allowed
+     * @return false if manual network selection is not allowed
+     */
+    public boolean isManualNetSelAllowed();
+
     /**
      * Return an interface to retrieve the ISIM records for IMS, if available.
      * @return the interface to retrieve the ISIM records, or null if not supported
@@ -1770,6 +1776,20 @@ public interface Phone {
             throws CallStateException;
 
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException;
+
+    /**
+     * When upgrade to video call and remote party does not support AVPF, IMS
+     * Phone retries upgrade request and this function registers for the failure
+     * indication
+     * @param h The handler that will receive the message
+     * @param what The message to send
+     * @param obj User object to send with the message
+     * @throws CallStateException
+     */
+    public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
+            throws CallStateException;
+
+    public void unregisterForAvpUpgradeFailure(Handler h) throws CallStateException;
 
     /**
      * Request a modification to a current connection This will send an
