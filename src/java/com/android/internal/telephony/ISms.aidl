@@ -356,4 +356,11 @@ interface ISms {
      * @hide
      */
     boolean setGsmSmsCenter(String center);
+
+    /**
+     * set sms pre store.
+     *
+     */
+    boolean setSmsPreStore(int preStore);      
+
 }

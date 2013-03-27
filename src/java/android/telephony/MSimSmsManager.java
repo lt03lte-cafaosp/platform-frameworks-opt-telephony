@@ -51,6 +51,14 @@ public class MSimSmsManager {
     protected static boolean isMultiSimEnabled = MSimTelephonyManager.
             getDefault().isMultiSimEnabled();
     private final int DEFAULT_SUB = 0;
+    
+    private static final int UNKNOWN = -1;    
+    private static final int STORE_ME = 1;
+    private static final int STORE_SM = 2;    
+    
+    public static final int SLOT1 = 0;
+    public static final int SLOT2 = 1;    
+    private static int mCurSmsPreStore[];
 
     /**
      * Send a text based SMS.
@@ -302,6 +310,9 @@ public class MSimSmsManager {
 
     private MSimSmsManager() {
         //nothing
+        mCurSmsPreStore = new int[2];
+        mCurSmsPreStore[SLOT1] = UNKNOWN;
+        mCurSmsPreStore[SLOT2] = UNKNOWN;
     }
 
     /**
@@ -741,6 +752,42 @@ public class MSimSmsManager {
             return ret;
         }
 
+    /**
+     * set sms precedence store on mobile or icc card
+     *
+     * @return true if set success
+     * @hide
+     */    
+    public boolean setSmsPreStore(int preStore, boolean force, int subscription)
+    {
+        boolean ret = false;
+        ISmsMSim simISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+
+        if(subscription > (mCurSmsPreStore.length - 1))
+            return false;
+        
+        if (simISms == null) {
+            mCurSmsPreStore[subscription] = UNKNOWN;
+            return false;
+        }
+
+        if (force || (mCurSmsPreStore[subscription] != preStore )){
+            mCurSmsPreStore[subscription] = UNKNOWN;
+            try {
+                ret = simISms.setSmsPreStore(preStore, subscription);
+            }
+            catch (RemoteException ex) {
+                ret = false;
+            }  
+            
+            if (ret){
+                mCurSmsPreStore[subscription] = preStore;
+            }
+        } else {
+            ret = true;
+        }
+        return ret;
+    }    
 
     // see SmsMessage.getStatusOnIcc
 

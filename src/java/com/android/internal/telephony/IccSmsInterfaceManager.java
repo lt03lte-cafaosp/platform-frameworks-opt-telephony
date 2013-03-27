@@ -907,4 +907,13 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         return true;
     }
 
+    public boolean setSmsPreStore(int preStore)
+    {  
+        int sub = mPhone.getSubscription();
+    
+        Log.w(LOG_TAG, "setSmsPreStore preStore = " + preStore + ", sub = " + sub);    
+        mPhone.mCM.setSmsPreStore(preStore, sub/*0*/, null);
+        return true;
+    }  
+
 }

@@ -1115,6 +1115,8 @@ public interface CommandsInterface {
     void writeSmsToSim(int status, String smsc, String pdu, Message response);
 
     void writeSmsToRuim(int status, String pdu, Message response);
+    
+    void setSmsPreStore(int preStore, int subID, Message result); 
 
     void setRadioPower(boolean on, Message response);
 

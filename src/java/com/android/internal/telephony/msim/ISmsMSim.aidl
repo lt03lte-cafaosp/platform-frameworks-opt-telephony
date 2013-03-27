@@ -290,4 +290,10 @@ interface ISmsMSim {
      * @hide
      */
     boolean setGsmSmsCenter(String center, int subscription);
+
+    /**
+     * set sms pre store.
+     *
+     */
+    boolean setSmsPreStore(int preStore, int subscription);        
 }

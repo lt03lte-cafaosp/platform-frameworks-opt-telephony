@@ -965,6 +965,10 @@ public final class SimulatedCommands extends BaseCommands
         Log.d(LOG_TAG, "Write SMS to RUIM with status " + status);
         unimplemented(response);
     }
+    
+    public void setSmsPreStore(int preStore, int subID, Message result) {
+        unimplemented(result);
+    }   
 
     public void setupDataCall(String radioTechnology, String profile,
             String apn, String user, String password, String authType,

@@ -385,6 +385,10 @@ class UsimDataDownloadCommands extends BaseCommands {
     }
 
     @Override
+    public void setSmsPreStore(int preStore, int subID, Message result) {
+    }   
+
+    @Override
     public void setRadioPower(boolean on, Message response) {
     }
 

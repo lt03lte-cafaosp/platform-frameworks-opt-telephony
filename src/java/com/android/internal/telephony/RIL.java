@@ -1474,6 +1474,21 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         send(rr);
     }
 
+    public void setSmsPreStore(int preStore, int subID, Message result)
+    {
+        Log.d(LOG_TAG, "setSmsPreStore() preStore = " + preStore + ", subID = " + subID);
+        RILRequest rr 
+            = RILRequest.obtain(RIL_REQUEST_SET_SMS_PRE_STORE, result);
+
+        rr.mp.writeInt(2);
+        rr.mp.writeInt(preStore);
+        rr.mp.writeInt(subID);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+        send(rr);     
+    } 
+
     /**
      *  Translates EF_SMS status bits to a status value compatible with
      *  SMS AT commands.  See TS 27.005 3.1.
@@ -2495,6 +2510,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_GET_UICC_SUBSCRIPTION: ret = responseUiccSubscription(p); break;
             case RIL_REQUEST_GET_DATA_SUBSCRIPTION: ret = responseInts(p); break;
             case RIL_REQUEST_SET_SUBSCRIPTION_MODE: ret = responseVoid(p); break;
+            case RIL_REQUEST_SET_SMS_PRE_STORE: ret =  responseVoid(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
@@ -3835,6 +3851,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_CDMA_SUBSCRIPTION: return "RIL_REQUEST_CDMA_SUBSCRIPTION";
             case RIL_REQUEST_CDMA_WRITE_SMS_TO_RUIM: return "RIL_REQUEST_CDMA_WRITE_SMS_TO_RUIM";
             case RIL_REQUEST_CDMA_DELETE_SMS_ON_RUIM: return "RIL_REQUEST_CDMA_DELETE_SMS_ON_RUIM";
+            case RIL_REQUEST_SET_SMS_PRE_STORE: return "RIL_REQUEST_SET_SMS_PRE_STORE";
             case RIL_REQUEST_DEVICE_IDENTITY: return "RIL_REQUEST_DEVICE_IDENTITY";
             case RIL_REQUEST_GET_SMSC_ADDRESS: return "RIL_REQUEST_GET_SMSC_ADDRESS";
             case RIL_REQUEST_SET_SMSC_ADDRESS: return "RIL_REQUEST_SET_SMSC_ADDRESS";

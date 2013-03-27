@@ -44,6 +44,12 @@ import java.util.List;
 public final class SmsManager {
     /** Singleton object constructed during class initialization. */
     private static final SmsManager sInstance = new SmsManager();
+    
+    private static final int UNKNOWN = -1;    
+    private static final int STORE_ME = 1;
+    private static final int STORE_SM = 2;      
+
+    private static int mCurSmsPreStore = UNKNOWN;
 
     /**
      * Send a text based SMS.
@@ -854,6 +860,38 @@ public final class SmsManager {
         return ret;
     }
 
+    /**
+     * set sms precedence store on mobile or icc card
+     *
+     * @return true if set success
+     * @hide
+     */
+    public boolean setSmsPreStore(int preStore, boolean force)
+    {
+        boolean ret = false;
+        ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms")); 
+        if (simISms == null) {
+            mCurSmsPreStore = UNKNOWN;
+            return ret;
+        }
+
+        if (force || (mCurSmsPreStore != preStore )){
+            mCurSmsPreStore = UNKNOWN;
+            try {
+                ret = simISms.setSmsPreStore(preStore);
+            }
+            catch (RemoteException ex) {
+                ret = false;
+            }  
+            
+            if (ret){
+                mCurSmsPreStore = preStore;
+            }
+        } else {
+            ret = true;
+        }
+        return ret;
+    }
 
     // see SmsMessage.getStatusOnIcc
 

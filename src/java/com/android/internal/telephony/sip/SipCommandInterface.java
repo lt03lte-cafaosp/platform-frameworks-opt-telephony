@@ -202,6 +202,9 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
 
     public void writeSmsToRuim(int status, String pdu, Message response) {
     }
+    
+    public void setSmsPreStore(int preStore, int subID, Message result) {
+    }   
 
     public void setupDataCall(String radioTechnology, String profile,
             String apn, String user, String password, String authType,
