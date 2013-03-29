@@ -167,6 +167,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             break;
 
         case EVENT_NEW_ICC_SMS:
+            Log.d(TAG, "Receive EVENT_NEW_ICC_SMS");
             ar = (AsyncResult)msg.obj;
             dispatchMessage((SmsMessage)ar.result);
             break;
@@ -234,6 +235,16 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             // Displayed/Stored/Notified. They should only be acknowledged.
             Log.d(TAG, "Received short message type 0, Don't display or store it. Send Ack");
             return Intents.RESULT_SMS_HANDLED;
+        }
+        //Add for process sms received from ICC 
+        int indexOnIcc = smsb.getIndexOnIcc();
+        Log.d(TAG, "z103 dispatchMessage indexOnIcc = " + indexOnIcc);
+        if (indexOnIcc >= 0)
+        {            
+            byte[][] pdus = new byte[1][];
+            pdus[0] = smsb.getPdu();
+            dispatchIccPdus(sms, pdus, indexOnIcc);
+            return Activity.RESULT_OK;
         }
 
         // Send SMS-PP data download messages to UICC. See 3GPP TS 31.111 section 7.1.1.
@@ -465,6 +476,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     }
 
     private void onUpdateIccAvailability() {
+        Log.d(TAG, "onUpdateIccAvailability");
         if (mUiccController == null ) {
             return;
         }
@@ -674,4 +686,66 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         Message msg = obtainMessage(EVENT_GET_SMS_CENTER_OVER);        
         mCm.getSmscAddress(msg);
     }
+    private void deleteSmSmsByIndex(int index)
+    {
+        Log.d(TAG, "deleteSmsByIndex index = " + index);
+        mCm.deleteSmsOnSim(index, null);        
+    }
+
+
+    /* Handle sms received from icc card */
+    private void dispatchIccPdus(SmsMessage sms, byte[][] pdus, int index) 
+    {
+        Log.d(TAG, "Cindy659 dispatchIccPdus be called in GSM!");
+        if (sms != null)
+        {
+            if (sms.getMessageClass() == SmsConstants.MessageClass.CLASS_0)
+            {
+                deleteSmSmsByIndex(index);
+                dispatchPdus(pdus);
+                return;
+            }
+            SmsHeader smsHeader = sms.getUserDataHeader();
+            if ((smsHeader == null) || (smsHeader.concatRef == null)) 
+            {
+                if (smsHeader != null && smsHeader.portAddrs != null) 
+                {
+                    deleteSmSmsByIndex(index);                
+                    if (smsHeader.portAddrs.destPort == SmsHeader.PORT_WAP_PUSH) 
+                    {
+                        mWapPush.dispatchWapPdu(sms.getUserData()/*, sms.getDisplayOriginatingAddress()*/);                    
+                        return;
+                    }
+                    else 
+                    {
+                        // The message was sent to a port, so concoct a URI for it.
+                        dispatchPortAddressedPdus(pdus, smsHeader.portAddrs.destPort);
+                        return;
+                    }                    
+                }
+            }
+            else 
+            {
+                if (smsHeader != null && smsHeader.portAddrs != null) 
+                {
+                    Log.d(TAG, "z207 smsHeader.portAddrs.destPort = " + smsHeader.portAddrs.destPort);
+                    deleteSmSmsByIndex(index);                    
+                    processMessagePart(sms.getPdu(), sms.getOriginatingAddress(), 
+                        smsHeader.concatRef.refNumber, smsHeader.concatRef.seqNumber, smsHeader.concatRef.msgCount, 
+                        sms.getTimestampMillis(), smsHeader.portAddrs.destPort, false);
+                    return ;
+                }           
+            }        
+        }
+        //Intent intent = new Intent(Intents.SMS_RECEIVED_ACTION);
+        Intent intent = new Intent("com.android.mms.transaction.ICC_SMS_RECEIVED");                
+        intent.putExtra("pdus", pdus);
+        intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, mPhone.getSubscription());        
+        intent.putExtra("icc_card", 2);  
+        intent.putExtra("index_on_icc", index);
+        //intent.putExtra("encoding", getEncoding());                        
+        intent.putExtra("format", getFormat());
+        dispatch(intent, "android.permission.RECEIVE_SMS");
+    }
+
 }

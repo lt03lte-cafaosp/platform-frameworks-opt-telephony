@@ -349,6 +349,9 @@ public abstract class SmsMessageBase {
         return indexOnIcc;
     }
 
+    public void setIndexOnIcc(int index) {
+        indexOnIcc = index;
+    }
     protected void parseMessageBody() {
         // originatingAddress could be null if this message is from a status
         // report.
