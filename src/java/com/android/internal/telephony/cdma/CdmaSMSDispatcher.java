@@ -214,6 +214,9 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
             return Intents.RESULT_SMS_OUT_OF_MEMORY;
         }
 
+        if (mStorageMonitor.isStorageNearlyFull()){
+            sendNearlyFullAction();
+        }
         if (SmsEnvelope.TELESERVICE_WAP == teleService) {
             return processCdmaWapPdu(sms.getUserData(), sms.messageRef,
                     sms.getOriginatingAddress());

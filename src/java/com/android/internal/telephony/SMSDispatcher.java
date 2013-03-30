@@ -1448,6 +1448,14 @@ public abstract class SMSDispatcher extends Handler {
         acknowledgeLastIncomingSms(success, result, response);
     }
 
+    protected void sendNearlyFullAction() {
+        // broadcast SMS_REJECTED_ACTION intent
+        Intent intent = new Intent(Intents.SMS_REJECTED_ACTION);
+        intent.putExtra("isNearFull", true);
+        mWakeLock.acquire(WAKE_LOCK_TIMEOUT);
+        mContext.sendBroadcast(intent, "android.permission.RECEIVE_SMS");
+    }
+
     /**
      * Keeps track of an SMS that has been sent to the RIL, until it has
      * successfully been sent, or we're done trying.

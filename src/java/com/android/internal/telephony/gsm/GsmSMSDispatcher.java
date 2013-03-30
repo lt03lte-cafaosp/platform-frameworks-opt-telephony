@@ -304,6 +304,10 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             return Intents.RESULT_SMS_OUT_OF_MEMORY;
         }
 
+        if (mStorageMonitor.isStorageNearlyFull()){
+            sendNearlyFullAction();
+        }
+
         return dispatchNormalMessage(smsb);
     }
 
