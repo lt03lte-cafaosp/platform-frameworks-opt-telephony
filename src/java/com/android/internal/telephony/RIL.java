@@ -1474,6 +1474,24 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         send(rr);
     }
 
+    /* modemtype : 0: CDMA ; 1: GSM */
+    public void
+    setIccSmsRead(int index, boolean read, int modemtype, Message result)
+    {
+        Log.d(LOG_TAG, "setIccSmsRead() index = " + index + ", modemtype = " + modemtype);
+        RILRequest rr 
+        = RILRequest.obtain(RIL_REQUEST_SET_SIM_SMS_READ, result);
+
+        rr.mp.writeInt(2);
+        rr.mp.writeInt(index);
+        rr.mp.writeInt(modemtype);
+        
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> "
+                + "ril_request = %d"+rr.mRequest + requestToString(rr.mRequest)
+                + "  index =  " + index + "  modemtype = " + modemtype);
+        send(rr);
+    }
+    
     public void setSmsPreStore(int preStore, int subID, Message result)
     {
         Log.d(LOG_TAG, "setSmsPreStore() preStore = " + preStore + ", subID = " + subID);
@@ -2511,6 +2529,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_GET_DATA_SUBSCRIPTION: ret = responseInts(p); break;
             case RIL_REQUEST_SET_SUBSCRIPTION_MODE: ret = responseVoid(p); break;
             case RIL_REQUEST_SET_SMS_PRE_STORE: ret =  responseVoid(p); break;
+            case RIL_REQUEST_SET_SIM_SMS_READ: ret =  responseVoid(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
@@ -3871,6 +3890,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_GET_DATA_SUBSCRIPTION: return "RIL_REQUEST_GET_DATA_SUBSCRIPTION";
             case RIL_REQUEST_SET_SUBSCRIPTION_MODE: return "RIL_REQUEST_SET_SUBSCRIPTION_MODE";
             case RIL_REQUEST_SET_SMS_PRE_STORE: return "RIL_REQUEST_SET_SMS_PRE_STORE";
+            case RIL_REQUEST_SET_SIM_SMS_READ: return "RIL_REQUEST_SET_SIM_SMS_READ";
             default: return "<unknown request>";
         }
     }

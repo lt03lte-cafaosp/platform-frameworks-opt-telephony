@@ -358,6 +358,13 @@ interface ISms {
     boolean setGsmSmsCenter(String center);
 
     /**
+     * modify sms status on icc.
+     * @return true if set successfully.
+     * @hide
+     */
+     boolean setIccSmsRead(int index, boolean read);
+     
+    /**
      * set sms pre store.
      *
      */

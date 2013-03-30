@@ -292,6 +292,13 @@ interface ISmsMSim {
     boolean setGsmSmsCenter(String center, int subscription);
 
     /**
+     * modify sms status on icc.
+     * @return true if set successfully.
+     * @hide
+     */
+     boolean setIccSmsRead(int index, boolean read, int subscription);
+     
+    /**
      * set sms pre store.
      *
      */

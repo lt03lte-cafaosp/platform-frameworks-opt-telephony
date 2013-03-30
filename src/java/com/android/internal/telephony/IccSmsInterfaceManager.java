@@ -65,7 +65,8 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     private static final int EVENT_SET_BROADCAST_ACTIVATION_DONE = 3;
     private static final int EVENT_SET_BROADCAST_CONFIG_DONE = 4;
     private static final int EVENT_WRITE_TO_CARD_DONE = 5;
-  
+    private static final int EVENT_SET_SMS_READ_DONE = 6;
+    
     private static final int SMS_CB_CODE_SCHEME_MIN = 0;
     private static final int SMS_CB_CODE_SCHEME_MAX = 255;
     private int mWriteIndex = -1;   /* Store for index of copy ICC */
@@ -906,6 +907,33 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         mPhone.mCM.setSmscAddress(center, null);
         return true;
     }
+
+    public boolean setIccSmsRead(int index, boolean read)
+    {
+        int ModemType = PhoneConstants.PHONE_TYPE_GSM;
+        
+        if (PhoneConstants.PHONE_TYPE_GSM == mPhone.getPhoneType())  {
+            ModemType = PhoneConstants.PHONE_TYPE_GSM;
+        }
+        else {
+            ModemType = 0; /*Phone.PHONE_TYPE_CDMA */
+        }
+        //int sub = mPhone.getSubscription();
+        Log.d(LOG_TAG, "setIccSmsRead() index = " + index + ", ModemType = " + ModemType);
+        
+        synchronized(mLock) {
+            mSuccess = false;
+            Message response = mHandler.obtainMessage(EVENT_SET_SMS_READ_DONE);
+            mPhone.mCM.setIccSmsRead(index, read, ModemType, response);        
+            try 
+            {
+                mLock.wait();
+            } catch (InterruptedException e) {
+                log("interrupted while trying to update by index");
+            }
+        }
+        return mSuccess;
+    }    
 
     public boolean setSmsPreStore(int preStore)
     {  

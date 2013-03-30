@@ -385,6 +385,10 @@ class UsimDataDownloadCommands extends BaseCommands {
     }
 
     @Override
+    public void setIccSmsRead(int index, boolean read, int modem, Message result){
+    }
+
+    @Override
     public void setSmsPreStore(int preStore, int subID, Message result) {
     }   
 

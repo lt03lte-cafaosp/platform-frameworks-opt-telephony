@@ -965,7 +965,10 @@ public final class SimulatedCommands extends BaseCommands
         Log.d(LOG_TAG, "Write SMS to RUIM with status " + status);
         unimplemented(response);
     }
-    
+
+    public void setIccSmsRead(int index, boolean read, int modem, Message result){
+        unimplemented(result);
+    }
     public void setSmsPreStore(int preStore, int subID, Message result) {
         unimplemented(result);
     }   

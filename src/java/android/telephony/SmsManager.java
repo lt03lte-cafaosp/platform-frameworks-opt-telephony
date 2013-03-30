@@ -861,6 +861,34 @@ public final class SmsManager {
     }
 
     /**
+     * set sms status to read or unread on icc card 
+     *
+     * @return true if set success
+     * @hide
+     */
+    public boolean setIccSmsRead(int index, boolean read)
+    {
+        boolean ret = false;
+        if (index < 0) {
+            return false;
+        }
+        
+        try 
+        {
+            ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (simISms != null) {                
+                ret = simISms.setIccSmsRead(index, read);
+            }
+            else{
+                ret = false;
+            }
+        } catch (RemoteException ex) {
+            ret = false;            
+        }
+        return ret; 
+    } 
+
+    /**
      * set sms precedence store on mobile or icc card
      *
      * @return true if set success

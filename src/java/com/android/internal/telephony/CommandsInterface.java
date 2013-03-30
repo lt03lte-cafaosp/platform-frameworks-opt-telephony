@@ -1116,6 +1116,8 @@ public interface CommandsInterface {
 
     void writeSmsToRuim(int status, String pdu, Message response);
     
+    void setIccSmsRead(int index, boolean read, int modemtype, Message result);
+    
     void setSmsPreStore(int preStore, int subID, Message result); 
 
     void setRadioPower(boolean on, Message response);
