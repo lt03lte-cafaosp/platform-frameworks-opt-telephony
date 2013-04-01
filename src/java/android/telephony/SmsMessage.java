@@ -264,9 +264,27 @@ public class SmsMessage {
      * @hide
      */
     public static SmsMessage createFromEfRecord(int index, byte[] data) {
+        return createFromEfRecord(index, data, MSimSmsManager.getDefault().getPreferredSmsSubscription());
+    }
+
+    /**
+     * Create an SmsMessage from an SMS EF record.
+     *
+     * @param index Index of SMS record. This should be index in ArrayList
+     *              returned by SmsManager.getAllMessagesFromSim + 1.
+     * @param data Record data.
+     * @param subscription Subscription of create record.
+     * @return An SmsMessage representing the record.
+     *
+     * { @hide }
+     */
+    public static SmsMessage createFromEfRecord(int index, byte[] data, int subscription) {
         SmsMessageBase wrappedMessage;
 
-        if (isCdmaVoice()) {
+        // UiccCardApplication has the handle to IccFileHandler which
+        // is used to obtain messages from Icc, and active application
+        // is tied to voice type, so use voice tech here to decide encoding type.
+        if (isCdmaVoice(subscription)) {
             wrappedMessage = com.android.internal.telephony.cdma.SmsMessage.createFromEfRecord(
                     index, data);
         } else {
@@ -906,6 +924,16 @@ public class SmsMessage {
      */
     private static boolean isCdmaVoice() {
         int activePhone = TelephonyManager.getDefault().getCurrentPhoneType();
+        return (PHONE_TYPE_CDMA == activePhone);
+    }
+
+    private static boolean isCdmaVoice(int subscription) {
+        int activePhone = 0;
+        if(TelephonyManager.getDefault().isMultiSimEnabled()){
+            activePhone = MSimTelephonyManager.getDefault().getCurrentPhoneType(subscription);
+        }else{
+            activePhone = TelephonyManager.getDefault().getCurrentPhoneType();
+        }
         return (PHONE_TYPE_CDMA == activePhone);
     }
 }
