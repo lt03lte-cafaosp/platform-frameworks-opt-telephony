@@ -102,6 +102,8 @@ public class CallDetails {
                                                       * until domain is set
                                                       */
 
+    public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
+
     public int call_type;
     public int call_domain;
 
@@ -116,8 +118,7 @@ public class CallDetails {
     public CallDetails(int callType, int callDomain, String[] extraparams) {
         call_type = callType;
         call_domain = callDomain;
-        // TODO Implement this later when extras is implemented
-        extras = null;
+        extras = extraparams;
     }
 
     public CallDetails(CallDetails srcCall) {
@@ -155,13 +156,31 @@ public class CallDetails {
         this.extras = getExtrasFromMap(newExtras);
     }
 
+    public String getValueForKeyFromExtras(String[] extras, String key) {
+        for (int i = 0; extras != null && i < extras.length; i++) {
+            if (extras[i] != null) {
+                String[] currKey = extras[i].split("=");
+                if (currKey.length == 2 && currKey[0].equals(key)) {
+                    return currKey[1];
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * @return string representation.
      */
     @Override
     public String toString() {
+        String extrasResult = "";
+        if (extras != null) {
+            for (String s : extras) {
+                extrasResult += s;
+            }
+        }
         return (" " + call_type
                 + " " + call_domain
-                + " " + extras); // TODO - fix printing string array
+                + " " + extrasResult);
     }
 }
