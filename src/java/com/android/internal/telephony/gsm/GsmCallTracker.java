@@ -943,6 +943,19 @@ public final class GsmCallTracker extends CallTracker {
                 ar = (AsyncResult)msg.obj;
                 if (ar.exception != null) {
                     phone.notifySuppServiceFailed(getFailedService(msg.what));
+                    // When switch request fails, the existing call may still be
+                    // in active/disconnected state. In either case telephony will
+                    // dial the emergency call. The handling of the emergency call
+                    // will depend on the lower layer behaviour
+                    if (pendingMO != null) {
+                        boolean isEmergencyNumber = PhoneNumberUtils
+                                .isExactOrPotentialLocalEmergencyNumber(
+                                        pendingMO.getAddress(), phone.getContext());
+                        if (isEmergencyNumber && ar.userObj != null) {
+                            log("Call Hold/Switch failed, proceed with e911 dialing");
+                            dialPendingCall((Integer) ar.userObj);
+                        }
+                    }
                 } else {
                     if (ar.userObj != null) {
                         dialPendingCall((Integer) ar.userObj);
