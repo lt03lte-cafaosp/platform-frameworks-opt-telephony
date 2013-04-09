@@ -75,6 +75,10 @@ public abstract class BaseCommands implements CommandsInterface {
     protected RegistrantList mWwanIwlanCoexistenceRegistrants = new RegistrantList();
     protected RegistrantList mSimRefreshRegistrants = new RegistrantList();
     protected RegistrantList mModemCapRegistrants = new RegistrantList();
+    protected RegistrantList mCdmaFwdBurstDtmfRegistrants = new RegistrantList();
+    protected RegistrantList mCdmaFwdContDtmfStartRegistrants = new RegistrantList();
+    protected RegistrantList mCdmaFwdContDtmfStopRegistrants = new RegistrantList();
+    protected RegistrantList mWmsReadyRegistrants = new RegistrantList();
 
     protected Registrant mGsmSmsRegistrant;
     protected Registrant mCdmaSmsRegistrant;
@@ -755,6 +759,38 @@ public abstract class BaseCommands implements CommandsInterface {
 
     public void unregisterForSubscriptionStatusChanged(Handler h) {
         mSubscriptionStatusRegistrants.remove(h);
+    }
+
+    public void registerForCdmaFwdBurstDtmf(Handler h, int what, Object obj) {
+        mCdmaFwdBurstDtmfRegistrants.addUnique(h, what, obj);
+    }
+
+    public void unregisterForCdmaFwdBurstDtmf(Handler h) {
+        mCdmaFwdBurstDtmfRegistrants.remove(h);
+    }
+
+    public void registerForCdmaFwdContDtmfStart(Handler h, int what, Object obj) {
+        mCdmaFwdContDtmfStartRegistrants.addUnique(h, what, obj);
+    }
+
+    public void unregisterForCdmaFwdContDtmfStart(Handler h) {
+        mCdmaFwdContDtmfStartRegistrants.remove(h);
+    }
+
+    public void registerForCdmaFwdContDtmfStop(Handler h, int what, Object obj) {
+        mCdmaFwdContDtmfStopRegistrants.addUnique(h, what, obj);
+    }
+
+    public void unregisterForCdmaFwdContDtmfStop(Handler h) {
+        mCdmaFwdContDtmfStopRegistrants.remove(h);
+    }
+
+    public void registerForWmsReadyEvent(Handler h, int what, Object obj) {
+        mWmsReadyRegistrants.addUnique(h, what, obj);
+    }
+
+    public void unregisterForWmsReadyEvent(Handler h) {
+        mWmsReadyRegistrants.remove(h);
     }
 
     public void registerForWwanIwlanCoexistence(Handler h, int what, Object obj) {
