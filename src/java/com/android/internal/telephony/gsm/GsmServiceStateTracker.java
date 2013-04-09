@@ -302,7 +302,7 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
 
             case EVENT_SIM_READY:
                 // Set the network type, in case the radio does not restore it.
-                cm.setCurrentPreferredNetworkType();
+                //cm.setCurrentPreferredNetworkType();
 
                 boolean skipRestoringSelection = phone.getContext().getResources().getBoolean(
                         com.android.internal.R.bool.skip_restoring_network_selection);
