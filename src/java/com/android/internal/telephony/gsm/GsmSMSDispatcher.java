@@ -750,6 +750,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         //intent.putExtra("encoding", getEncoding());                        
         intent.putExtra("format", getFormat());
         dispatch(intent, "android.permission.RECEIVE_SMS");
+        Log.d(TAG, "transaction send ICC_SMS_RECEIVED!");
     }
 
 }

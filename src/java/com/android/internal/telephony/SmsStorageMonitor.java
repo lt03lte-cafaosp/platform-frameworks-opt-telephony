@@ -16,6 +16,8 @@
 
 package com.android.internal.telephony;
 
+import com.android.internal.telephony.MSimConstants;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -53,6 +55,7 @@ public final class SmsStorageMonitor extends Handler {
     private PowerManager.WakeLock mWakeLock;
 
     private boolean mReportMemoryStatusPending;
+    private int mSubId = 0;
 
     final CommandsInterface mCm;                            // accessed from inner class
     boolean mStorageAvailable = true;                       // accessed from inner class
@@ -71,6 +74,7 @@ public final class SmsStorageMonitor extends Handler {
     public SmsStorageMonitor(PhoneBase phone) {
         mContext = phone.getContext();
         mCm = phone.mCM;
+        mSubId = phone.getSubscription();
 
         createWakelock();
 
@@ -141,6 +145,7 @@ public final class SmsStorageMonitor extends Handler {
     private void handleIccFull() {
         // broadcast SIM_FULL intent
         Intent intent = new Intent(Intents.SIM_FULL_ACTION);
+        intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, mSubId);
         mWakeLock.acquire(WAKE_LOCK_TIMEOUT);
         mContext.sendBroadcast(intent, SMSDispatcher.RECEIVE_SMS_PERMISSION);
     }
