@@ -48,6 +48,7 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
     protected final Object mLock = new Object();
     protected int recordSize[];
     protected boolean success;
+    protected int update_err;
     protected List<AdnRecord> records;
 
     protected static final boolean ALLOW_SIM_OP_IN_UI_THREAD = false;
@@ -55,7 +56,7 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
     protected static final int EVENT_GET_SIZE_DONE = 1;
     protected static final int EVENT_LOAD_DONE = 2;
     protected static final int EVENT_UPDATE_DONE = 3;
-
+    protected static final int EVENT_UPDATE_USIMADN_DONE = 4;
     protected Handler mBaseHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -94,6 +95,29 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
                             if (records != null) {
                                 records.clear();
                             }
+                        }
+                        notifyPending(ar);
+                    }
+                    break;
+                case EVENT_UPDATE_USIMADN_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    synchronized (mLock) {
+                        logd(""+ar.exception);
+                        if(ar.exception == null)
+                        {
+                            update_err=1;
+                        }
+                        else if(ar.exception.toString().equals("java.lang.RuntimeException: Email sparecount is 0"))
+                        {
+                            update_err=-1;
+                        }
+                        else if(ar.exception.equals("java.lang.RuntimeException: anr sparecount is 0"))
+                        {
+                            update_err=-2;
+                        }
+                        else
+                        {
+                            update_err=-2;
                         }
                         notifyPending(ar);
                     }
@@ -195,7 +219,7 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
         }
         return success;
     }
-
+/*
     public boolean
     updateAdnRecordsInEfBySearch (int efid,
             ContentValues values, String pin2) {
@@ -239,6 +263,51 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
             }
         }
         return success;
+    }
+*/
+    public int
+    updateAdnRecordsInEfBySearch (int efid,
+            ContentValues values, String pin2) {
+
+
+        if (phone.getContext().checkCallingOrSelfPermission(
+                android.Manifest.permission.WRITE_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED) {
+            throw new SecurityException(
+                    "Requires android.permission.WRITE_CONTACTS permission");
+        }
+
+        String oldTag = values.getAsString(IccProvider.STR_TAG);
+        String newTag = values.getAsString(IccProvider.STR_NEW_TAG);
+        String oldPhoneNumber = values.getAsString(IccProvider.STR_NUMBER);
+        String newPhoneNumber = values.getAsString(IccProvider.STR_NEW_NUMBER);
+        String oldEmail = values.getAsString(IccProvider.STR_EMAILS);
+        String newEmail = values.getAsString(IccProvider.STR_NEW_EMAILS);
+        String oldAnr = values.getAsString(IccProvider.STR_ANRS);
+        String newAnr = values.getAsString(IccProvider.STR_NEW_ANRS);
+        String[] oldEmailArray = TextUtils.isEmpty(oldEmail)? null: getStringArray(oldEmail);
+        String[] newEmailArray = TextUtils.isEmpty(newEmail)? null: getStringArray(newEmail);
+        String[] oldAnrArray = TextUtils.isEmpty(oldAnr)? null: getStringArray(oldAnr);
+        String[] newAnrArray = TextUtils.isEmpty(newAnr)? null: getStringArray(newAnr);
+        efid = updateEfForIccType(efid);
+
+        if (DBG) logd("updateAdnRecordsInEfBySearch: efid=" + efid +
+                ", values = " + values + ", pin2=" + pin2);
+        synchronized(mLock) {
+            checkThread();
+            update_err = 0;
+            AtomicBoolean status = new AtomicBoolean(false);
+            Message response = mBaseHandler.obtainMessage(EVENT_UPDATE_USIMADN_DONE, status);
+            AdnRecord oldAdn = new AdnRecord(oldTag, oldPhoneNumber, oldEmailArray, oldAnrArray);
+            AdnRecord newAdn = new AdnRecord(newTag, newPhoneNumber, newEmailArray, newAnrArray);
+            if (adnCache != null) {
+                adnCache.updateAdnBySearch(efid, oldAdn, newAdn, pin2, response);
+                waitForResult(status);
+            } else {
+                logd("Failure while trying to update by search due to uninitialised adncache");
+            }
+        }
+        return update_err;
     }
 
     /**
@@ -378,36 +447,6 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
     
     public int getSpareEmailCount() {
         return adnCache.getSpareEmailCount();
-    }
-    
-    public boolean updateUsimAdnRecordsInEfByIndex(int efid, String newTag,
-            String newPhoneNumber, String[] anrNumbers, String[] emails, int index, String pin2) {
-
-        if (phone.getContext().checkCallingOrSelfPermission(
-                android.Manifest.permission.WRITE_CONTACTS)
-                != PackageManager.PERMISSION_GRANTED) {
-            throw new SecurityException(
-                    "Requires android.permission.WRITE_CONTACTS permission");
-        }
-
-        if (DBG) logd("updateAdnRecordsInEfByIndex: efid=" + efid +
-                " Index=" + index + " ==> " +
-                "("+ newTag + "," + newPhoneNumber + ")"+ " pin2=" + pin2);
-        synchronized(mLock) {
-            checkThread();
-            success = false;
-            AtomicBoolean status = new AtomicBoolean(false);
-            Message response = mBaseHandler.obtainMessage(EVENT_UPDATE_DONE, status);
-            AdnRecord newAdn = new AdnRecord(newTag, newPhoneNumber, emails, anrNumbers);
-            efid = updateEfForIccType(efid); 
-            if (adnCache != null) {
-                adnCache.updateUsimAdnByIndex(efid, newAdn, index, pin2, response);
-                waitForResult(status);
-            } else {
-                logd("Failure while trying to update by index due to uninitialised adncache");
-            }
-        }
-        return success;
     }
     
     public int getAdnCount() {

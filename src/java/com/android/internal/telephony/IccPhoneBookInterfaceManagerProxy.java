@@ -62,7 +62,7 @@ public class IccPhoneBookInterfaceManagerProxy extends IIccPhoneBook.Stub {
                 efid, oldTag, oldPhoneNumber, newTag, newPhoneNumber, pin2);
     }
 
-    public boolean
+    public int
     updateAdnRecordsInEfBySearch (int efid,
             ContentValues values,
             String pin2) throws android.os.RemoteException {
@@ -92,12 +92,6 @@ public class IccPhoneBookInterfaceManagerProxy extends IIccPhoneBook.Stub {
     
     public int getSpareEmailCount() {
         return mIccPhoneBookInterfaceManager.getSpareEmailCount();
-    }
-    
-    public boolean updateUsimAdnRecordsInEfByIndex(int efid, String newTag,
-            String newPhoneNumber, String[] anrNumbers, String[] emails, int index, String pin2) throws android.os.RemoteException {
-        return mIccPhoneBookInterfaceManager.updateUsimAdnRecordsInEfByIndex(efid,
-                newTag, newPhoneNumber, anrNumbers, emails, index, pin2);
     }
     
     public void setUimLoaderStatus(int state) {
