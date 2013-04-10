@@ -107,7 +107,7 @@ interface IIccPhoneBookMSim {
      * @param pin2 required to update EF_FDN, otherwise must be null
      * @return true for success
      */
-    boolean updateAdnRecordsInEfBySearchOnSubscription(int efid,
+    int updateAdnRecordsInEfBySearchOnSubscription(int efid,
             in ContentValues values,
             String pin2, int subscription);        
 
@@ -124,10 +124,6 @@ interface IIccPhoneBookMSim {
     int[] getAdnRecordsSize(int efid, int subscription);
     
     //Interface add for usim phonebook start
-    boolean updateUsimAdnRecordsInEfByIndex(int sub,int efid, String newTag,
-            String newPhoneNumber, in String[] anrNumbers, in String[] emails, int index,
-            String pin2);
-    
     int getAdnCount(int sub);
     
     void setUimLoaderStatus(int sub,int state);
