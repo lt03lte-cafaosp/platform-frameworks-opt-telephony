@@ -149,12 +149,7 @@ public class IccProvider extends ContentProvider {
         mValues.put(STR_NEW_NUMBER,number);
         mValues.put(STR_NEW_EMAILS,emails);
         mValues.put(STR_NEW_ANRS,anrs);
-        boolean success = updateIccRecordInEf(efType, mValues, pin2);
-
-        if (!success) {
-            return null;
-        }
-
+        int success = updateIccRecordInEf(efType, mValues, pin2);
         StringBuilder buf = new StringBuilder("content://icc/");
         switch (match) {
             case ADN:
@@ -167,7 +162,7 @@ public class IccProvider extends ContentProvider {
         }
 
         // TODO: we need to find out the rowId for the newly added record
-        buf.append(0);
+        buf.append(success);
 
         resultUri = Uri.parse(buf.toString());
 
@@ -268,13 +263,9 @@ public class IccProvider extends ContentProvider {
         }
 
         if (DBG) log("delete mvalues= " + mValues);
-        boolean success = updateIccRecordInEf(efType, mValues, pin2);
-        if (!success) {
-            return 0;
-        }
-
+        int success = updateIccRecordInEf(efType, mValues, pin2);
         getContext().getContentResolver().notifyChange(url, null);
-        return 1;
+        return success;
     }
 
     @Override
@@ -301,14 +292,9 @@ public class IccProvider extends ContentProvider {
         }
 
         // TODO(): Update for email.
-        boolean success = updateIccRecordInEf(efType, values, pin2);
-
-        if (!success) {
-            return 0;
-        }
-
+        int success = updateIccRecordInEf(efType, values, pin2);
         getContext().getContentResolver().notifyChange(url, null);
-        return 1;
+        return success;
     }
 
     private MatrixCursor loadFromEf(int efType) {
@@ -343,12 +329,12 @@ public class IccProvider extends ContentProvider {
         }
     }
 
-    private boolean
+    private int
     addIccRecordToEf(int efType, String name, String number, String[] emails, String pin2) {
         if (DBG) log("addIccRecordToEf: efType=" + efType + ", name=" + name +
                 ", number=" + number + ", emails=" + emails);
 
-        boolean success = false;
+        int success = 0;
 
         // TODO: do we need to call getAdnRecordsInEf() before calling
         // updateAdnRecordsInEfBySearch()? In any case, we will leave
@@ -364,12 +350,12 @@ public class IccProvider extends ContentProvider {
         return success;
     }
 
-    private boolean
+    private int
     updateIccRecordInEf(int efType, String oldName, String oldNumber,
             String newName, String newNumber, String pin2) {
         if (DBG) log("updateIccRecordInEf: efType=" + efType + ", oldname=" + oldName + ", oldnumber=" + oldNumber +
             ", newname=" + newName + ", newnumber=" + newNumber );
-        boolean success = false;
+        int success = 0;
         ContentValues values = new ContentValues();
         values.put(STR_TAG,oldName);
         values.put(STR_NUMBER,oldNumber);
@@ -382,10 +368,10 @@ public class IccProvider extends ContentProvider {
     }
 
 
-    private boolean
+    private int
     updateIccRecordInEf(int efType, ContentValues values, String pin2) {
         if (DBG) log("updateIccRecordInEf: efType=" + efType + ", values: "+ values);
-        boolean success = false;
+        int success = 0;
 
         try {
             IIccPhoneBook iccIpb = IIccPhoneBook.Stub.asInterface(
@@ -404,12 +390,12 @@ public class IccProvider extends ContentProvider {
     }
 
 
-    private boolean deleteIccRecordFromEf(int efType, String name, String number, String[] emails,
+    private int deleteIccRecordFromEf(int efType, String name, String number, String[] emails,
             String pin2) {
         if (DBG) log("deleteIccRecordFromEf: efType=" + efType +
                 ", name=" + name + ", number=" + number + ", emails=" + emails + ", pin2=" + pin2);
 
-        boolean success = false;
+        int success = 0;
 
         ContentValues values = new ContentValues();
         values.put(STR_TAG,name);
