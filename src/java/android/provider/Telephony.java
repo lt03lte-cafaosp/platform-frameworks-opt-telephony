@@ -76,6 +76,7 @@ public final class Telephony {
         public static final int MESSAGE_TYPE_QUEUED = 6; // for messages to send later
         public static final int MESSAGE_TYPE_INBOX_SUB1 = 7;
         public static final int MESSAGE_TYPE_INBOX_SUB2 = 8;
+        public static final int MESSAGE_TYPE_SEARCH  = 9;
 
 
         /**

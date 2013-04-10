@@ -483,8 +483,9 @@ public class CatService extends Handler implements AppInterface {
         buf.write(DEV_ID_UICC); // destination device id
 
         // result
+        tag = ComprehensionTlvTag.RESULT.value();
         if (cmdDet.compRequired) {
-            tag = 0x80 | ComprehensionTlvTag.RESULT.value();
+            tag |= 0x80;
         }
         buf.write(tag);
         int length = includeAdditionalInfo ? 2 : 1;
@@ -505,7 +506,7 @@ public class CatService extends Handler implements AppInterface {
 
         byte[] rawData = buf.toByteArray();
         String hexString = IccUtils.bytesToHexString(rawData);
-        if (false) {
+        if (true) {
             CatLog.d(this, "TERMINAL RESPONSE: " + hexString);
         }
 
