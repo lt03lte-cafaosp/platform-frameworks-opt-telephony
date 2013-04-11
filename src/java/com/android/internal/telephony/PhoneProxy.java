@@ -1014,6 +1014,10 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.unsetOnEcbModeExitResponse(h);
     }
 
+    public boolean isManualNetSelAllowed() {
+        return mActivePhone.isManualNetSelAllowed();
+    }
+
     public boolean isCspPlmnEnabled() {
         return mActivePhone.isCspPlmnEnabled();
     }
