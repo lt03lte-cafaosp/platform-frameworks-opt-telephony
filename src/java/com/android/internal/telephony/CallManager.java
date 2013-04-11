@@ -708,6 +708,10 @@ public final class CallManager {
             phone.registerForCallWaiting(mHandler, EVENT_CALL_WAITING, null);
             phone.registerForEcmTimerReset(mHandler, EVENT_ECM_TIMER_RESET, null);
         }
+
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
+            phone.registerForEcmTimerReset(mHandler, EVENT_ECM_TIMER_RESET, null);
+        }
     }
 
     private void unregisterForPhoneStates(Phone phone) {
@@ -740,6 +744,10 @@ public final class CallManager {
             phone.unregisterForCdmaOtaStatusChange(mHandler);
             phone.unregisterForSubscriptionInfoReady(mHandler);
             phone.unregisterForCallWaiting(mHandler);
+            phone.unregisterForEcmTimerReset(mHandler);
+        }
+
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
             phone.unregisterForEcmTimerReset(mHandler);
         }
     }
