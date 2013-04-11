@@ -884,9 +884,9 @@ public class IccSmsInterfaceManager extends ISms.Stub {
             Log.e(LOG_TAG, "getSmsCapCountOnIcc - aborting, no icc card present.");
             return -1;
         }    
-        if (DBG) log("getSmsCapCountOnIcc: ");        
+        //if (DBG) log("getSmsCapCountOnIcc: ");        
         int numberOnIcc = fh.getSmsCapCountOnIcc();	
-		Log.d(LOG_TAG,"wangshuang-->getSmsCapCountOnIcc().numberOnIcc="+numberOnIcc);
+        Log.d(LOG_TAG,"getSmsCapCountOnIcc().numberOnIcc="+numberOnIcc);
         return numberOnIcc;
     }
 
