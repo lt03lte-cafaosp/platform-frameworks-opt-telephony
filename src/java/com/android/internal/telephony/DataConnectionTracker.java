@@ -249,7 +249,8 @@ public abstract class DataConnectionTracker extends Handler {
     static LinkedHashMap<String, Integer> mApnPriorities =
         new LinkedHashMap<String, Integer>() {
             {
-                put(PhoneConstants.APN_TYPE_DM,     8);
+                put(PhoneConstants.APN_TYPE_WAP,     9);
+                put(PhoneConstants.APN_TYPE_DM,      8);
                 put(PhoneConstants.APN_TYPE_CBS,     7);
                 put(PhoneConstants.APN_TYPE_IMS,     6);
                 put(PhoneConstants.APN_TYPE_FOTA,    5);
@@ -798,6 +799,8 @@ public abstract class DataConnectionTracker extends Handler {
             return DctConstants.APN_CBS_ID;
         } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_DM)) {
             return DctConstants.APN_DM_ID;
+        } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_WAP)) {
+            return DctConstants.APN_WAP_ID;
         } else {
             return DctConstants.APN_INVALID_ID;
         }
@@ -823,6 +826,8 @@ public abstract class DataConnectionTracker extends Handler {
             return PhoneConstants.APN_TYPE_CBS;
         case DctConstants.APN_DM_ID:
             return PhoneConstants.APN_TYPE_DM;
+        case DctConstants.APN_WAP_ID:
+            return PhoneConstants.APN_TYPE_WAP;
         default:
             log("Unknown id (" + id + ") in apnIdToType");
             return PhoneConstants.APN_TYPE_DEFAULT;
