@@ -240,11 +240,11 @@ public class AdnRecord implements Parcelable {
             adnString[i] = (byte) 0xFF;
         }
 
-        if (TextUtils.isEmpty(number)) {
+        if ((TextUtils.isEmpty(number))&&(TextUtils.isEmpty(alphaTag))) {
             Log.w(LOG_TAG, "[buildAdnString] Empty dialing number");
             return adnString;   // return the empty record (for delete)
-        } else if (number.length()
-                > (ADN_DIALING_NUMBER_END - ADN_DIALING_NUMBER_START + 1) * 2) {
+        } else if ((number!=null)&&(number.length()
+                > (ADN_DIALING_NUMBER_END - ADN_DIALING_NUMBER_START + 1) * 2)) {
             Log.w(LOG_TAG,
                     "[buildAdnString] Max length of dialing number is 20");
             return null;
@@ -253,13 +253,15 @@ public class AdnRecord implements Parcelable {
                     "[buildAdnString] Max length of tag is " + footerOffset);
             return null;
         } else {
-            bcdNumber = PhoneNumberUtils.numberToCalledPartyBCD(number);
-
-            System.arraycopy(bcdNumber, 0, adnString,
-                    footerOffset + ADN_TON_AND_NPI, bcdNumber.length);
-
-            adnString[footerOffset + ADN_BCD_NUMBER_LENGTH]
-                    = (byte) (bcdNumber.length);
+            if(!(TextUtils.isEmpty(number))){
+                bcdNumber = PhoneNumberUtils.numberToCalledPartyBCD(number);
+    
+                System.arraycopy(bcdNumber, 0, adnString,
+                        footerOffset + ADN_TON_AND_NPI, bcdNumber.length);
+    
+                adnString[footerOffset + ADN_BCD_NUMBER_LENGTH]
+                        = (byte) (bcdNumber.length);
+            }
             adnString[footerOffset + ADN_CAPABILITY_ID]
                     = (byte) 0xFF; // Capability Id
             adnString[footerOffset + ADN_EXTENSION_ID]

@@ -479,10 +479,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     emails[0] = readEmailRecord(recNum - 1,pbrIndex);
                     adnRecIndex = i + getInitIndexBy(pbrIndex);
                     AdnRecord rec = mPhoneBookRecords.get(adnRecIndex);
-                    if (rec != null &&
-                        (!TextUtils.isEmpty(rec.getAlphaTag()) ||
-                        !TextUtils.isEmpty(rec.getNumber())) &&
-                        (!TextUtils.isEmpty(emails[0]))) {
+                    if (rec != null &&(!TextUtils.isEmpty(emails[0]))) {
                         rec.setEmails(emails);
                         mPhoneBookRecords.set(adnRecIndex, rec);
                         
@@ -510,9 +507,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 if (emailList == null) continue;
     
                 AdnRecord rec = mPhoneBookRecords.get(i);
-                if (rec != null &&
-                    (!TextUtils.isEmpty(rec.getAlphaTag()) ||
-                    !TextUtils.isEmpty(rec.getNumber()))) {
+                if (rec != null) {
                     String[] emails = new String[emailList.size()];
                     System.arraycopy(emailList.toArray(), 0, emails, 0, emailList.size());
                     rec.setEmails(emails);
@@ -547,10 +542,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     anrs[0] = readAnrRecord(recNum - 1,pbrIndex);
                     adnRecIndex = i + getInitIndexBy(pbrIndex);
                     AdnRecord rec = mPhoneBookRecords.get(adnRecIndex);
-                    if (rec != null &&
-                        (!TextUtils.isEmpty(rec.getAlphaTag()) ||
-                        !TextUtils.isEmpty(rec.getNumber())) &&
-                        (!TextUtils.isEmpty(anrs[0]))) {
+                    if (rec != null&&(!TextUtils.isEmpty(anrs[0]))) {
                         rec.setAdditionalNumbers(anrs);
                         mPhoneBookRecords.set(adnRecIndex, rec);
                         mAnrFlags.get(pbrIndex).set(recNum - 1,1);
@@ -570,9 +562,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 }
                 if (anrList == null) continue;
                 AdnRecord rec = mPhoneBookRecords.get(i);
-                if (rec != null &&
-                    (!TextUtils.isEmpty(rec.getAlphaTag()) ||
-                    !TextUtils.isEmpty(rec.getNumber()))) {
+                if (rec != null) {
                     String[] anrs = new String[anrList.size()];
                     System.arraycopy(anrList.toArray(), 0, anrs, 0, anrList.size());
                     rec.setAdditionalNumbers(anrs);
@@ -869,10 +859,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         int initAdnIndex = getInitIndexBy(pbrIndex);
         log("pbr index is " + pbrIndex + ", initAdnIndex is " + initAdnIndex);
         for (int i=0; i < mAdnLengthList.get(pbrIndex); i++) {
-            if (!TextUtils.isEmpty(mPhoneBookRecords.get(i + initAdnIndex).getNumber())) {
-                recordNums.add(i+1);
-                log("valid recnum is " + (i+1));
-            }
+            recordNums.add(i+1);
+            log("valid recnum is " + (i+1));
         }
         //Need to read at least one record to inint
         //variable mIapFileRecord, mEmailFileRecord,mAnrFileRecord
@@ -1073,7 +1061,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             
             //code add for usim phonebook start
             for (int i=0; i<data.length; i++ ) {
-                log("EVENT_UPDATE_EMAIL_RECORD_DONE data = "+data[i]+",i is "+i);
+                //log("EVENT_UPDATE_EMAIL_RECORD_DONE data = "+data[i]+",i is "+i);
                 if(data[i]!=(byte)0xff)
                 {
                     log("EVENT_UPDATE_EMAIL_RECORD_DONE data !=0xff");

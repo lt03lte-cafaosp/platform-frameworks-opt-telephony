@@ -478,60 +478,6 @@ public final class AdnRecordCache extends Handler implements IccConstants {
     }
 
     //Interface add for usim phonebook start
-    public void updateUsimAdnByIndex(int efid, AdnRecord newAdn, int recordIndex, String pin2,
-                Message response) {
-    
-        int extensionEF;
-        extensionEF = extensionEfForEf(efid);
-        if (extensionEF < 0) {
-            sendErrorResponse(response, "EF is not known ADN-like EF:" + efid);
-            return;
-        }
-    
-        ArrayList<AdnRecord>  oldAdnList = null;
-        try {
-            if (efid == EF_PBR) {
-                oldAdnList = mUsimPhoneBookManager.loadEfFilesFromUsim();
-            } else {
-                oldAdnList = getRecordsIfLoaded(efid);
-            }
-        } catch (NullPointerException e) {
-            // NullPointerException will be thrown occasionally when we call this method just during phone changed to airplane mode.
-            // Some Object used in this method will be reset, so we add protect code here to avoid phone force close.
-            oldAdnList = null;
-        }
-    
-        if (oldAdnList == null) {
-            sendErrorResponse(response, "Adn list not exist for EF:" + efid);
-            return;
-        }
-    
-        int index = recordIndex;
-    
-        if (efid == EF_PBR) {
-            AdnRecord foundAdn = oldAdnList.get(index-1);
-            newAdn.efid = foundAdn.efid;
-            newAdn.extRecord = foundAdn.extRecord;
-            newAdn.recordNumber = foundAdn.recordNumber;
-        }
-    
-        Message pendingResponse = userWriteResponse.get(efid);
-    
-        if (pendingResponse != null) {
-            sendErrorResponse(response, "Have pending update for EF:" + efid);
-            return;
-        }
-    
-        if (efid == EF_PBR) {
-            updateEmailAndAnr(efid, oldAdnList.get(index-1), newAdn, index, pin2, response);
-        } else {
-            userWriteResponse.put(efid, response);
-            new AdnRecordLoader(mFh).updateEF(newAdn, efid, extensionEF,
-                    index, pin2,
-                    obtainMessage(EVENT_UPDATE_ADN_DONE, efid, index, newAdn));
-        }
-    }
-    
     public int getSpareAnrCount() {
         return mUsimPhoneBookManager.getSpareAnrCount();
     }
