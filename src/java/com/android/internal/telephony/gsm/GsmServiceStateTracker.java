@@ -563,10 +563,11 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                         == SIMRecords.SPN_RULE_SHOW_SPN);
 
         // Update SPN_STRINGS_UPDATED_ACTION IFF any value changes
-        if (showPlmn != curShowPlmn
+        /*if (showPlmn != curShowPlmn
                 || showSpn != curShowSpn
                 || !TextUtils.equals(spn, curSpn)
-                || !TextUtils.equals(plmn, curPlmn)) {
+                || !TextUtils.equals(plmn, curPlmn)) */
+        {
             if (DBG) {
                 log(String.format("updateSpnDisplay: changed" +
                         " sending intent rule=" + rule +
