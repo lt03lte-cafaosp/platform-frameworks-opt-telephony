@@ -542,8 +542,10 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         for (int i = 0; i < count; i++) {
             byte[] ba = messages.get(i);
             if (ba[0] == STATUS_ON_ICC_FREE) {
+                if (DBG) log("buildValidRawData index = "+i+";  null");
                 ret.add(null);
             } else {
+                if (DBG) log("buildValidRawData index = "+i+";  valid");
                 ret.add(new SmsRawData(messages.get(i)));
             }
         }
