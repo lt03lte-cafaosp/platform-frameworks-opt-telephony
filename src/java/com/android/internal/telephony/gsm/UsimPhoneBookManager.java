@@ -280,6 +280,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         if (fileIds.containsKey(USIM_EFANR_TAG)) {
             int efid = fileIds.get(USIM_EFANR_TAG);
             if (mAnrPresentInIap) {
+                Log.e(LOG_TAG, "mAnrPresentInIap is true");
                 readIapFileAndWait(fileIds.get(USIM_EFIAP_TAG),recNum);
                 if (!hasRecordIn(mIapFileRecord,recNum)) {
                     Log.e(LOG_TAG, "Error: IAP file is empty");
@@ -288,6 +289,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 mFh.loadEFLinearFixedAll(fileIds.get(USIM_EFANR_TAG),
                     obtainMessage(EVENT_ANR_LOAD_DONE,recNum));
             } else {
+                Log.e(LOG_TAG, "mAnrPresentInIap is false");
+                Log.e(LOG_TAG, "getValidRecordNums is "+getValidRecordNums(recNum));
                 mFh.loadEFLinearFixedPart(fileIds.get(USIM_EFANR_TAG),
                     getValidRecordNums(recNum),
                     obtainMessage(EVENT_ANR_LOAD_DONE,recNum));
@@ -551,9 +554,14 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 }
             }
         }else{
-   
-            parseType1AnrFile(numAdnRecs,pbrIndex);
-            for (int i = getInitIndexBy(pbrIndex); i < numAdnRecs+getInitIndexBy(pbrIndex); i++) {
+             int numRecords=0;
+             if(mAnrFileRecord.get(pbrIndex).size()<numAdnRecs) {
+                 numRecords=mAnrFileRecord.get(pbrIndex).size();
+             } else {
+                 numRecords=numAdnRecs;
+             }
+            parseType1AnrFile(numRecords,pbrIndex);
+            for (int i = getInitIndexBy(pbrIndex); i < numRecords+getInitIndexBy(pbrIndex); i++) {
                 ArrayList<String> anrList = null;
                 try {
                     anrList = mAnrsForAdnRec.get(i);
@@ -605,7 +613,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             mEmailsForAdnRec.put(adnRecIndex, val);
             
             //code add for usim phonebook start
-			mEmailFlags.get(pbrIndex).set(i,1);
+            mEmailFlags.get(pbrIndex).set(i,1);
             Log.e(LOG_TAG, "parseType1EmailFile: flag set 1 index is "+i);
         }
     }
@@ -640,7 +648,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             mAnrsForAdnRec.put(adnRecIndex, val);
             
             //code add for usim phonebook start
-			mAnrFlags.get(pbrIndex).set(i,1);
+            mAnrFlags.get(pbrIndex).set(i,1);
             //code add for usim phonebook end
         }
     }
@@ -1093,8 +1101,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             for (int i=0; i<data.length; i++ ) {
                 if(data[i]!=(byte)0xff)
                 {
-                	mAnrFlags.get(pbrIndex).set(recordNumber-1,1);
-                	break;
+                    mAnrFlags.get(pbrIndex).set(recordNumber-1,1);
+                    break;
                 }
                 mAnrFlags.get(pbrIndex).set(recordNumber-1,0);
             }
@@ -1365,8 +1373,27 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     
         if (!mAnrPresentInIap || mIapFileRecord == null) 
         { 
-            log("getSpareAnrCount count is 65535");
-            return  65535;
+            int pbrIndex = getPbrIndexBy(index -1);
+
+            if(mAnrFileRecord.get(pbrIndex).size()<mAdnLengthList.get(pbrIndex)){
+                 int adnrecnumber = index;
+                 if(index>mAdnLengthList.get(pbrIndex))
+                 {
+                     adnrecnumber=index-mAdnLengthList.get(pbrIndex);
+                 }
+                 if(adnrecnumber>mAnrFileRecord.get(pbrIndex).size())
+                 {
+                     Log.d(LOG_TAG,"getEmptyAnrNumbyAdnindex1 pbrIndex is: "+pbrIndex
+                        +" size is: "+mAnrFlags.get(pbrIndex).size()+", index is "+index+", count is 0");
+                     return 0;
+                 }
+                 else
+                 {
+                     Log.d(LOG_TAG,"getEmptyAnrNumbyAdnindex3 pbrIndex is: "+pbrIndex
+                        +" size is: "+mAnrFlags.get(pbrIndex).size()+", index is "+index+", count is 65535");
+                     return  65535;
+                 }
+            }
         }
         int count = 0;
         int pbrIndex = getPbrIndexBy(index -1);

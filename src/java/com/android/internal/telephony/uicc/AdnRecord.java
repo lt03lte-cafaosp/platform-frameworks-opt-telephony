@@ -254,6 +254,12 @@ public class AdnRecord implements Parcelable {
             return null;
         } else {
             if(!(TextUtils.isEmpty(number))){
+                number = number.replace('P',',');
+                number = number.replace('T',';');
+                number = number.replace('p',',');
+                number = number.replace('t',';');
+                number = number.replace('W','N'); // temp 20110114  0xD -> W
+                number = number.replace('w','N');
                 bcdNumber = PhoneNumberUtils.numberToCalledPartyBCD(number);
     
                 System.arraycopy(bcdNumber, 0, adnString,

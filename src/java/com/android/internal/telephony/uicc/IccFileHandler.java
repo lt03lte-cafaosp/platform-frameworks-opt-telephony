@@ -593,7 +593,6 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 lc = (LoadLinearFixedContext) ar.userObj;
                 result = (IccIoResult) ar.result;
                 response = lc.onLoaded;
-
                 if (processException(response, (AsyncResult) msg.obj)) {
                     break;
                 }
@@ -674,7 +673,6 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 result = (IccIoResult) ar.result;
                 response = lc.onLoaded;
                 path = lc.path;
-
                 if (processException(response, (AsyncResult) msg.obj)) {
                     break;
                 }
@@ -682,7 +680,6 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 if (lc.loadAll){
                     lc.results.add(result.payload);
                     lc.recordNum++;
-
                     if (lc.recordNum > lc.countRecords) {
                         sendResult(response, lc.results, null);
                     } else {
@@ -701,6 +698,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                     lc.count++;
                     if (lc.count < lc.countLoadrecords) {
                         lc.recordNum =lc.recordNums.get(lc.count);
+
                         if (lc.recordNum <= lc.countRecords) {
                             if (path == null) {
                                 path = getEFPath(lc.efid);
@@ -710,6 +708,8 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                                         READ_RECORD_MODE_ABSOLUTE,
                                         lc.recordSize, null, null, mAid,
                                         obtainMessage(EVENT_READ_RECORD_DONE, lc));
+                        } else {
+                            sendResult(response, lc.results, null);
                         }
                     } else {
                         sendResult(response, lc.results, null);
