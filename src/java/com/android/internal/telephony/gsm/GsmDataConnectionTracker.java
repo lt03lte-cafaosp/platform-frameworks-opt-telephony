@@ -85,6 +85,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 /**
  * {@hide}
@@ -127,6 +128,13 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
     static final Uri PREFERAPN_NO_UPDATE_URI =
                         Uri.parse("content://telephony/carriers/preferapn_no_update");
     static final String APN_ID = "apn_id";
+
+    private static final Uri PREFERAPN_URI = Uri.parse("content://telephony/carriers/preferapn");
+    private static final Uri PREFERAPN_URI1 = Uri.parse("content://telephony/carriers/preferapn1");
+    private static final String APN_ID1 = "apn_id1";
+    public static final int SUB1 = 0;
+    public static final int SUB2 = 1;
+
     private boolean canSetPreferApn = false;
 
     private static final boolean DATA_STALL_SUSPECTED = true;
@@ -351,6 +359,12 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
                 break;
             case ConnectivityManager.TYPE_MOBILE_CBS:
                 apnContext = addApnContext(PhoneConstants.APN_TYPE_CBS);
+                break;
+            case ConnectivityManager.TYPE_MOBILE_DM:
+                apnContext = addApnContext(PhoneConstants.APN_TYPE_DM);
+                break;
+            case ConnectivityManager.TYPE_MOBILE_WAP:
+                apnContext = addApnContext(PhoneConstants.APN_TYPE_WAP);
                 break;
             default:
                 // skip unknown types
@@ -600,6 +614,32 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
     }
 
     private boolean isDataAllowed(ApnContext apnContext) {
+
+        if (FeatureQuery.FEATURE_RESTRICT_SLOT2_DATA_SERVICE) {
+            // slot2 can only use data for mms
+            if (DBG)
+                log("restrict slot2 data feature open");
+            if (DBG)
+                log("subscription:" + mPhone.getSubscription() + ",apnType:"
+                        + apnContext.getApnType());
+            if (mPhone.getSubscription() == 1) {
+                boolean inChina = true;
+                String operatorNumber = mPhone.getServiceState().getOperatorNumeric();
+                if (DBG)
+                    log("operator number is:" + operatorNumber);
+                if (null != operatorNumber && operatorNumber.length() >= 3) {
+                    String mcc = (String) operatorNumber.subSequence(0, 3);
+                    //China mainland and Macau
+                    if(!mcc.equals("460") && !mcc.equals("455")){
+                        inChina = false;
+                    }
+                }
+                if (inChina && !apnContext.getApnType().equals(PhoneConstants.APN_TYPE_MMS))
+                {
+                    return false;
+                }
+            }
+        }
         return apnContext.isReady() && isDataAllowed();
     }
 
@@ -789,7 +829,9 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
         if ((apnContext.getState() == DctConstants.State.IDLE ||
                 apnContext.getState() == DctConstants.State.SCANNING) &&
-                isDataAllowed(apnContext) && getAnyDataEnabled() && !isEmergency()) {
+                isDataAllowed(apnContext) && (getAnyDataEnabled() ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_MMS)
+                ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DM)
+                ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_WAP))  && !isEmergency()) {
 
             if (apnContext.getState() == DctConstants.State.IDLE) {
                 ArrayList<DataProfile> waitingApns = buildWaitingApns(apnContext.getApnType());
@@ -2354,13 +2396,29 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
         log("setPreferredApn: delete");
         ContentResolver resolver = mPhone.getContext().getContentResolver();
-        resolver.delete(PREFERAPN_NO_UPDATE_URI, null, null);
+        //resolver.delete(PREFERAPN_NO_UPDATE_URI, null, null);
 
-        if (pos >= 0) {
-            log("setPreferredApn: insert");
-            ContentValues values = new ContentValues();
-            values.put(APN_ID, pos);
-            resolver.insert(PREFERAPN_NO_UPDATE_URI, values);
+        if(mPhone.getSubscription()==SUB1)
+        {
+            resolver.delete(PREFERAPN_URI, null, null);
+
+            if (pos >= 0) {
+                log("setPreferredApn: insert");
+                ContentValues values = new ContentValues();
+                values.put(APN_ID, pos);
+                resolver.insert(PREFERAPN_URI, values);
+            }
+        }
+        else
+        {
+            resolver.delete(PREFERAPN_URI1, null, null);
+
+            if (pos >= 0) {
+                log("setPreferredApn: insert");
+                ContentValues values = new ContentValues();
+                values.put(APN_ID1, pos);
+                resolver.insert(PREFERAPN_URI1, values);
+            }
         }
     }
 
@@ -2370,9 +2428,24 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             return null;
         }
 
-        Cursor cursor = mPhone.getContext().getContentResolver().query(
+        /*Cursor cursor = mPhone.getContext().getContentResolver().query(
                 PREFERAPN_NO_UPDATE_URI, new String[] { "_id", "name", "apn" },
+                null, null, Telephony.Carriers.DEFAULT_SORT_ORDER);*/
+        int radioTech = mPhone.getServiceState().getRadioTechnology();
+        Cursor cursor;
+        if(mPhone.getSubscription()==SUB1)
+        {
+            cursor = mPhone.getContext().getContentResolver().query(
+                PREFERAPN_URI, new String[] { "_id", "name", "apn" },
                 null, null, Telephony.Carriers.DEFAULT_SORT_ORDER);
+        }
+        else
+        {
+            cursor = mPhone.getContext().getContentResolver().query(
+                PREFERAPN_URI1, new String[] { "_id", "name", "apn" },
+                null, null, Telephony.Carriers.DEFAULT_SORT_ORDER);
+        }
+
 
         if (cursor != null) {
             canSetPreferApn = true;
@@ -2395,6 +2468,33 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
         if (cursor != null) {
             cursor.close();
+        }
+
+        if (mAllApns != null) {
+          for (DataProfile p:mAllApns) {
+            if (p.canHandleType(mRequestedApnType)) {
+              if (p.bearer == 0 || p.bearer == radioTech) {
+                if((p.apn.equals("3gnet"))||(p.apn.equals("cmnet"))){
+                  log("preferred apn : " +p.toString());
+                  setPreferredApn(p.id);
+                  return p;
+                }
+              }
+            }
+          }
+
+          for (DataProfile p:mAllApns) {
+            if (p.canHandleType(mRequestedApnType)) {
+              if (p.bearer == 0 || p.bearer == radioTech) {
+                log("preferred apn not found, will set the first apn in apn list: " +p.toString());
+                setPreferredApn(p.id);
+                return p;
+              }
+            }
+          }
+        }
+        else {
+          loge("mAllApns is empty!");
         }
 
         log("getPreferredApn: X not found");

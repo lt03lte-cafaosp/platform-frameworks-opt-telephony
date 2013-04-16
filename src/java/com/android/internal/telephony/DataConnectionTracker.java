@@ -249,6 +249,8 @@ public abstract class DataConnectionTracker extends Handler {
     static LinkedHashMap<String, Integer> mApnPriorities =
         new LinkedHashMap<String, Integer>() {
             {
+                put(PhoneConstants.APN_TYPE_WAP,     9);
+                put(PhoneConstants.APN_TYPE_DM,      8);
                 put(PhoneConstants.APN_TYPE_CBS,     7);
                 put(PhoneConstants.APN_TYPE_IMS,     6);
                 put(PhoneConstants.APN_TYPE_FOTA,    5);
@@ -353,7 +355,8 @@ public abstract class DataConnectionTracker extends Handler {
         public void register(Context context) {
             final ContentResolver resolver = context.getContentResolver();
             resolver.registerContentObserver(
-                    Settings.Global.getUriFor(Settings.Global.DATA_ROAMING), false, this);
+                    Settings.Global.getUriFor(mPhone.getSubscription() == 0 ? Settings.Global.DATA_ROAMING
+                            : Settings.Global.DATA_ROAMING_2), false, this);
         }
 
         public void unregister(Context context) {
@@ -574,7 +577,9 @@ public abstract class DataConnectionTracker extends Handler {
     public void setDataOnRoamingEnabled(boolean enabled) {
         if (getDataOnRoamingEnabled() != enabled) {
             final ContentResolver resolver = mPhone.getContext().getContentResolver();
-            Settings.Global.putInt(resolver, Settings.Global.DATA_ROAMING, enabled ? 1 : 0);
+            Settings.Global.putInt(resolver,
+                    mPhone.getSubscription() == 0 ? Settings.Global.DATA_ROAMING
+                            : Settings.Global.DATA_ROAMING_2, enabled ? 1 : 0);
             // will trigger handleDataOnRoamingChange() through observer
         }
     }
@@ -585,7 +590,9 @@ public abstract class DataConnectionTracker extends Handler {
     public boolean getDataOnRoamingEnabled() {
         try {
             final ContentResolver resolver = mPhone.getContext().getContentResolver();
-            return Settings.Global.getInt(resolver, Settings.Global.DATA_ROAMING) != 0;
+            return Settings.Global.getInt(resolver,
+                    mPhone.getSubscription() == 0 ? Settings.Global.DATA_ROAMING
+                            : Settings.Global.DATA_ROAMING_2) != 0;
         } catch (SettingNotFoundException snfe) {
             return false;
         }
@@ -790,6 +797,10 @@ public abstract class DataConnectionTracker extends Handler {
             return DctConstants.APN_FOTA_ID;
         } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_CBS)) {
             return DctConstants.APN_CBS_ID;
+        } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_DM)) {
+            return DctConstants.APN_DM_ID;
+        } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_WAP)) {
+            return DctConstants.APN_WAP_ID;
         } else {
             return DctConstants.APN_INVALID_ID;
         }
@@ -813,6 +824,10 @@ public abstract class DataConnectionTracker extends Handler {
             return PhoneConstants.APN_TYPE_FOTA;
         case DctConstants.APN_CBS_ID:
             return PhoneConstants.APN_TYPE_CBS;
+        case DctConstants.APN_DM_ID:
+            return PhoneConstants.APN_TYPE_DM;
+        case DctConstants.APN_WAP_ID:
+            return PhoneConstants.APN_TYPE_WAP;
         default:
             log("Unknown id (" + id + ") in apnIdToType");
             return PhoneConstants.APN_TYPE_DEFAULT;
