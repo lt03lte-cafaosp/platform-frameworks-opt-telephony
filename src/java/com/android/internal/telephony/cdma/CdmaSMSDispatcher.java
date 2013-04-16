@@ -397,7 +397,11 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         }
         sendRawPdu(tracker);
     }
-
+    
+    @Override
+    protected void sendSMSExpectMore(SmsTracker tracker, boolean lastPart) {
+         sendSms(tracker);
+    }
     /** {@inheritDoc} */
     @Override
     protected void sendSms(SmsTracker tracker) {

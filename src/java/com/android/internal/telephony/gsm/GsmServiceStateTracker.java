@@ -563,10 +563,11 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                         == SIMRecords.SPN_RULE_SHOW_SPN);
 
         // Update SPN_STRINGS_UPDATED_ACTION IFF any value changes
-        if (showPlmn != curShowPlmn
+        /*if (showPlmn != curShowPlmn
                 || showSpn != curShowSpn
                 || !TextUtils.equals(spn, curSpn)
-                || !TextUtils.equals(plmn, curPlmn)) {
+                || !TextUtils.equals(plmn, curPlmn)) */
+        {
             if (DBG) {
                 log(String.format("updateSpnDisplay: changed" +
                         " sending intent rule=" + rule +
@@ -668,10 +669,12 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                             int rejCode = Integer.parseInt(states[13]);
                             // Check if rejCode is "Persistent location update reject",
                             if (rejCode == 10) {
+                                /* no need this when registing network 
                                 log(" Posting Managed roaming intent ");
                                 Intent intent =
                                     new Intent(TelephonyIntents.ACTION_MANAGED_ROAMING_IND);
                                 phone.getContext().sendBroadcast(intent);
+                            */
                             }
                         } catch (NumberFormatException ex) {
                             loge("error parsing regCode: " + ex);

@@ -363,6 +363,9 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             case ConnectivityManager.TYPE_MOBILE_DM:
                 apnContext = addApnContext(PhoneConstants.APN_TYPE_DM);
                 break;
+            case ConnectivityManager.TYPE_MOBILE_WAP:
+                apnContext = addApnContext(PhoneConstants.APN_TYPE_WAP);
+                break;
             default:
                 // skip unknown types
                 continue;
@@ -827,7 +830,8 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
         if ((apnContext.getState() == DctConstants.State.IDLE ||
                 apnContext.getState() == DctConstants.State.SCANNING) &&
                 isDataAllowed(apnContext) && (getAnyDataEnabled() ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_MMS)
-                ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DM))  && !isEmergency()) {
+                ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DM)
+                ||apnContext.getApnType().equals(PhoneConstants.APN_TYPE_WAP))  && !isEmergency()) {
 
             if (apnContext.getState() == DctConstants.State.IDLE) {
                 ArrayList<DataProfile> waitingApns = buildWaitingApns(apnContext.getApnType());

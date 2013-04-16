@@ -206,6 +206,13 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     }
 
     @Override
+    protected void sendSMSExpectMore(SmsTracker tracker, boolean lastPart) {
+        //  sendSms is a helper function to other send functions, sendText/Data...
+        //  it is not part of ISms.stub
+        Log.e(TAG, "sendSms should never be called from here!");
+    }
+    
+    @Override
     protected void sendText(String destAddr, String scAddr, String text,
             PendingIntent sentIntent, PendingIntent deliveryIntent) {
         Log.d(TAG, "sendText");

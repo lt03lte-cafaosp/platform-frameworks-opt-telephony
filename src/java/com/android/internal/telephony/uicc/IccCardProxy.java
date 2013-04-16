@@ -572,8 +572,10 @@ public class IccCardProxy extends Handler implements IccCard {
 
     @Override
     public void supplyPin(String pin, Message onComplete) {
+        if (DBG) log("supplyPin enter");
         synchronized (mLock) {
             if (mUiccApplication != null) {
+                if (DBG) log("supplyPin enter mUiccApplication is not null");
                 mUiccApplication.supplyPin(pin, onComplete);
             } else if (onComplete != null) {
                 Exception e = new RuntimeException("ICC card is absent.");

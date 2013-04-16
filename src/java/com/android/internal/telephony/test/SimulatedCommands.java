@@ -946,6 +946,8 @@ public final class SimulatedCommands extends BaseCommands
      */
     public void sendSMS (String smscPDU, String pdu, Message result) {unimplemented(result);}
 
+    public void sendSMSExpectMore (String smscPDU, String pdu, Message result) {unimplemented(result);}
+    
     public void deleteSmsOnSim(int index, Message response) {
         Log.d(LOG_TAG, "Delete message at index " + index);
         unimplemented(response);

@@ -542,8 +542,10 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         for (int i = 0; i < count; i++) {
             byte[] ba = messages.get(i);
             if (ba[0] == STATUS_ON_ICC_FREE) {
+                if (DBG) log("buildValidRawData index = "+i+";  null");
                 ret.add(null);
             } else {
+                if (DBG) log("buildValidRawData index = "+i+";  valid");
                 ret.add(new SmsRawData(messages.get(i)));
             }
         }
@@ -884,7 +886,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
             Log.e(LOG_TAG, "getSmsCapCountOnIcc - aborting, no icc card present.");
             return -1;
         }    
-        if (DBG) log("getSmsCapCountOnIcc: ");        
+        //if (DBG) log("getSmsCapCountOnIcc: ");        
         int numberOnIcc = fh.getSmsCapCountOnIcc();	
         Log.d(LOG_TAG,"getSmsCapCountOnIcc().numberOnIcc="+numberOnIcc);
         return numberOnIcc;

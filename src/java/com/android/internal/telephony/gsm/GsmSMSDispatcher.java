@@ -401,7 +401,14 @@ public class GsmSMSDispatcher extends SMSDispatcher {
                     message, pdu);
             SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
                     deliveryIntent, getFormat());
-            sendRawPdu(tracker);
+            if(lastPart)
+            {
+                sendRawPdu(tracker);
+            }
+            else
+            {
+                sendRawPdu(tracker, lastPart);
+            }
         } else {
             Log.e(TAG, "GsmSMSDispatcher.sendNewSubmitPdu(): getSubmitPdu() returned null");
         }
@@ -450,6 +457,56 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         }
     }
 
+    @Override
+    protected void sendSMSExpectMore(SmsTracker tracker, boolean lastPart) {
+        HashMap<String, Object> map = tracker.mData;
+
+        byte smsc[] = (byte[]) map.get("smsc");
+        byte pdu[] = (byte[]) map.get("pdu");
+
+        Message reply = obtainMessage(EVENT_SEND_SMS_COMPLETE, tracker);
+
+        Log.d(TAG, "sendSMSExpectMore: "
+                +" isIms()="+isIms()
+                +" mRetryCount="+tracker.mRetryCount
+                +" mImsRetry="+tracker.mImsRetry
+                +" mMessageRef="+tracker.mMessageRef
+                +" SS=" +mPhone.getServiceState().getState());
+
+        // sms over gsm is used:
+        //   if sms over IMS is not supported AND
+        //   this is not a retry case after sms over IMS failed
+        //     indicated by mImsRetry > 0
+        if (0 == tracker.mImsRetry && !isIms()) {
+            if (tracker.mRetryCount > 0) {
+                // per TS 23.040 Section 9.2.3.6:  If TP-MTI SMS-SUBMIT (0x01) type
+                //   TP-RD (bit 2) is 1 for retry
+                //   and TP-MR is set to previously failed sms TP-MR
+                if (((0x01 & pdu[0]) == 0x01)) {
+                    pdu[0] |= 0x04; // TP-RD
+                    pdu[1] = (byte) tracker.mMessageRef; // TP-MR
+                }
+            }
+            if(lastPart)
+            {
+                mCm.sendSMS(IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), reply);
+            }
+            else
+            {
+                mCm.sendSMSExpectMore(IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), reply);
+            }
+        } else {
+            mCm.sendImsGsmSms(IccUtils.bytesToHexString(smsc),
+                    IccUtils.bytesToHexString(pdu), tracker.mImsRetry,
+                    tracker.mMessageRef, reply);
+            // increment it here, so in case of SMS_FAIL_RETRY over IMS
+            // next retry will be sent using IMS request again.
+            tracker.mImsRetry++;
+        }
+    }
+    
     @Override
     public void sendRetrySms(SmsTracker tracker) {
         //re-routing to ImsSMSDispatcher
@@ -750,6 +807,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         //intent.putExtra("encoding", getEncoding());                        
         intent.putExtra("format", getFormat());
         dispatch(intent, "android.permission.RECEIVE_SMS");
+        Log.d(TAG, "transaction send ICC_SMS_RECEIVED!");
     }
 
 }
