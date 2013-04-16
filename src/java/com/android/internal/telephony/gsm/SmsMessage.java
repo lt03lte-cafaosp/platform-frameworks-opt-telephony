@@ -777,6 +777,13 @@ public class SmsMessage extends SmsMessageBase {
             if (len == 0) {
                 // no SC address
                 ret = null;
+                
+                /*If SMSC is null, as is "00", then do not ++, take orignal headbyte as nun-header PDU*/
+                if(cur > 0 && ((pdu[cur]&0xff) != 0)) /*if "0000***", then do nothing, or -- for "00**"*/
+                {
+                    Log.d(LOG_TAG, "cur = "+cur);
+                    cur --;
+                }
             } else {
                 // SC address
                 try {
@@ -813,6 +820,13 @@ public class SmsMessage extends SmsMessageBase {
             // The TOA field is not included as part of this
             int addressLength = pdu[cur] & 0xff;
             int lengthBytes = 2 + (addressLength + 1) / 2;
+            
+            /*if no numbers even if it is submit or deliver, it is invalid*/
+            if (addressLength == 0)
+            {
+                cur += lengthBytes;
+                return null;
+            }
 
             try {
                 ret = new GsmSmsAddress(pdu, cur, lengthBytes);
@@ -914,6 +928,16 @@ public class SmsMessage extends SmsMessageBase {
                 }
             }
 
+            /*buffer as 255 will overload orignal one on card as 176, it should be reallocated, wangfei, 20130218*/
+            if (bufferLen > (pdu.length - offset))
+            {
+                Log.d(LOG_TAG, "constructUserData bufferLen = " + bufferLen + 
+                                        ";offset = " + offset +  
+                                        ";pdu.length = " + pdu.length
+                                        );               
+                bufferLen = pdu.length - offset;
+            }
+            
             userData = new byte[bufferLen];
             System.arraycopy(pdu, offset, userData, 0, userData.length);
             cur = offset;
