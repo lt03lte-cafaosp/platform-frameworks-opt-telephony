@@ -886,7 +886,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         }    
         if (DBG) log("getSmsCapCountOnIcc: ");        
         int numberOnIcc = fh.getSmsCapCountOnIcc();	
-		Log.d(LOG_TAG,"wangshuang-->getSmsCapCountOnIcc().numberOnIcc="+numberOnIcc);
+        Log.d(LOG_TAG,"getSmsCapCountOnIcc().numberOnIcc="+numberOnIcc);
         return numberOnIcc;
     }
 

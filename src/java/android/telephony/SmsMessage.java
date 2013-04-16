@@ -686,21 +686,37 @@ public class SmsMessage {
      * @return message body is there is one, otherwise null
      */
     public String getMessageBody() {
-        return mWrappedSmsMessage.getMessageBody();
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.getMessageBody();
+        }
     }
 
     /**
      * Returns the class of this message.
      */
     public MessageClass getMessageClass() {
-        switch(mWrappedSmsMessage.getMessageClass()) {
-            case CLASS_0: return MessageClass.CLASS_0;
-            case CLASS_1: return MessageClass.CLASS_1;
-            case CLASS_2: return MessageClass.CLASS_2;
-            case CLASS_3: return MessageClass.CLASS_3;
-            default: return MessageClass.UNKNOWN;
-
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return MessageClass.UNKNOWN;
         }
+        else
+        {
+            switch(mWrappedSmsMessage.getMessageClass()) {
+                case CLASS_0: return MessageClass.CLASS_0;
+                case CLASS_1: return MessageClass.CLASS_1;
+                case CLASS_2: return MessageClass.CLASS_2;
+                case CLASS_3: return MessageClass.CLASS_3;
+                default: return MessageClass.UNKNOWN;
+            }
+        }
+
     }
 
     /**
