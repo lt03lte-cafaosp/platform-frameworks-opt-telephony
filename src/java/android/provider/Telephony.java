@@ -76,6 +76,7 @@ public final class Telephony {
         public static final int MESSAGE_TYPE_QUEUED = 6; // for messages to send later
         public static final int MESSAGE_TYPE_INBOX_SUB1 = 7;
         public static final int MESSAGE_TYPE_INBOX_SUB2 = 8;
+        public static final int MESSAGE_TYPE_SEARCH  = 9;
 
 
         /**
@@ -822,12 +823,13 @@ public final class Telephony {
              */
             public static SmsMessage[] getMessagesFromIntent(
                     Intent intent) {
+                int index = intent.getIntExtra("index_on_icc", -1); //add for distinguish sms received from CARD                  
                 Object[] messages = (Object[]) intent.getSerializableExtra("pdus");
                 String format = intent.getStringExtra("format");
                 byte[][] pduObjs = new byte[messages.length][];
                 int subId = intent.getIntExtra(MSimConstants.SUBSCRIPTION_KEY, 0);
 
-                Log.v(TAG, " getMessagesFromIntent sub_id : " + subId);
+                Log.v(TAG, " getMessagesFromIntent sub_id : " + subId + "; index = " + index + "; format = " +format);
 
                 for (int i = 0; i < messages.length; i++) {
                     pduObjs[i] = (byte[]) messages[i];
@@ -837,8 +839,24 @@ public final class Telephony {
                 SmsMessage[] msgs = new SmsMessage[pduCount];
                 for (int i = 0; i < pduCount; i++) {
                     pdus[i] = pduObjs[i];
-                    msgs[i] = SmsMessage.createFromPdu(pdus[i], format);
-                    msgs[i].setSubId(subId);
+
+                    /*add for icc record, when EG coperations*/
+                    if (index > -1) {
+                        /*if cdma as 3gpp2, then create form EF record from 0x6f3c*/
+                        msgs[i] = SmsMessage.createFromEfRecord(index, pdus[i], subId/*format*/);
+
+                        /*if gsm as 3gpp, then create form PDU data from 0x6f3c*/
+                        if(null == msgs[i]) {
+                            msgs[i] = SmsMessage.createFromPdu(pdus[i], format);
+                        }
+                    }
+                    else {
+                        msgs[i] = SmsMessage.createFromPdu(pdus[i], format);
+                    }
+                    
+                    if(msgs[i] != null){
+                        msgs[i].setSubId(subId);
+                    }
                 }
                 return msgs;
             }

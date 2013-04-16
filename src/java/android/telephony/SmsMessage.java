@@ -29,6 +29,7 @@ import com.android.internal.telephony.SmsConstants;
 import com.android.internal.telephony.SmsHeader;
 import com.android.internal.telephony.SmsMessageBase;
 import com.android.internal.telephony.SmsMessageBase.SubmitPduBase;
+import com.android.internal.telephony.SmsMessageBase.DeliveryPduBase;
 
 import java.lang.Math;
 import java.util.ArrayList;
@@ -144,6 +145,28 @@ public class SmsMessage {
 
     }
 
+    /* Pdu of Delivery , add for copy delivery pdu from mobile to ICC card */
+    public static class DeliveryPdu {
+
+        public byte[] encodedScAddress; // Null if not applicable.
+        public byte[] encodedMessage;
+
+        public String toString() {
+            return "DeliverPdu: encodedScAddress = "
+                    + Arrays.toString(encodedScAddress)
+                    + ", encodedMessage = "
+                    + Arrays.toString(encodedMessage);
+        }
+
+        /**
+         * @hide
+         */
+        protected DeliveryPdu(DeliveryPduBase spb) {
+            this.encodedMessage = spb.encodedMessage;
+            this.encodedScAddress = spb.encodedScAddress;
+        }
+
+    }
     private SmsMessage(SmsMessageBase smb) {
         mWrappedSmsMessage = smb;
     }
@@ -241,9 +264,27 @@ public class SmsMessage {
      * @hide
      */
     public static SmsMessage createFromEfRecord(int index, byte[] data) {
+        return createFromEfRecord(index, data, MSimSmsManager.getDefault().getPreferredSmsSubscription());
+    }
+
+    /**
+     * Create an SmsMessage from an SMS EF record.
+     *
+     * @param index Index of SMS record. This should be index in ArrayList
+     *              returned by SmsManager.getAllMessagesFromSim + 1.
+     * @param data Record data.
+     * @param subscription Subscription of create record.
+     * @return An SmsMessage representing the record.
+     *
+     * { @hide }
+     */
+    public static SmsMessage createFromEfRecord(int index, byte[] data, int subscription) {
         SmsMessageBase wrappedMessage;
 
-        if (isCdmaVoice()) {
+        // UiccCardApplication has the handle to IccFileHandler which
+        // is used to obtain messages from Icc, and active application
+        // is tied to voice type, so use voice tech here to decide encoding type.
+        if (isCdmaVoice(subscription)) {
             wrappedMessage = com.android.internal.telephony.cdma.SmsMessage.createFromEfRecord(
                     index, data);
         } else {
@@ -476,6 +517,103 @@ public class SmsMessage {
     }
 
     /**
+     * Get an SMS-SUBMIT PDU for a data message to a destination address &amp; port.
+     * This method will not attempt to use any GSM national language 7 bit encodings.
+     *
+     * @param scAddress Service Centre address. null == use default
+     * @param destinationAddress the address of the destination for the message
+     * @param destinationPort the port to deliver the message to at the
+     *        destination
+     * @param data the data for the message
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, short destinationPort, short orginationPort, byte[] data,
+            boolean statusReportRequested) {
+        SubmitPduBase spb;
+
+        if (useCdmaFormatForMoSms()) {
+            spb = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, destinationPort, orginationPort, data, statusReportRequested);
+        } else {
+            spb = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, destinationPort, orginationPort, data, statusReportRequested);
+        }
+
+        return new SubmitPdu(spb);
+    }
+
+    /**
+     * get a submit pdu with the timestamp.
+     * { @hide }
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, String message, boolean statusReportRequested, byte[] date, int subscription) {
+        SubmitPduBase spb;
+
+        int activePhone = TelephonyManager.getDefault().isMultiSimEnabled() ?
+                MSimTelephonyManager.getDefault().getCurrentPhoneType(subscription) :
+                    TelephonyManager.getDefault().getPhoneType();
+
+        if (PHONE_TYPE_CDMA == activePhone) {
+            //We can not store time stamp into RUIM card now.
+            spb = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, null);
+        } else {
+            spb = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, date);
+        }
+
+        return new SubmitPdu(spb);
+    }
+
+    /**
+     * Get an SMS-Delivery PDU for a destination address and a message.
+     * This method will not attempt to use any GSM national language 7 bit encodings.
+     *
+     * @param scAddress Service Centre address.  Null means use default.
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static DeliveryPdu getDeliveryPdu(String scAddress,
+            String destinationAddress, String message, boolean statusReportRequested, byte[] date) {
+        return getDeliveryPdu(scAddress, destinationAddress, message, statusReportRequested,
+                null, date, MSimSmsManager.getDefault().getPreferredSmsSubscription());
+    }
+
+    /** TODO: Not used remove? SmsMessage in gsm/cdma is public.
+     * Get an SMS-Delivery PDU for a destination address and a message.
+     * This method will not attempt to use any GSM national language 7 bit encodings.
+     *
+     * @param scAddress Service Centre address.  Null means use default.
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     * { @hide }
+     */
+    public static DeliveryPdu getDeliveryPdu(String scAddress,
+            String destinationAddress, String message, boolean statusReportRequested, 
+            byte[] header, byte[] date, int subscription) {
+        DeliveryPduBase spb;
+
+        int activePhone = TelephonyManager.getDefault().isMultiSimEnabled() ?
+                MSimTelephonyManager.getDefault().getCurrentPhoneType(subscription) :
+                    TelephonyManager.getDefault().getPhoneType();
+
+        if (PHONE_TYPE_CDMA == activePhone) {
+            spb = com.android.internal.telephony.cdma.SmsMessage.getDeliveryPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, SmsHeader.fromByteArray(header), date);
+        } else {
+            spb = com.android.internal.telephony.gsm.SmsMessage.getDeliveryPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, header, date);
+        }
+
+        return new DeliveryPdu(spb);
+    }
+    /**
      * Returns the address of the SMS service center that relayed this message
      * or null if there is none.
      */
@@ -497,28 +635,86 @@ public class SmsMessage {
      * unavailable.
      */
     public String getDisplayOriginatingAddress() {
-        return mWrappedSmsMessage.getDisplayOriginatingAddress();
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.getDisplayOriginatingAddress();
+        }
     }
+
+    /**
+     * {@hide}
+     * Returns return if the address is an international number, else false.
+     */
+    public boolean isInternationalAddress() {
+    
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return false; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.isInternationalAddress();
+        }
+    }
+
+    /**
+     * {@hide}
+     * Returns the recipient address,  Returns null if recipient address
+     * unavailable. Only used in GSM sms message.
+     */
+    public String getRecipientddress() {
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.getRecipientAddress();
+        }
+    }
+
 
     /**
      * Returns the message body as a String, if it exists and is text based.
      * @return message body is there is one, otherwise null
      */
     public String getMessageBody() {
-        return mWrappedSmsMessage.getMessageBody();
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null; 
+        }
+        else
+        {
+            return mWrappedSmsMessage.getMessageBody();
+        }
     }
 
     /**
      * Returns the class of this message.
      */
     public MessageClass getMessageClass() {
-        switch(mWrappedSmsMessage.getMessageClass()) {
-            case CLASS_0: return MessageClass.CLASS_0;
-            case CLASS_1: return MessageClass.CLASS_1;
-            case CLASS_2: return MessageClass.CLASS_2;
-            case CLASS_3: return MessageClass.CLASS_3;
-            default: return MessageClass.UNKNOWN;
-
+        if(mWrappedSmsMessage == null)
+        {
+            Log.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return MessageClass.UNKNOWN;
+        }
+        else
+        {
+            switch(mWrappedSmsMessage.getMessageClass()) {
+                case CLASS_0: return MessageClass.CLASS_0;
+                case CLASS_1: return MessageClass.CLASS_1;
+                case CLASS_2: return MessageClass.CLASS_2;
+                case CLASS_3: return MessageClass.CLASS_3;
+                default: return MessageClass.UNKNOWN;
+            }
         }
     }
 
@@ -743,6 +939,16 @@ public class SmsMessage {
      */
     private static boolean isCdmaVoice() {
         int activePhone = TelephonyManager.getDefault().getCurrentPhoneType();
+        return (PHONE_TYPE_CDMA == activePhone);
+    }
+
+    private static boolean isCdmaVoice(int subscription) {
+        int activePhone = 0;
+        if(TelephonyManager.getDefault().isMultiSimEnabled()){
+            activePhone = MSimTelephonyManager.getDefault().getCurrentPhoneType(subscription);
+        }else{
+            activePhone = TelephonyManager.getDefault().getCurrentPhoneType();
+        }
         return (PHONE_TYPE_CDMA == activePhone);
     }
 }

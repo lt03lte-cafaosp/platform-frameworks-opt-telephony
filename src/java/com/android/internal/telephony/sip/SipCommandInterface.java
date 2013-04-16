@@ -177,6 +177,9 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
     public void sendSMS (String smscPDU, String pdu, Message result) {
     }
 
+    public void sendSMSExpectMore (String smscPDU, String pdu, Message result) {
+    }
+    
     public void sendCdmaSms(byte[] pdu, Message result) {
     }
 
@@ -202,6 +205,12 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
 
     public void writeSmsToRuim(int status, String pdu, Message response) {
     }
+
+    public void setIccSmsRead(int index, boolean read, int modem, Message result){
+    }
+    
+    public void setSmsPreStore(int preStore, int subID, Message result) {
+    }   
 
     public void setupDataCall(String radioTechnology, String profile,
             String apn, String user, String password, String authType,

@@ -355,6 +355,10 @@ class UsimDataDownloadCommands extends BaseCommands {
     }
 
     @Override
+    public void sendSMSExpectMore(String smscPDU, String pdu, Message response) {
+    }
+    
+    @Override
     public void sendCdmaSms(byte[] pdu, Message response) {
     }
 
@@ -383,6 +387,14 @@ class UsimDataDownloadCommands extends BaseCommands {
     @Override
     public void writeSmsToRuim(int status, String pdu, Message response) {
     }
+
+    @Override
+    public void setIccSmsRead(int index, boolean read, int modem, Message result){
+    }
+
+    @Override
+    public void setSmsPreStore(int preStore, int subID, Message result) {
+    }   
 
     @Override
     public void setRadioPower(boolean on, Message response) {

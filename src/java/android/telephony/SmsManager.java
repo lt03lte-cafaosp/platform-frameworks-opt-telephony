@@ -44,6 +44,12 @@ import java.util.List;
 public final class SmsManager {
     /** Singleton object constructed during class initialization. */
     private static final SmsManager sInstance = new SmsManager();
+    
+    private static final int UNKNOWN = -1;    
+    private static final int STORE_ME = 1;
+    private static final int STORE_SM = 2;      
+
+    private static int mCurSmsPreStore = UNKNOWN;
 
     /**
      * Send a text based SMS.
@@ -225,6 +231,57 @@ public final class SmsManager {
     }
 
     /**
+     * Send a data based SMS to a specific application port with original port
+     *
+     * @param destinationAddress the address to send the message to
+     * @param scAddress is the service center address or null to use
+     *  the current default SMSC
+     * @param destinationPort the port to deliver the message to
+     * @param originalPort the original port 
+     * @param data the body of the message to send
+     * @param sentIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is successfully sent, or failed.
+     *  The result code will be <code>Activity.RESULT_OK</code> for success,
+     *  or one of these errors:<br>
+     *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+     *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+     *  <code>RESULT_ERROR_NULL_PDU</code><br>
+     *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+     *  the extra "errorCode" containing a radio technology specific value,
+     *  generally only useful for troubleshooting.<br>
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applications,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     *
+     * @throws IllegalArgumentException if destinationAddress or data are empty
+     */
+    public void sendDataMessage(
+            String destinationAddress, String scAddress, short destinationPort, short originalPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        if (TextUtils.isEmpty(destinationAddress)) {
+            throw new IllegalArgumentException("Invalid destinationAddress");
+        }
+
+        if (data == null || data.length == 0) {
+            throw new IllegalArgumentException("Invalid message data");
+        }
+
+        try {
+            ISms iccISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (iccISms != null) {
+                iccISms.sendDataWithOrgPort(destinationAddress, scAddress, destinationPort & 0xFFFF, originalPort & 0xFFFF,
+                        data, sentIntent, deliveryIntent);
+            }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+    }
+
+
+    /**
      * Get the default instance of the SmsManager
      *
      * @return the default instance of the SmsManager
@@ -269,6 +326,37 @@ public final class SmsManager {
         return success;
     }
 
+    /**
+     * Copy a raw SMS PDU to the ICC, and return the index on ICC
+     * ICC (Integrated Circuit Card) is the card of the device.
+     * For example, this can be the SIM or USIM for GSM.
+     *
+     * @param smsc the SMSC for this message, or NULL for the default SMSC
+     * @param pdu the raw PDU to store
+     * @param status message status (STATUS_ON_ICC_READ, STATUS_ON_ICC_UNREAD,
+     *               STATUS_ON_ICC_SENT, STATUS_ON_ICC_UNSENT)
+     * @return index of ICC, -1 means copy failed
+     *
+     * @throws IllegalArgumentException if pdu is NULL
+     * {@hide}
+     */
+    public int copyMessageToIccGetIndex(byte[] smsc, byte[] pdu, int status) {
+        int index = -1;
+
+        if (null == pdu) {
+            throw new IllegalArgumentException("pdu is NULL");
+        }
+        try {
+            ISms iccISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (iccISms != null) {
+                index = iccISms.copyMessageToIccEfGetIndex(status, pdu, smsc);
+            }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+
+        return index;
+    }
     /**
      * Delete the specified message from the ICC.
      * ICC (Integrated Circuit Card) is the card of the device.
@@ -671,6 +759,166 @@ public final class SmsManager {
             // ignore it
         }
         return format;
+    }
+    /**
+     * Get the Capacitance count of sms on Icc card 
+     *
+     * @return the Capacitance count of sms on Icc card
+     * @hide
+     */
+    public static int getSmsCapCountOnIcc() 
+    {
+        int ret = -1;
+        try 
+        {
+            ISms iccISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (iccISms != null) 
+            {            
+                ret = iccISms.getSmsCapCountOnIcc();
+            }
+            else
+            {
+            }
+        }
+        catch (RemoteException ex) 
+        {
+            //ignore it
+        }
+        return ret;
+    }
+    /**
+     * Process reduce long sms overtime in raw table
+     *
+     * @return 
+     * @hide
+     */
+    public void processCachedLongSms()
+    {
+        try 
+        {
+            ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (simISms != null) {
+                simISms.processCachedLongSms();
+            }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+    }
+	
+    /**
+     * get gsm sms center
+     *
+     * @return the sms center or null
+     * @hide
+     */
+    public String getGsmSmsCenter() 
+    {
+        String ret = null;
+        try 
+        {
+            ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (simISms != null) 
+            {           
+                return simISms.getGsmSmsCenter();
+            }
+            else
+            {
+            }
+        }
+        catch (RemoteException ex) 
+        {
+            //ignore it
+        }
+        return ret;
+    }
+
+	
+    /**
+     * set gsm sms center
+     *
+     * @return true if set successfully.
+     * @hide
+     */
+    public boolean setGsmSmsCenter(String center) 
+    {
+        boolean ret = false;
+        try 
+        {
+            ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (simISms != null) 
+            {       
+                return simISms.setGsmSmsCenter(center);
+            }
+            else
+            {
+            }
+        }
+        catch (RemoteException ex) 
+        {
+            //ignore it
+        }
+        return ret;
+    }
+
+    /**
+     * set sms status to read or unread on icc card 
+     *
+     * @return true if set success
+     * @hide
+     */
+    public boolean setIccSmsRead(int index, boolean read)
+    {
+        boolean ret = false;
+        if (index < 0) {
+            return false;
+        }
+        
+        try 
+        {
+            ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (simISms != null) {                
+                ret = simISms.setIccSmsRead(index, read);
+            }
+            else{
+                ret = false;
+            }
+        } catch (RemoteException ex) {
+            ret = false;            
+        }
+        return ret; 
+    } 
+
+    /**
+     * set sms precedence store on mobile or icc card
+     *
+     * @return true if set success
+     * @hide
+     */
+    public boolean setSmsPreStore(int preStore, boolean force)
+    {
+        boolean ret = false;
+        ISms simISms = ISms.Stub.asInterface(ServiceManager.getService("isms")); 
+        if (simISms == null) {
+            mCurSmsPreStore = UNKNOWN;
+            return ret;
+        }
+
+        if (force || (mCurSmsPreStore != preStore )){
+            mCurSmsPreStore = UNKNOWN;
+            try {
+                ret = simISms.setSmsPreStore(preStore);
+            }
+            catch (RemoteException ex) {
+                ret = false;
+            }  
+            
+            if (ret){
+                mCurSmsPreStore = preStore;
+            }
+        } else {
+            ret = true;
+        }
+        return ret;
     }
 
     // see SmsMessage.getStatusOnIcc

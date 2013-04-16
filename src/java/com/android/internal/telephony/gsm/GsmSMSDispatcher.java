@@ -23,7 +23,10 @@ package com.android.internal.telephony.gsm;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncResult;
 import android.os.Message;
 import android.os.SystemProperties;
@@ -54,6 +57,9 @@ import com.android.internal.telephony.uicc.SIMRecords;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.uicc.UsimServiceTable;
+import com.android.internal.telephony.MSimConstants;
+
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -79,9 +85,33 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     /** Handler for SMS-PP data download messages to UICC. */
     private final UsimDataDownloadHandler mDataDownloadHandler;
 
+    private final IntentFilter mLongSmsAlarmFilter = new IntentFilter(INTENT_LONG_SMS_OVERTIME_ACTION);
+
+    /** Receiver for long sms alarm action **/
+    private final BroadcastReceiver mLongSmsAlarmReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (INTENT_LONG_SMS_OVERTIME_ACTION.equals(intent.getAction())) {
+                
+                int alarmSubId = intent.getIntExtra("subscription", MSimConstants.SUB1);
+                int msgRef = intent.getIntExtra("messageRef", 0);
+                String address = intent.getStringExtra("address");
+                
+                Log.w(TAG, "INTENT_LONG_SMS_OVERTIME_ACTION onReceive alarmSubId = "
+                            + alarmSubId + ";mSubscription = " + mSubscription);    
+
+                if(alarmSubId == mSubscription){
+                    deleteSpecLongSmsOnRaw(msgRef, address);
+                }                
+                
+            }
+        }
+    };
+
     public GsmSMSDispatcher(PhoneBase phone, SmsStorageMonitor storageMonitor,
             SmsUsageMonitor usageMonitor, ImsSMSDispatcher imsSMSDispatcher) {
         super(phone, storageMonitor, usageMonitor);
+        mSubscription = phone.getSubscription();
         mImsSMSDispatcher = imsSMSDispatcher;
         mDataDownloadHandler = new UsimDataDownloadHandler(mCm);
         mCm.setOnNewGsmSms(this, EVENT_NEW_SMS, null);
@@ -91,6 +121,11 @@ public class GsmSMSDispatcher extends SMSDispatcher {
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
         Log.d(TAG, "GsmSMSDispatcher created");
+        //register receiver for receive long sms alarm 
+        if (FeatureQuery.FEATURE_SMS_DISCARD_BROKEN_LONG_SMS){
+            mContext.registerReceiver(mLongSmsAlarmReceiver, mLongSmsAlarmFilter);
+        }
+
     }
 
     @Override
@@ -139,6 +174,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             break;
 
         case EVENT_NEW_ICC_SMS:
+            Log.d(TAG, "Receive EVENT_NEW_ICC_SMS");
             ar = (AsyncResult)msg.obj;
             dispatchMessage((SmsMessage)ar.result);
             break;
@@ -213,6 +249,16 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             Log.d(TAG, "Received short message type 0, Don't display or store it. Send Ack");
             return Intents.RESULT_SMS_HANDLED;
         }
+        //Add for process sms received from ICC 
+        int indexOnIcc = smsb.getIndexOnIcc();
+        Log.d(TAG, "z103 dispatchMessage indexOnIcc = " + indexOnIcc);
+        if (indexOnIcc >= 0)
+        {            
+            byte[][] pdus = new byte[1][];
+            pdus[0] = smsb.getPdu();
+            dispatchIccPdus(sms, pdus, indexOnIcc);
+            return Activity.RESULT_OK;
+        }
 
         // Send SMS-PP data download messages to UICC. See 3GPP TS 31.111 section 7.1.1.
         if (sms.isUsimDataDownload()) {
@@ -271,6 +317,10 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             return Intents.RESULT_SMS_OUT_OF_MEMORY;
         }
 
+        if (mStorageMonitor.isStorageNearlyFull()){
+            sendNearlyFullAction();
+        }
+
         return dispatchNormalMessage(smsb);
     }
 
@@ -297,12 +347,29 @@ public class GsmSMSDispatcher extends SMSDispatcher {
 
     /** {@inheritDoc} */
     @Override
-    protected void sendData(String destAddr, String scAddr, int destPort,
+    protected void sendData(String destAddr, String scAddr, int destPort, 
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
         SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
                 scAddr, destAddr, destPort, data, (deliveryIntent != null));
         if (pdu != null) {
-            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, data, pdu);
+            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, 0, data, pdu);
+            SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
+                    getFormat());
+            sendRawPdu(tracker);
+        } else {
+            Log.e(TAG, "GsmSMSDispatcher.sendData(): getSubmitPdu() returned null");
+        }
+    }
+
+
+    /** {@inheritDoc} */
+    @Override
+    protected void sendData(String destAddr, String scAddr, int destPort, int orgPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
+                scAddr, destAddr, destPort, orgPort, data, (deliveryIntent != null));
+        if (pdu != null) {
+            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, orgPort, data, pdu);
             SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
                     getFormat());
             sendRawPdu(tracker);
@@ -347,7 +414,14 @@ public class GsmSMSDispatcher extends SMSDispatcher {
                     message, pdu);
             SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
                     deliveryIntent, getFormat());
-            sendRawPdu(tracker);
+            if(lastPart)
+            {
+                sendRawPdu(tracker);
+            }
+            else
+            {
+                sendRawPdu(tracker, lastPart);
+            }
         } else {
             Log.e(TAG, "GsmSMSDispatcher.sendNewSubmitPdu(): getSubmitPdu() returned null");
         }
@@ -397,6 +471,56 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     }
 
     @Override
+    protected void sendSMSExpectMore(SmsTracker tracker, boolean lastPart) {
+        HashMap<String, Object> map = tracker.mData;
+
+        byte smsc[] = (byte[]) map.get("smsc");
+        byte pdu[] = (byte[]) map.get("pdu");
+
+        Message reply = obtainMessage(EVENT_SEND_SMS_COMPLETE, tracker);
+
+        Log.d(TAG, "sendSMSExpectMore: "
+                +" isIms()="+isIms()
+                +" mRetryCount="+tracker.mRetryCount
+                +" mImsRetry="+tracker.mImsRetry
+                +" mMessageRef="+tracker.mMessageRef
+                +" SS=" +mPhone.getServiceState().getState());
+
+        // sms over gsm is used:
+        //   if sms over IMS is not supported AND
+        //   this is not a retry case after sms over IMS failed
+        //     indicated by mImsRetry > 0
+        if (0 == tracker.mImsRetry && !isIms()) {
+            if (tracker.mRetryCount > 0) {
+                // per TS 23.040 Section 9.2.3.6:  If TP-MTI SMS-SUBMIT (0x01) type
+                //   TP-RD (bit 2) is 1 for retry
+                //   and TP-MR is set to previously failed sms TP-MR
+                if (((0x01 & pdu[0]) == 0x01)) {
+                    pdu[0] |= 0x04; // TP-RD
+                    pdu[1] = (byte) tracker.mMessageRef; // TP-MR
+                }
+            }
+            if(lastPart)
+            {
+                mCm.sendSMS(IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), reply);
+            }
+            else
+            {
+                mCm.sendSMSExpectMore(IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), reply);
+            }
+        } else {
+            mCm.sendImsGsmSms(IccUtils.bytesToHexString(smsc),
+                    IccUtils.bytesToHexString(pdu), tracker.mImsRetry,
+                    tracker.mMessageRef, reply);
+            // increment it here, so in case of SMS_FAIL_RETRY over IMS
+            // next retry will be sent using IMS request again.
+            tracker.mImsRetry++;
+        }
+    }
+    
+    @Override
     public void sendRetrySms(SmsTracker tracker) {
         //re-routing to ImsSMSDispatcher
         mImsSMSDispatcher.sendRetrySms(tracker);
@@ -426,6 +550,7 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     }
 
     private void onUpdateIccAvailability() {
+        Log.d(TAG, "onUpdateIccAvailability");
         if (mUiccController == null ) {
             return;
         }
@@ -623,4 +748,79 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     public String getImsSmsFormat() {
         return mImsSMSDispatcher.getImsSmsFormat();
     }
+
+    protected void processCachedLongSmsWhenBoot()
+    {
+        deleteLongSmsPartOverTimeOnRaw();
+    }
+
+    
+    protected void getGsmSmsCenter()
+    {
+        Message msg = obtainMessage(EVENT_GET_SMS_CENTER_OVER);        
+        mCm.getSmscAddress(msg);
+    }
+    private void deleteSmSmsByIndex(int index)
+    {
+        Log.d(TAG, "deleteSmsByIndex index = " + index);
+        mCm.deleteSmsOnSim(index, null);        
+    }
+
+
+    /* Handle sms received from icc card */
+    private void dispatchIccPdus(SmsMessage sms, byte[][] pdus, int index) 
+    {
+        Log.d(TAG, "Cindy659 dispatchIccPdus be called in GSM!");
+        if (sms != null)
+        {
+            if (sms.getMessageClass() == SmsConstants.MessageClass.CLASS_0)
+            {
+                deleteSmSmsByIndex(index);
+                dispatchPdus(pdus);
+                return;
+            }
+            SmsHeader smsHeader = sms.getUserDataHeader();
+            if ((smsHeader == null) || (smsHeader.concatRef == null)) 
+            {
+                if (smsHeader != null && smsHeader.portAddrs != null) 
+                {
+                    deleteSmSmsByIndex(index);                
+                    if (smsHeader.portAddrs.destPort == SmsHeader.PORT_WAP_PUSH) 
+                    {
+                        mWapPush.dispatchWapPdu(sms.getUserData()/*, sms.getDisplayOriginatingAddress()*/);                    
+                        return;
+                    }
+                    else 
+                    {
+                        // The message was sent to a port, so concoct a URI for it.
+                        dispatchPortAddressedPdus(pdus, smsHeader.portAddrs.destPort);
+                        return;
+                    }                    
+                }
+            }
+            else 
+            {
+                if (smsHeader != null && smsHeader.portAddrs != null) 
+                {
+                    Log.d(TAG, "z207 smsHeader.portAddrs.destPort = " + smsHeader.portAddrs.destPort);
+                    deleteSmSmsByIndex(index);                    
+                    processMessagePart(sms.getPdu(), sms.getOriginatingAddress(), 
+                        smsHeader.concatRef.refNumber, smsHeader.concatRef.seqNumber, smsHeader.concatRef.msgCount, 
+                        sms.getTimestampMillis(), smsHeader.portAddrs.destPort, false);
+                    return ;
+                }           
+            }        
+        }
+        //Intent intent = new Intent(Intents.SMS_RECEIVED_ACTION);
+        Intent intent = new Intent("com.android.mms.transaction.ICC_SMS_RECEIVED");                
+        intent.putExtra("pdus", pdus);
+        intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, mPhone.getSubscription());        
+        intent.putExtra("icc_card", 2);  
+        intent.putExtra("index_on_icc", index);
+        //intent.putExtra("encoding", getEncoding());                        
+        intent.putExtra("format", getFormat());
+        dispatch(intent, "android.permission.RECEIVE_SMS");
+        Log.d(TAG, "transaction send ICC_SMS_RECEIVED!");
+    }
+
 }

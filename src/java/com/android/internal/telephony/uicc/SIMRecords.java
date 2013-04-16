@@ -151,6 +151,7 @@ public class SIMRecords extends IccRecords {
     private static final int EVENT_GET_ALL_SMS_DONE = 18;
     private static final int EVENT_MARK_SMS_READ_DONE = 19;
     private static final int EVENT_SET_MBDN_DONE = 20;
+    private static final int EVENT_SMS_ON_SIM = 21;
     private static final int EVENT_GET_SMS_DONE = 22;
     private static final int EVENT_GET_CFF_DONE = 24;
     private static final int EVENT_SET_CPHS_MAILBOX_DONE = 25;
@@ -202,6 +203,7 @@ public class SIMRecords extends IccRecords {
         // recordsToLoad is set to 0 because no requests are made yet
         recordsToLoad = 0;
 
+        mCi.setOnSmsOnSim(this, EVENT_SMS_ON_SIM, null);
         mCi.registerForIccRefresh(this, EVENT_SIM_REFRESH, null);
 
         // Start off by setting empty state
@@ -214,6 +216,7 @@ public class SIMRecords extends IccRecords {
         if (DBG) log("Disposing SIMRecords " + this);
         //Unregister for all events
         mCi.unregisterForIccRefresh(this);
+        mCi.unSetOnSmsOnSim(this);
         mParentApp.unregisterForReady(this);
         resetRecords();
         super.dispose();
@@ -1030,11 +1033,31 @@ public class SIMRecords extends IccRecords {
                 Log.i("ENF", "marked read: sms " + msg.arg1);
                 break;
 
+
+            case EVENT_SMS_ON_SIM:
+                isRecordLoadResponse = false;
+
+                ar = (AsyncResult)msg.obj;
+
+                int[] index = (int[])ar.result;
+
+                if (ar.exception != null || index.length != 1) {
+                    loge("Error on SMS_ON_SIM with exp "
+                            + ar.exception + " length " + index.length);
+                } else {
+                    log("READ EF_SMS RECORD index=" + index[0]);
+                    mFh.loadEFLinearFixed(EF_SMS,index[0],
+                            obtainMessage(EVENT_GET_SMS_DONE,index[0],0));
+                }
+                break;
+
             case EVENT_GET_SMS_DONE:
                 isRecordLoadResponse = false;
                 ar = (AsyncResult)msg.obj;
+                int smsIndexOnSim = msg.arg1;
+                log("Cindy EVENT_GET_SMS_DONE smsIndexOnSim=" + smsIndexOnSim);
                 if (ar.exception == null) {
-                    handleSms((byte[])ar.result);
+                    handleSms((byte[])ar.result, smsIndexOnSim);
                 } else {
                     loge("Error on GET_SMS with exp " + ar.exception);
                 }
@@ -1313,6 +1336,26 @@ public class SIMRecords extends IccRecords {
             log("READ EF_SMS RECORD index= " + index[0]);
             mFh.loadEFLinearFixed(EF_SMS,index[0],
                             obtainMessage(EVENT_GET_SMS_DONE));
+        }
+    }
+
+    private void handleSms(byte[] ba, int smsIndexOnSim) {
+        if (ba[0] != 0)
+            Log.d("ENF", "status : " + ba[0] + ", smsIndexOnSim" + smsIndexOnSim);
+
+        // 3GPP TS 51.011 v5.0.0 (20011-12)  10.5.3
+        // 3 == "received by MS from network; message to be read"
+        if (ba[0] == 3) {
+            int n = ba.length;
+
+            // Note: Data may include trailing FF's.  That's OK; message
+            // should still parse correctly.
+            byte[] pdu = new byte[n - 1];
+            System.arraycopy(ba, 1, pdu, 0, n - 1);
+            SmsMessage message = SmsMessage.createFromPdu(pdu);
+            message.setIndexOnIcc(smsIndexOnSim);
+
+            dispatchGsmMessage(message);
         }
     }
 

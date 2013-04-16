@@ -1052,6 +1052,7 @@ public interface CommandsInterface {
      */
     void sendSMS (String smscPDU, String pdu, Message response);
 
+    void sendSMSExpectMore (String smscPDU, String pdu, Message response);
     /**
      * @param pdu is CDMA-SMS in internal pseudo-PDU format
      * @param response sent when operation completes
@@ -1115,6 +1116,10 @@ public interface CommandsInterface {
     void writeSmsToSim(int status, String smsc, String pdu, Message response);
 
     void writeSmsToRuim(int status, String pdu, Message response);
+    
+    void setIccSmsRead(int index, boolean read, int modemtype, Message result);
+    
+    void setSmsPreStore(int preStore, int subID, Message result); 
 
     void setRadioPower(boolean on, Message response);
 
