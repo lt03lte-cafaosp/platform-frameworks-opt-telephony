@@ -1052,6 +1052,7 @@ public interface CommandsInterface {
      */
     void sendSMS (String smscPDU, String pdu, Message response);
 
+    void sendSMSExpectMore (String smscPDU, String pdu, Message response);
     /**
      * @param pdu is CDMA-SMS in internal pseudo-PDU format
      * @param response sent when operation completes

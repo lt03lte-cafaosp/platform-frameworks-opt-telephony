@@ -177,6 +177,9 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
     public void sendSMS (String smscPDU, String pdu, Message result) {
     }
 
+    public void sendSMSExpectMore (String smscPDU, String pdu, Message result) {
+    }
+    
     public void sendCdmaSms(byte[] pdu, Message result) {
     }
 

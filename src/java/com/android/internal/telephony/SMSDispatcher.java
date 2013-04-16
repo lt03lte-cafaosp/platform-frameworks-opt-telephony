@@ -1149,6 +1149,85 @@ public abstract class SMSDispatcher extends Handler {
         }
     }
 
+    protected void sendRawPdu(SmsTracker tracker, boolean lastPart) {
+        HashMap map = tracker.mData;
+        byte pdu[] = (byte[]) map.get("pdu");
+
+        PendingIntent sentIntent = tracker.mSentIntent;
+        if (mSmsSendDisabled) {
+            if (sentIntent != null) {
+                try {
+                    sentIntent.send(RESULT_ERROR_NO_SERVICE);
+                } catch (CanceledException ex) {}
+            }
+            Log.d(TAG, "Device does not support sending sms.");
+            return;
+        }
+
+        if (pdu == null) {
+            if (sentIntent != null) {
+                try {
+                    sentIntent.send(RESULT_ERROR_NULL_PDU);
+                } catch (CanceledException ex) {}
+            }
+            return;
+        }
+
+        // Get calling app package name via UID from Binder call
+        PackageManager pm = mContext.getPackageManager();
+        String[] packageNames = pm.getPackagesForUid(Binder.getCallingUid());
+
+        if (packageNames == null || packageNames.length == 0) {
+            // Refuse to send SMS if we can't get the calling package name.
+            Log.e(TAG, "Can't get calling app package name: refusing to send SMS");
+            if (sentIntent != null) {
+                try {
+                    sentIntent.send(RESULT_ERROR_GENERIC_FAILURE);
+                } catch (CanceledException ex) {
+                    Log.e(TAG, "failed to send error result");
+                }
+            }
+            return;
+        }
+
+        // Get package info via packagemanager
+        PackageInfo appInfo = null;
+        try {
+            // XXX this is lossy- apps can share a UID
+            appInfo = pm.getPackageInfo(packageNames[0], PackageManager.GET_SIGNATURES);
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Can't get calling app package info: refusing to send SMS");
+            if (sentIntent != null) {
+                try {
+                    sentIntent.send(RESULT_ERROR_GENERIC_FAILURE);
+                } catch (CanceledException ex) {
+                    Log.e(TAG, "failed to send error result");
+                }
+            }
+            return;
+        }
+
+        // checkDestination() returns true if the destination is not a premium short code or the
+        // sending app is approved to send to short codes. Otherwise, a message is sent to our
+        // handler with the SmsTracker to request user confirmation before sending.
+        if (checkDestination(tracker)) {
+            // check for excessive outgoing SMS usage by this app
+            if (!mUsageMonitor.check(appInfo.packageName, SINGLE_PART_SMS)) {
+                sendMessage(obtainMessage(EVENT_SEND_LIMIT_REACHED_CONFIRMATION, tracker));
+                return;
+            }
+
+            int ss = mPhone.getServiceState().getState();
+
+            // if sms over IMS is not supported on data and voice is not available...
+            if (!isIms() && ss != ServiceState.STATE_IN_SERVICE) {
+                handleNotInService(ss, tracker.mSentIntent);
+            } else {
+                sendSMSExpectMore(tracker, lastPart);
+            }
+        }
+    }
+
     /**
      * Check if destination is a potential premium short code and sender is not pre-approved to
      * send to short codes.
@@ -1377,6 +1456,7 @@ public abstract class SMSDispatcher extends Handler {
      */
     protected abstract void sendSms(SmsTracker tracker);
 
+    protected abstract void sendSMSExpectMore(SmsTracker tracker, boolean lastPart);
     /**
      * Retry the message along to the radio.
      *
