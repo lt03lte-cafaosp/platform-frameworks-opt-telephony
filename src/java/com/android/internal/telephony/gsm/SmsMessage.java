@@ -44,6 +44,12 @@ import static com.android.internal.telephony.SmsConstants.MAX_USER_DATA_SEPTETS;
 import static com.android.internal.telephony.SmsConstants.MAX_USER_DATA_BYTES;
 import static com.android.internal.telephony.SmsConstants.MAX_USER_DATA_BYTES_WITH_HEADER;
 
+import com.android.internal.util.HexDump;
+import java.util.Vector;
+import java.util.TimeZone;
+import android.os.SystemProperties;
+import android.text.TextUtils;
+
 /**
  * A Short Message Service message.
  *
@@ -860,12 +866,27 @@ public class SmsMessage extends SmsMessageBase {
             // which is more than enough)
 
             byte tzByte = pdu[cur++];
+            if (year == 0 && month == 0 && day == 0)
+            {
+                return System.currentTimeMillis();
+            }
 
             // Mask out sign bit.
             int timezoneOffset = IccUtils.gsmBcdByteToInt((byte) (tzByte & (~0x08)));
 
-            timezoneOffset = ((tzByte & 0x08) == 0) ? timezoneOffset : -timezoneOffset;
+            //timezoneOffset = ((tzByte & 0x08) == 0) ? timezoneOffset : -timezoneOffset;
+            timezoneOffset = ((tzByte & 0x08) == 0) ? timezoneOffset
+                    : -timezoneOffset;
 
+            Log.v(LOG_TAG, "the timezoneOffset:" + timezoneOffset);
+            int offsetTime = timezoneOffset * 15 * 60 * 1000;
+
+            if (timezoneOffset == 0)
+            {
+                TimeZone zone = TimeZone.getTimeZone(SystemProperties.get("persist.sys.timezone"));
+                offsetTime = zone.getRawOffset();
+            }
+            
             Time time = new Time(Time.TIMEZONE_UTC);
 
             // It's 2006.  Should I really support years < 2000?
@@ -877,7 +898,8 @@ public class SmsMessage extends SmsMessageBase {
             time.second = second;
 
             // Timezone offset is in quarter hours.
-            return time.toMillis(true) - (timezoneOffset * 15 * 60 * 1000);
+            //return time.toMillis(true) - (timezoneOffset * 15 * 60 * 1000);
+            return time.toMillis(true) - offsetTime;
         }
 
         /**

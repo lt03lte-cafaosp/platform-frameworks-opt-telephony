@@ -311,7 +311,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     public void loadEFLinearFixedAll(int fileid, String path, Message onLoaded) {
         if (fileid == EF_SMS) {
              mSmsCountOnIcc = -1;
-        }	
+        }
         Message response = obtainMessage(EVENT_GET_RECORD_SIZE_DONE,
                         new LoadLinearFixedContext(fileid, path, onLoaded));
 
@@ -619,7 +619,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 if (fileid == EF_SMS)
                 {
                     mSmsCountOnIcc = lc.countRecords;
-                    Log.w("SMS", "z464 s_SmsCountOnIcc = " + mSmsCountOnIcc);
+                    Log.d("IccFileHandler", "s_SmsCountOnIcc = " + mSmsCountOnIcc);
                 }
                  if (lc.loadAll) {
                      lc.results = new ArrayList<byte[]>(lc.countRecords);
