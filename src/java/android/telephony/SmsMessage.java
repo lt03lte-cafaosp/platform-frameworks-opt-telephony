@@ -563,7 +563,7 @@ public class SmsMessage {
                     destinationAddress, message, statusReportRequested, null);
         } else {
             spb = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(scAddress,
-                    destinationAddress, message, statusReportRequested, date);
+                    destinationAddress, message, statusReportRequested, null, date);
         }
 
         return new SubmitPdu(spb);
