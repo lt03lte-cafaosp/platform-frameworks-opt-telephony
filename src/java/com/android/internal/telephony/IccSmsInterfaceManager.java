@@ -111,6 +111,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                     ar = (AsyncResult)msg.obj;
                     synchronized (mLock) {
                         if (ar.exception == null) {
+                            if(DBG) log("EVENT_LOAD_DONE Sms records");
                             mSms  = (List<SmsRawData>)
                                     buildValidRawData((ArrayList<byte[]>) ar.result);
                             //Mark SMS as read after importing it from card.
@@ -538,7 +539,9 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         ArrayList<SmsRawData> ret;
 
         ret = new ArrayList<SmsRawData>(count);
-
+        
+        if (DBG) log("buildValidRawData count = " + count);
+        
         for (int i = 0; i < count; i++) {
             byte[] ba = messages.get(i);
             if (ba[0] == STATUS_ON_ICC_FREE) {
