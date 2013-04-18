@@ -882,7 +882,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     }
     public int getSmsCapCountOnIcc() 
     {
-        IccFileHandler fh = mPhone.getIccFileHandler();		
+        IccFileHandler fh = mPhone.getIccFileHandler();
         if (fh == null) {
             //shouldn't really happen, as messages are marked as read, only
             //after importing it from icc.

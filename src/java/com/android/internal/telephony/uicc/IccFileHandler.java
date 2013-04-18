@@ -28,6 +28,7 @@ import java.util.ArrayList;
  */
 public abstract class IccFileHandler extends Handler implements IccConstants {
 
+    static private final String TAG = "IccFileHandler";
     //from TS 11.11 9.1 or elsewhere
     static protected final int COMMAND_READ_BINARY = 0xb0;
     static protected final int COMMAND_UPDATE_BINARY = 0xd6;
@@ -98,7 +99,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     protected final CommandsInterface mCi;
     protected final UiccCardApplication mParentApp;
     protected final String mAid;
-	protected int mSmsCountOnIcc = -1;
+    protected int mSmsCountOnIcc = -1;
 
     static class LoadLinearFixedContext {
 
@@ -230,7 +231,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     */
     public int getSmsCapCountOnIcc()
     {
-        Log.d("ICC", "getSmsCapCountOnIcc() =  " + mSmsCountOnIcc);
+        Log.d(TAG, "getSmsCapCountOnIcc() =  " + mSmsCountOnIcc);
         return mSmsCountOnIcc;
     }
 
@@ -619,7 +620,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 if (fileid == EF_SMS)
                 {
                     mSmsCountOnIcc = lc.countRecords;
-                    Log.d("IccFileHandler", "s_SmsCountOnIcc = " + mSmsCountOnIcc);
+                    Log.d(TAG, "s_SmsCountOnIcc = " + mSmsCountOnIcc);
                 }
                  if (lc.loadAll) {
                      lc.results = new ArrayList<byte[]>(lc.countRecords);
@@ -674,6 +675,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 response = lc.onLoaded;
                 path = lc.path;
                 if (processException(response, (AsyncResult) msg.obj)) {
+                    Log.d(TAG, "EVENT_READ_RECORD_DONE with exception");
                     break;
                 }
 
@@ -681,6 +683,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                     lc.results.add(result.payload);
                     lc.recordNum++;
                     if (lc.recordNum > lc.countRecords) {
+                        Log.d(TAG, "EVENT_READ_RECORD_DONE when over lc.recordNum = " + lc.recordNum);
                         sendResult(response, lc.results, null);
                     } else {
                         if (path == null) {
