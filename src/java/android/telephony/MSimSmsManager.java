@@ -814,6 +814,33 @@ public class MSimSmsManager {
         return ret;
     }    
 
+    /*
+      **Send register message for unicom sim card
+      *@subscription for certain sim card of unicom
+      *@hide
+      */
+      public void sendUnicomRegSms(String destAddr, String scAddr, int destPort,
+          byte[] data, PendingIntent sentIntent, int subscription) 
+      {
+          if (TextUtils.isEmpty(destAddr)) {
+          }
+    
+          if (data == null || data.length == 0) {
+              return;
+          }
+          
+          try {
+              ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+              if (iccISms != null) {
+                  iccISms.sendData(destAddr, scAddr,
+                          destPort & 0xFFFF, data, sentIntent,
+                          null, subscription);
+              }
+          } catch (RemoteException ex) {
+              // ignore it
+          }
+      }
+
     // see SmsMessage.getStatusOnIcc
 
     /** Free space (TS 51.011 10.5.3 / 3GPP2 C.S0023 3.4.27). */
