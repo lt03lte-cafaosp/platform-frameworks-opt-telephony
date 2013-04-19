@@ -683,8 +683,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         String anr = PhoneNumberUtils.calledPartyBCDToString(
                             anrRec,  2, numberLength);
         anr = anr.replace(',','P');
-        anr = anr.replace(';','T');
-        anr = anr.replace('N','W'); // temp 20110114  0xD -> W
+        anr = anr.replace(';','W');
             
         return anr;
     }
@@ -821,11 +820,9 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         data[ANR_DESCRIPTION_ID] = (byte) (0x0);
         String number = anr;
         number = number.replace('P',',');
-        number = number.replace('T',';');
         number = number.replace('p',',');
-        number = number.replace('t',';');
-        number = number.replace('W','N'); // temp 20110114  0xD -> W
-        number = number.replace('w','N');
+        number = number.replace('W',';');
+        number = number.replace('w',';');
         byte[] byteAnr = PhoneNumberUtils.numberToCalledPartyBCD(number);
 
         // If the phone number does not matching format, like "+" return null.

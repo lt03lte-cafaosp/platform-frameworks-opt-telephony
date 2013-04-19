@@ -764,6 +764,8 @@ public abstract class DataConnectionTracker extends Handler {
     public boolean getAnyDataEnabled() {
         final boolean result;
         synchronized (mDataEnabledLock) {
+            if (DBG)
+                log("getAnyDataEnabled  " + mInternalDataEnabled + "  " + mUserDataEnabled + " " +sPolicyDataEnabled +"  " +enabledCount);
             result = (mInternalDataEnabled && mUserDataEnabled && sPolicyDataEnabled
                     && (enabledCount != 0));
         }
@@ -1123,6 +1125,7 @@ public abstract class DataConnectionTracker extends Handler {
     protected void onSetUserDataEnabled(boolean enabled) {
         synchronized (mDataEnabledLock) {
             final boolean prevEnabled = getAnyDataEnabled();
+            if (DBG) log("onSetUserDataEnabled  " + mUserDataEnabled + "  " + prevEnabled);
             if (mUserDataEnabled != enabled) {
                 mUserDataEnabled = enabled;
                 Settings.Global.putInt(mPhone.getContext().getContentResolver(),

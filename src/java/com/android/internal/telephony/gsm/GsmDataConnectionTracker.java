@@ -601,6 +601,8 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
     @Override
     public boolean getAnyDataEnabled() {
         synchronized (mDataEnabledLock) {
+            if (DBG)
+               log("gsm getAnyDataEnabled " + mInternalDataEnabled +" " +mUserDataEnabled + " " + sPolicyDataEnabled);
             if (!(mInternalDataEnabled && mUserDataEnabled && sPolicyDataEnabled)) return false;
             for (ApnContext apnContext : mApnContexts.values()) {
                 // Make sure we dont have a context that going down
@@ -614,7 +616,6 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
     }
 
     private boolean isDataAllowed(ApnContext apnContext) {
-
         if (FeatureQuery.FEATURE_RESTRICT_SLOT2_DATA_SERVICE) {
             // slot2 can only use data for mms
             if (DBG)
@@ -640,6 +641,8 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
                 }
             }
         }
+        if (DBG)
+            log("isDataAllowed "+apnContext.isReady() +" " +isDataAllowed());
         return apnContext.isReady() && isDataAllowed();
     }
 
@@ -804,6 +807,15 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
             log("trySetupData: (fix?) We're on the simulator; assuming data is connected");
             return true;
+        }
+
+        if (FeatureQuery.FEATURE_WLAN_CMCC_SUPPORT) {
+            if((mIsWifiConnected)&&(apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DEFAULT)))
+            {
+                log("trySetupData fail as wifi connected, " + apnContext);
+                notifyOffApnsOfAvailability(apnContext.getReason());
+                return false;
+            }
         }
 
         boolean desiredPowerState = mPhone.getServiceStateTracker().getDesiredPowerState();
