@@ -33,6 +33,8 @@ import android.telephony.MSimTelephonyManager;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.util.Log;
+import android.os.PowerManager;
+
 
 import com.android.internal.telephony.BaseCommands;
 import com.android.internal.telephony.CommandsInterface;
@@ -1293,6 +1295,9 @@ public class SIMRecords extends IccRecords {
                         fetchSimRecords();
                     }
                 }
+                //add mobile reboot   
+                PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+                pm.reboot("SIM is reset.");
                 break;
             default:
                 // unknown refresh operation
