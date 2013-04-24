@@ -1162,6 +1162,51 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             return false;
         }
 
+        {   // modify mtu according net
+            String  mtu=  SystemProperties.get("ril.data_netmgrd_mtu", "1380");
+            int radioTech = mPhone.getServiceState().getRadioTechnology();
+            int mtuSize = 0;
+
+            if (DBG) log("get mtu:" + mtu );
+            if(radioTech < TelephonyManager.NETWORK_TYPE_UMTS)
+            {
+              if(PhoneConstants.APN_TYPE_MMS.equals(apnContext.getApnType()))
+              {
+                  mtuSize = mPhone.getContext().getResources().getInteger(
+                            com.android.internal.R.integer.config_mms_mtu_2g_size);
+              }
+              else if(PhoneConstants.APN_TYPE_DEFAULT.equals(apnContext.getApnType()))
+              {
+                  mtuSize = mPhone.getContext().getResources().getInteger(
+                            com.android.internal.R.integer.config_mobile_mtu_2g_size);
+              }
+              else
+              {
+                  mtuSize = mPhone.getContext().getResources().getInteger(
+                            com.android.internal.R.integer.config_mtu_default_size);
+              }
+            }
+            else
+            {
+              if(PhoneConstants.APN_TYPE_MMS.equals(apnContext.getApnType()))
+              {
+                  mtuSize = mPhone.getContext().getResources().getInteger(
+                            com.android.internal.R.integer.config_mms_mtu_3g_size);
+              }
+              else if(PhoneConstants.APN_TYPE_DEFAULT.equals(apnContext.getApnType()))
+              {
+                  mtuSize = mPhone.getContext().getResources().getInteger(
+                            com.android.internal.R.integer.config_mobile_mtu_3g_size);
+              }
+              else
+              {
+                  mtuSize = mPhone.getContext().getResources().getInteger(
+                            com.android.internal.R.integer.config_mtu_default_size);
+              }
+            }
+            if (DBG) log("Set mtu="+mtuSize);
+            SystemProperties.set("ril.data_netmgrd_mtu", Integer.toString(mtuSize));
+        }
 
         dc = (GsmDataConnection) checkForConnectionForApnContext(apnContext);
 
