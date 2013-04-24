@@ -1162,7 +1162,7 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             return false;
         }
 
-        {   // modify mtu according net
+        {   // modify mtu according net type
             String  mtu=  SystemProperties.get("ril.data_netmgrd_mtu", "1380");
             int radioTech = mPhone.getServiceState().getRadioTechnology();
             int mtuSize = 0;
