@@ -28,6 +28,7 @@ import java.util.ArrayList;
  */
 public abstract class IccFileHandler extends Handler implements IccConstants {
 
+    static private final String TAG = "IccFileHandler";
     //from TS 11.11 9.1 or elsewhere
     static protected final int COMMAND_READ_BINARY = 0xb0;
     static protected final int COMMAND_UPDATE_BINARY = 0xd6;
@@ -98,7 +99,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     protected final CommandsInterface mCi;
     protected final UiccCardApplication mParentApp;
     protected final String mAid;
-	protected int mSmsCountOnIcc = -1;
+    protected int mSmsCountOnIcc = -1;
 
     static class LoadLinearFixedContext {
 
@@ -230,7 +231,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     */
     public int getSmsCapCountOnIcc()
     {
-        Log.d("ICC", "getSmsCapCountOnIcc() =  " + mSmsCountOnIcc);
+        Log.d(TAG, "getSmsCapCountOnIcc() =  " + mSmsCountOnIcc);
         return mSmsCountOnIcc;
     }
 
@@ -311,7 +312,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
     public void loadEFLinearFixedAll(int fileid, String path, Message onLoaded) {
         if (fileid == EF_SMS) {
              mSmsCountOnIcc = -1;
-        }	
+        }
         Message response = obtainMessage(EVENT_GET_RECORD_SIZE_DONE,
                         new LoadLinearFixedContext(fileid, path, onLoaded));
 
@@ -619,7 +620,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 if (fileid == EF_SMS)
                 {
                     mSmsCountOnIcc = lc.countRecords;
-                    Log.w("SMS", "z464 s_SmsCountOnIcc = " + mSmsCountOnIcc);
+                    Log.d(TAG, "s_SmsCountOnIcc = " + mSmsCountOnIcc);
                 }
                  if (lc.loadAll) {
                      lc.results = new ArrayList<byte[]>(lc.countRecords);
@@ -673,16 +674,16 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                 result = (IccIoResult) ar.result;
                 response = lc.onLoaded;
                 path = lc.path;
-
                 if (processException(response, (AsyncResult) msg.obj)) {
+                    Log.d(TAG, "EVENT_READ_RECORD_DONE with exception");
                     break;
                 }
 
                 if (lc.loadAll){
                     lc.results.add(result.payload);
                     lc.recordNum++;
-
                     if (lc.recordNum > lc.countRecords) {
+                        Log.d(TAG, "EVENT_READ_RECORD_DONE when over lc.recordNum = " + lc.recordNum);
                         sendResult(response, lc.results, null);
                     } else {
                         if (path == null) {
@@ -700,6 +701,7 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                     lc.count++;
                     if (lc.count < lc.countLoadrecords) {
                         lc.recordNum =lc.recordNums.get(lc.count);
+
                         if (lc.recordNum <= lc.countRecords) {
                             if (path == null) {
                                 path = getEFPath(lc.efid);

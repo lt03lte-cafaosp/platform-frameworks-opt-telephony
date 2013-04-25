@@ -503,9 +503,8 @@ public abstract class SMSDispatcher extends Handler {
         }
 
         if (ar.exception == null) {
-            if (false) {
-                Log.d(TAG, "SMS send complete. Broadcasting "
-                        + "intent: " + sentIntent);
+            if (true) {
+                Log.d(TAG, "handleSendComplete. SMS send complete.  ");
             }
 
             if (tracker.mDeliveryIntent != null) {
@@ -523,13 +522,15 @@ public abstract class SMSDispatcher extends Handler {
                         Intent sendNext = new Intent();
                         sendNext.putExtra(SEND_NEXT_MSG_EXTRA, true);
                         sentIntent.send(mContext, Activity.RESULT_OK, sendNext);
+                        Log.e(TAG, "send ok.");
                     } else {
                         sentIntent.send(Activity.RESULT_OK);
+                        Log.e(TAG, "send ok, mRemainingMessages =  " + mRemainingMessages);
                     }
                 } catch (CanceledException ex) {}
             }
         } else {
-            if (false) {
+            if (true) {
                 Log.d(TAG, "SMS send failed");
             }
 
@@ -566,6 +567,7 @@ public abstract class SMSDispatcher extends Handler {
                 tracker.mRetryCount++;
                 Message retryMsg = obtainMessage(EVENT_SEND_RETRY, tracker);
                 sendMessageDelayed(retryMsg, SEND_RETRY_DELAY);
+                Log.e(TAG, "handlesendComlete tracker.mRetryCount = " + tracker.mRetryCount);
             } else if (tracker.mSentIntent != null) {
                 int error = RESULT_ERROR_GENERIC_FAILURE;
 
@@ -588,6 +590,7 @@ public abstract class SMSDispatcher extends Handler {
                     }
 
                     tracker.mSentIntent.send(mContext, error, fillIn);
+                    Log.e(TAG, "handlesendComlete  error = " + error);
                 } catch (CanceledException ex) {}
             }
         }
@@ -605,6 +608,7 @@ public abstract class SMSDispatcher extends Handler {
     protected static void handleNotInService(int ss, PendingIntent sentIntent) {
         if (sentIntent != null) {
             try {
+                Log.e(TAG, "handlesendComlete #5 ss = " + ss);
                 if (ss == ServiceState.STATE_POWER_OFF) {
                     sentIntent.send(RESULT_ERROR_RADIO_OFF);
                 } else {
