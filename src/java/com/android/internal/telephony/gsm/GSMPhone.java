@@ -130,6 +130,9 @@ public class GSMPhone extends PhoneBase {
     private String mVmNumber;
     private String mSetCfNumber;
 
+    //tianhaiyan add 20130426 for cfu  
+    public static final String CFU_KEY = "persist.ril.cfu.querytype";
+    private boolean needQueryCfu = true;
 
     // Constructors
 
@@ -1219,6 +1222,19 @@ public class GSMPhone extends PhoneBase {
 
             case EVENT_REGISTERED_TO_NETWORK:
                 syncClirSetting();
+
+                //tianhaiyan add 20130426 check query cfu when boot to show cfu icon for CTA
+                if (needQueryCfu) {
+                    String cfuSetting = SystemProperties.get(CFU_KEY, "1");
+                    if (LOCAL_DEBUG) Log.d(LOG_TAG,"[GSMPhone] CFU_KEY = " + cfuSetting);
+                    // 1 : OFF
+                    // 2 : ON
+                    if (cfuSetting.equals("2")) {
+                        mCM.queryCallForwardStatus(CF_REASON_UNCONDITIONAL, SERVICE_CLASS_VOICE, null, obtainMessage(EVENT_GET_CALL_FORWARD_DONE));
+                        needQueryCfu = false;
+                    }
+                }
+
                 break;
 
             case EVENT_SIM_RECORDS_LOADED:
