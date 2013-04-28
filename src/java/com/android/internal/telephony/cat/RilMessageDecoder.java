@@ -60,6 +60,10 @@ public class RilMessageDecoder extends StateMachine {
         return sInstance;
     }
 
+    public static synchronized void dispose() {
+        sInstance = null;
+    }
+
     /**
      * Start decoding the message parameters,
      * when complete MSG_ID_RIL_MSG_DECODED will be returned to caller.
