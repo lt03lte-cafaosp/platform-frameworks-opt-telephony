@@ -629,11 +629,11 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                     int lac = -1;
                     int cid = -1;
                     int regState = -1;
-                    int type = 0;
                     int reasonRegStateDenied = -1;
                     int psc = -1;
                     if (states.length > 0) {
                         try {
+                            int type = 0;
                             regState = Integer.parseInt(states[0]);
                             if (states.length >= 3) {
                                 if (states[1] != null && states[1].length() > 0) {
@@ -687,9 +687,6 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                         mEmergencyOnly = false;
                     }
 
-                    log("EVENT_POLL_STATE_REGISTRATION: type = " + type);
-                    mNewRilRadioTechnology = type;
-                    newSS.setRadioTechnology(type);
                     // LAC and CID are -1 if not avail
                     newCellLoc.setLacAndCid(lac, cid);
                     newCellLoc.setPsc(psc);
@@ -703,7 +700,7 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                                 states.length + " states=" + states);
                     }
 
-                    //int type = 0;
+                    int type = 0;
                     regState = -1;
                     mNewReasonDataDenied = -1;
                     mNewMaxDataCalls = 1;
@@ -712,9 +709,9 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                             regState = Integer.parseInt(states[0]);
 
                             // states[3] (if present) is the current radio technology
-                            //if (states.length >= 4 && states[3] != null) {
-                                //type = Integer.parseInt(states[3]);
-                            //}
+                            if (states.length >= 4 && states[3] != null) {
+                                type = Integer.parseInt(states[3]);
+                            }
                             if ((states.length >= 5 ) && (regState == 3)) {
                                 mNewReasonDataDenied = Integer.parseInt(states[4]);
                             }
@@ -727,8 +724,8 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                     }
                     newGPRSState = regCodeToServiceState(regState);
                     mDataRoaming = regCodeIsRoaming(regState);
-                    //mNewRilRadioTechnology = type;
-                    //newSS.setRadioTechnology(type);
+                    mNewRilRadioTechnology = type;
+                    newSS.setRadioTechnology(type);
                     newSS.setDataState(newGPRSState);
                     if (states.length >= 10) {
                         int mcc;
