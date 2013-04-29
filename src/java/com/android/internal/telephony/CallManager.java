@@ -717,7 +717,8 @@ public final class CallManager {
         phone.registerForMmiComplete(mHandler, EVENT_MMI_COMPLETE, phone);
         phone.registerForSuppServiceFailed(mHandler, EVENT_SUPP_SERVICE_FAILED, null);
         phone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
-        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM) {
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ||
+                phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
             phone.registerForSuppServiceNotification(mHandler, EVENT_SUPP_SERVICE_NOTIFY, null);
         }
 
