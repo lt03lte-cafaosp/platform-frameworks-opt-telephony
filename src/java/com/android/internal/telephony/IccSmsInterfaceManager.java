@@ -389,7 +389,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
      */
     public void sendData(String destAddr, String scAddr, int destPort,
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
-        mContext.enforceCallingPermission(
+        mContext.enforceCallingOrSelfPermission(
                 "android.permission.SEND_SMS",
                 "Sending SMS message");
         if (Log.isLoggable("SMS", Log.VERBOSE)) {
