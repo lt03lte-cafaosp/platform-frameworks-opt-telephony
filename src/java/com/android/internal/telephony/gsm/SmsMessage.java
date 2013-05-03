@@ -602,7 +602,7 @@ public class SmsMessage extends SmsMessageBase {
 
         SmsHeader.PortAddrs portAddrs = new SmsHeader.PortAddrs();
         portAddrs.destPort = destinationPort;
-        portAddrs.origPort = 0;
+        portAddrs.origPort = destinationPort;
         portAddrs.areEightBits = false;
 
         SmsHeader smsHeader = new SmsHeader();
