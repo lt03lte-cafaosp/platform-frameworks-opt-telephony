@@ -1205,9 +1205,9 @@ public class SmsMessage extends SmsMessageBase {
         scAddress = p.getSCAddress();
 
         if (scAddress != null) {
-            if (false) Log.d(LOG_TAG, "SMS SC address: " + scAddress);
+            if (true) Log.d(LOG_TAG, "SMS SC address: " + scAddress);
         }
-        if (false) Log.d(LOG_TAG, "SMS PDU " + IccUtils.bytesToHexString(pdu));
+        if (true) Log.d(LOG_TAG, "SMS PDU " + IccUtils.bytesToHexString(pdu));
 
         // TODO(mkf) support reply path, user data header indicator
 
@@ -1598,7 +1598,7 @@ public class SmsMessage extends SmsMessageBase {
             break;
         }
 
-        if (false) Log.v(LOG_TAG, "SMS message body (raw): '" + messageBody + "'");
+        if (true) Log.v(LOG_TAG, "SMS message body (raw): '" + messageBody + "'");
 
         if (messageBody != null) {
             parseMessageBody();
