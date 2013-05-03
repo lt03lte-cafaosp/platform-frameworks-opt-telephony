@@ -348,7 +348,7 @@ public class MSimSmsManager {
 
         return success;
     }
-	
+    
     /**
      * Copy a raw SMS PDU to the ICC, and return the index on ICC
      * ICC (Integrated Circuit Card) is the card of the device.
@@ -362,7 +362,7 @@ public class MSimSmsManager {
      * @throws IllegalArgumentException if pdu is NULL
      *
      * {@hide}
-     */	
+     */    
     public int copyMessageToIccGetIndex(byte[] smsc, byte[] pdu, int status,
             int subscription){
         int index = -1;
@@ -696,7 +696,7 @@ public class MSimSmsManager {
             // ignore it
         }
     }
-	
+    
     /**
      * get gsm sms center
      *
@@ -724,13 +724,13 @@ public class MSimSmsManager {
             return ret;
         }
     
-	
+    
     /**
      * set gsm sms center
      *
      * @return true if set successfully.
      * @hide
-     */	
+     */    
         public boolean setGsmSmsCenter(String center, int subscription) 
         {
             boolean ret = false;

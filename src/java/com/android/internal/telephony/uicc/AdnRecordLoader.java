@@ -169,6 +169,8 @@ public class AdnRecordLoader extends Handler {
                     ar = (AsyncResult)(msg.obj);
                     adn = (AdnRecord)(ar.userObj);
 
+                    AdnRecord newAdn =  new AdnRecord(adn.getAlphaTag(), adn.getNumber());
+
                     if (ar.exception != null) {
                         throw new RuntimeException("get EF record size failed",
                                 ar.exception);
@@ -185,7 +187,7 @@ public class AdnRecordLoader extends Handler {
                                 ar.exception);
                     }
 
-                    data = adn.buildAdnString(recordSize[0]);
+                    data = newAdn.buildAdnString(recordSize[0]);
 
                     if(data == null) {
                         throw new RuntimeException("wrong ADN format",
