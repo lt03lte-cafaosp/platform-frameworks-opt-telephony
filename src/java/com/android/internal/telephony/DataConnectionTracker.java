@@ -353,7 +353,10 @@ public abstract class DataConnectionTracker extends Handler {
         public void register(Context context) {
             final ContentResolver resolver = context.getContentResolver();
             resolver.registerContentObserver(
-                    Settings.Global.getUriFor(Settings.Global.DATA_ROAMING), false, this);
+                    Settings.Global.getUriFor(
+                            mPhone.getSubscription() == MSimConstants.SUB1 ?
+                            Settings.Global.DATA_ROAMING :
+                            Settings.Global.DATA_ROAMING_2), false, this);
         }
 
         public void unregister(Context context) {
@@ -574,7 +577,10 @@ public abstract class DataConnectionTracker extends Handler {
     public void setDataOnRoamingEnabled(boolean enabled) {
         if (getDataOnRoamingEnabled() != enabled) {
             final ContentResolver resolver = mPhone.getContext().getContentResolver();
-            Settings.Global.putInt(resolver, Settings.Global.DATA_ROAMING, enabled ? 1 : 0);
+            Settings.Global.putInt(resolver,
+                    mPhone.getSubscription() == MSimConstants.SUB1 ?
+                            Settings.Global.DATA_ROAMING
+                            : Settings.Global.DATA_ROAMING_2, enabled ? 1 : 0);
             // will trigger handleDataOnRoamingChange() through observer
         }
     }
@@ -585,7 +591,10 @@ public abstract class DataConnectionTracker extends Handler {
     public boolean getDataOnRoamingEnabled() {
         try {
             final ContentResolver resolver = mPhone.getContext().getContentResolver();
-            return Settings.Global.getInt(resolver, Settings.Global.DATA_ROAMING) != 0;
+            return Settings.Global.getInt(resolver,
+                    mPhone.getSubscription() == MSimConstants.SUB1 ?
+                            Settings.Global.DATA_ROAMING
+                            : Settings.Global.DATA_ROAMING_2) != 0;
         } catch (SettingNotFoundException snfe) {
             return false;
         }
