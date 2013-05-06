@@ -1427,6 +1427,11 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         String simNumeric = getSystemProperty(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, "");
         String  operatorNumeric = s.getOperatorNumeric();
 
+        // add for roaming state for same operator
+        if (gsmRoaming && isSameOperator(simNumeric, operatorNumeric)) {
+            return false;
+        }
+
         boolean equalsMcc = true;
         try {
             equalsMcc = simNumeric.substring(0, 3).
@@ -1435,6 +1440,24 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         }
 
         return gsmRoaming && !(equalsMcc && (equalsOnsl || equalsOnss));
+    }
+
+    private boolean isSameOperator(String num1, String num2) {
+        String operators[] = {
+            "46000,46002,46007", // China Mobile
+            "46001,46003",       // China Unicom
+        };
+
+        if (num1 == null || num2 == null) {
+            return true;
+        }
+
+        for (String op: operators) {
+            if (op.contains(num1) && op.contains(num2)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int twoDigitsAt(String s, int offset) {
