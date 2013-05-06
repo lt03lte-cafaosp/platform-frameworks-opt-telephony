@@ -419,7 +419,7 @@ public class IccCardProxy extends Handler implements IccCard {
         }
     }
 
-    private void setExternalState(State newState) {
+    protected void setExternalState(State newState) {
         setExternalState(newState, false);
     }
 
