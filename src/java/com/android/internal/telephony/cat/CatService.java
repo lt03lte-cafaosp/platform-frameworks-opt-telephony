@@ -438,7 +438,7 @@ public class CatService extends Handler implements AppInterface {
      * Handles RIL_UNSOL_STK_SESSION_END unsolicited command from RIL.
      *
      */
-    private void handleSessionEnd() {
+    protected void handleSessionEnd() {
         CatLog.d(this, "SESSION END");
 
         mCurrntCmd = mMenuCmd;
