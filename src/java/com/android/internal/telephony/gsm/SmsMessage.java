@@ -785,7 +785,7 @@ public class SmsMessage extends SmsMessageBase {
                 ret = null;
                 
                 /*If SMSC is null, as is "00", then do not ++, take orignal headbyte as nun-header PDU*/
-                if(cur > 0 && ((pdu[cur]&0xff) != 0)) /*if "0000***", then do nothing, or -- for "00**"*/
+                if(cur > 0 && ((pdu[cur]&0xff) != 0) && ((pdu[cur+1]&0xff) != 0)) /*if "0000***", then do nothing, or -- for "00**"*/
                 {
                     Log.d(LOG_TAG, "cur = "+cur);
                     cur --;
