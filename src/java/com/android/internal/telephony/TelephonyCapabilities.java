@@ -45,7 +45,8 @@ public class TelephonyCapabilities {
      * otherwise.
      */
     public static boolean supportsEcm(Phone phone) {
-        return (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA);
+        return (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA ||
+                phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS);
     }
 
     /**
