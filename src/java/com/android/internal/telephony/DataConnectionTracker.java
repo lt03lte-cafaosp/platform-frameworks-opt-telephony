@@ -44,6 +44,7 @@ import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
+import android.provider.Telephony;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -192,7 +193,6 @@ public abstract class DataConnectionTracker extends Handler {
     protected AtomicReference<IccRecords> mIccRecords = new AtomicReference<IccRecords>();
     protected DctConstants.Activity mActivity = DctConstants.Activity.NONE;
     protected DctConstants.State mState = DctConstants.State.IDLE;
-    protected Handler mDataConnectionTracker = null;
 
     protected long mTxPkts;
     protected long mRxPkts;
@@ -277,6 +277,26 @@ public abstract class DataConnectionTracker extends Handler {
 
     protected ContentResolver mResolver;
 
+    /** Watches for changes to the APN db. */
+    private ApnChangeObserver mApnObserver;
+
+    /**
+     * Handles changes to the APN db.
+     */
+    private class ApnChangeObserver extends ContentObserver {
+        public ApnChangeObserver (Handler h) {
+            super(h);
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            sendMessage(obtainMessage(DctConstants.EVENT_APN_CHANGED));
+        }
+    }
+
+    // Handles changes in Profiles database
+    protected abstract void onApnChanged();
+
     protected BroadcastReceiver mIntentReceiver = new BroadcastReceiver ()
     {
         @Override
@@ -340,7 +360,7 @@ public abstract class DataConnectionTracker extends Handler {
             }
 
             if (mNetStatPollEnabled) {
-                mDataConnectionTracker.postDelayed(this, mNetStatPollPeriod);
+                postDelayed(this, mNetStatPollPeriod);
             }
         }
     };
@@ -492,6 +512,9 @@ public abstract class DataConnectionTracker extends Handler {
         mDataRoamingSettingObserver.register(mPhone.getContext());
 
         mResolver = mPhone.getContext().getContentResolver();
+        mApnObserver = new ApnChangeObserver(this);
+        mPhone.getContext().getContentResolver().registerContentObserver(
+                Telephony.Carriers.CONTENT_URI, true, mApnObserver);
     }
 
     public void dispose() {
@@ -505,6 +528,7 @@ public abstract class DataConnectionTracker extends Handler {
         mDataRoamingSettingObserver.unregister(mPhone.getContext());
         mUiccController.unregisterForIccChanged(this);
         mPhone.mCM.unregisterForTetheredModeStateChanged(this);
+        mPhone.getContext().getContentResolver().unregisterContentObserver(this.mApnObserver);
     }
 
     protected void broadcastMessenger() {
@@ -741,6 +765,9 @@ public abstract class DataConnectionTracker extends Handler {
                 break;
             case DctConstants.EVENT_TETHERED_MODE_STATE_CHANGED:
                 onTetheredModeStateChanged((AsyncResult) msg.obj);
+                break;
+            case DctConstants.EVENT_APN_CHANGED:
+                onApnChanged();
                 break;
             default:
                 Log.e("DATA", "Unidentified event msg=" + msg);
@@ -1598,6 +1625,11 @@ public abstract class DataConnectionTracker extends Handler {
         pw.println(" mIsDisposed=" + mIsDisposed);
         pw.println(" mIntentReceiver=" + mIntentReceiver);
         pw.println(" mDataRoamingSettingObserver=" + mDataRoamingSettingObserver);
+        pw.println(" mApnObserver=" + mApnObserver);
         pw.flush();
+    }
+
+    public IccRecords getIccRecords() {
+        return mIccRecords.get();
     }
 }
