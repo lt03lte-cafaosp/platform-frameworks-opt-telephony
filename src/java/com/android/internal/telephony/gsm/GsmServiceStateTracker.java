@@ -669,10 +669,12 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                         }
                     }
 
-                    if (regState == 10 || regState == 12 || regState == 13 || regState == 14) {
-                        mEmergencyOnly = true;
-                    } else {
-                        mEmergencyOnly = false;
+                    if (phone.mIsVoiceCapable) {
+                        if (regState == 10 || regState == 12 || regState == 13 || regState == 14) {
+                            mEmergencyOnly = true;
+                        } else {
+                            mEmergencyOnly = false;
+                        }
                     }
 
                     // LAC and CID are -1 if not avail
