@@ -659,10 +659,12 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                             int rejCode = Integer.parseInt(states[13]);
                             // Check if rejCode is "Persistent location update reject",
                             if (rejCode == 10) {
-                                log(" Posting Managed roaming intent ");
-                                Intent intent =
-                                    new Intent(TelephonyIntents.ACTION_MANAGED_ROAMING_IND);
-                                phone.getContext().sendBroadcast(intent);
+                                if (mUiccApplcation != null && mUiccApplcation.getState() == AppState.APPSTATE_READY) {
+                                    log(" Posting Managed roaming intent ");
+                                    Intent intent =
+                                        new Intent(TelephonyIntents.ACTION_MANAGED_ROAMING_IND);
+                                    phone.getContext().sendBroadcast(intent);
+                                }
                             }
                         } catch (NumberFormatException ex) {
                             loge("error parsing regCode: " + ex);
