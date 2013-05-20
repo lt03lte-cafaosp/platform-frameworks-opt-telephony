@@ -147,18 +147,18 @@ public class UiccCard {
             // TODO: 1. Check property persist.radio.apm_sim_not_pwdn and radio state
             //  before notifying ABSENT
 
-            //if (radioState == RadioState.RADIO_ON && mLastRadioState == RadioState.RADIO_ON) {
-            //    if (oldState != CardState.CARDSTATE_ABSENT &&
-            //            mCardState == CardState.CARDSTATE_ABSENT) {
+            if (radioState == RadioState.RADIO_ON && mLastRadioState == RadioState.RADIO_ON) {
+                if (oldState != null && oldState != CardState.CARDSTATE_ABSENT &&
+                        mCardState == CardState.CARDSTATE_ABSENT) {
             //        if (DBG) log("update: notify card removed");
             //        mAbsentRegistrants.notifyRegistrants();
-            //        mHandler.sendMessage(mHandler.obtainMessage(EVENT_CARD_REMOVED, null));
-            //    } else if (oldState == CardState.CARDSTATE_ABSENT &&
+                    mHandler.sendMessage(mHandler.obtainMessage(EVENT_CARD_REMOVED, null));
+                } //else if (oldState == CardState.CARDSTATE_ABSENT &&
             //            mCardState != CardState.CARDSTATE_ABSENT) {
             //        if (DBG) log("update: notify card added");
             //        mHandler.sendMessage(mHandler.obtainMessage(EVENT_CARD_ADDED, null));
             //    }
-            //}
+            }
             mLastRadioState = radioState;
         }
     }
