@@ -1708,4 +1708,9 @@ public interface CommandsInterface {
     */
     public void setSubscriptionMode (int subscriptionMode, Message result);
 
+    /**
+     *  enable or disable engineer mode
+     */
+    public void enableEngineerMode(int on);
+
 }

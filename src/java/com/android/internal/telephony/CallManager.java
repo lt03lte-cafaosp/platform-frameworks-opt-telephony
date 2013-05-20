@@ -2097,6 +2097,13 @@ public final class CallManager {
         return false;
     }
 
+    /**
+     * Enable engineer mode.
+     */
+    public void enableEngineerMode(Phone phone, int on) {
+        getPhoneBase(phone).enableEngineerMode(on);
+    }
+
     private Handler mHandler = new Handler() {
 
         @Override

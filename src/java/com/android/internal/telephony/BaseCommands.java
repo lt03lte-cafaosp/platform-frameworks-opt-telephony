@@ -696,6 +696,8 @@ public abstract class BaseCommands implements CommandsInterface {
         return TelephonyManager.getLteOnCdmaModeStatic();
     }
 
+    public void enableEngineerMode(int on) {}
+
     @Override
     public void testingEmergencyCall() {}
 }

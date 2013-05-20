@@ -1075,4 +1075,8 @@ public class PhoneProxy extends Handler implements Phone {
     public int getSubscription() {
         return mActivePhone.getSubscription();
     }
+
+    public void enableEngineerMode(int on) {
+        mActivePhone.enableEngineerMode(on);
+    }
 }

@@ -1731,4 +1731,9 @@ public class GSMPhone extends PhoneBase {
         return countVoiceMessages;
     }
 
+    @Override
+    public void enableEngineerMode(int on) {
+        mCM.enableEngineerMode(on);
+    }
+
 }

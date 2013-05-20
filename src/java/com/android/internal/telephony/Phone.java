@@ -1840,4 +1840,9 @@ public interface Phone {
      * Returns the subscription id.
      */
     public int getSubscription();
+
+    /**
+     * Enable or dissable engineer mode.
+     */
+    void enableEngineerMode(int on);
 }
