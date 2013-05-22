@@ -601,9 +601,9 @@ public final class CallManager {
             }
             case IDLE:
                 if (audioManager.getMode() != mode) {
-                    updateAudioFocus(audioManager);
                     Log.d(LOG_TAG, "Calling setMode( " + mode + ") IDLE");
                     audioManager.setMode(mode);
+                    updateAudioFocus(audioManager);
                 }
                 break;
         }
@@ -662,10 +662,10 @@ public final class CallManager {
                     newAudioMode = AudioManager.MODE_IN_COMMUNICATION;
                 }
 
-                updateAudioFocus(audioManager);
-
-                if (audioManager.getMode() != newAudioMode || mSpeedUpAudioForMtCall)
+                if (audioManager.getMode() != newAudioMode || mSpeedUpAudioForMtCall) {
+                    updateAudioFocus(audioManager);
                     audioManager.setMode(newAudioMode);
+                }
 
                 mSpeedUpAudioForMtCall = false;
                 break;
@@ -682,16 +682,26 @@ public final class CallManager {
     }
 
     private void updateAudioFocus(AudioManager audioManager) {
-        if (hasActiveRingingCall() || hasActiveFgCall()) {
-            // request audio focus before setting the new mode
-            if (VDBG) Log.d(LOG_TAG, "Calling requestAudioFocusForCall on STREAM_VOICE_CALL");
-            audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-        } else {
-            // abandon audio focus when no call is ACTIVE
-            if (VDBG) Log.d(LOG_TAG, "Calling abandonAudioFocusForCall " +
-                    "as no calls are ACTIVE");
-            audioManager.abandonAudioFocusForCall();
+        switch (getState()) {
+            case RINGING:
+                // only request audio focus if the ringtone is going to be heard
+                if (audioManager.getStreamVolume(AudioManager.STREAM_RING) > 0) {
+                    if (VDBG) Log.d(LOG_TAG, "Calling requestAudioFocus on STREAM_RING");
+                    audioManager.requestAudioFocusForCall(AudioManager.STREAM_RING,
+                            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                }
+                break;
+            case OFFHOOK:
+                // request audio focus before setting the new mode
+                if (VDBG) Log.d(LOG_TAG, "Calling requestAudioFocusForCall on STREAM_VOICE_CALL");
+                audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                break;
+            case IDLE:
+                if (VDBG) Log.d(LOG_TAG, "Calling abandonAudioFocus");
+                // abandon audio focus after the mode has been set back to normal
+                audioManager.abandonAudioFocusForCall();
+                break;
         }
     }
 
