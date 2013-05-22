@@ -51,6 +51,7 @@ public class IconLoader extends Handler {
     protected HashMap<Integer, Bitmap> mIconsCache = null;
 
     private static IconLoader sLoader = null;
+    private static HandlerThread sThread = null;
 
     // Loader state values.
     private static final int STATE_SINGLE_ICON = 1;
@@ -85,9 +86,9 @@ public class IconLoader extends Handler {
             return sLoader;
         }
         if (fh != null) {
-            HandlerThread thread = new HandlerThread("Cat Icon Loader");
-            thread.start();
-            return new IconLoader(thread.getLooper(), fh);
+            sThread = new HandlerThread("Cat Icon Loader");
+            sThread.start();
+            return new IconLoader(sThread.getLooper(), fh);
         }
         return null;
     }
@@ -366,5 +367,14 @@ public class IconLoader extends Handler {
             break;
         }
         return mask;
+    }
+    public void dispose() {
+        mSimFH = null;
+        if (sThread != null) {
+            sThread.quit();
+            sThread = null;
+        }
+        mIconsCache = null;
+        sLoader = null;
     }
 }
