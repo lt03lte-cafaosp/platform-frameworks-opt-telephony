@@ -112,6 +112,15 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
 
     //***** Constants
+    /*
+     * Used to disable the mAutoAttachOnCreation AOSP change for SGLTE Modem.
+     * AOSP / CAF Commit ID: f08c4c89622ddcbc4ed9315fe6b399941dad4939
+     */
+    private static final String PROPERTY_BASEBAND = "ro.baseband";
+    private static final String SGLTE = "sglte";
+    private static final String SGLTE_TYPE2 = "sglte2";
+    // This variable tells us the type of baseband
+    private String mBaseband = SystemProperties.get(PROPERTY_BASEBAND, "msm");
 
     private static final int POLL_PDP_MILLIS = 5 * 1000;
 
@@ -630,7 +639,10 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             // update APN availability so that APN can be enabled.
             notifyOffApnsOfAvailability(Phone.REASON_DATA_ATTACHED);
         }
-        mAutoAttachOnCreation = true;
+        //Disable AOSP change for SGLTE Modem
+        if (!(mBaseband.equals(SGLTE) || mBaseband.equals(SGLTE_TYPE2))) {
+            mAutoAttachOnCreation = true;
+        }
         setupDataOnReadyApns(Phone.REASON_DATA_ATTACHED);
     }
 
