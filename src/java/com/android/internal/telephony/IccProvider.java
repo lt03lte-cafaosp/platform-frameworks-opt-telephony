@@ -223,7 +223,7 @@ public class IccProvider extends ContentProvider {
         int n = tokens.length;
 
         while (--n >= 0) {
-            String param = tokens[n];
+            /*String param = tokens[n];
             if (DBG) log("parsing '" + param + "'");
 
             String[] pair = param.split("=");
@@ -235,7 +235,22 @@ public class IccProvider extends ContentProvider {
 
             String key = pair[0].trim();
             String val = pair[1].trim();
+            */
+            String param = tokens[n];
+            if (DBG) {
+                log("parsing '" + param + "'");
+            }
+            int index = param.indexOf('=');
+            if (index == -1) {
+                Log.e(TAG, "resolve: bad whereClause parameter: " + param);
+                continue;
+            }
 
+            String key = param.substring(0, index).trim();
+            String val = param.substring(index + 1).trim();
+            log("parsing key is " + key + " index of = is " + index +
+                    " val is " + val);      
+            
             if (STR_TAG.equals(key)) {
                 tag = normalizeValue(val);
             } else if (STR_NUMBER.equals(key)) {
