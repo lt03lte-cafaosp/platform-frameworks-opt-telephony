@@ -1754,14 +1754,23 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
     public void
     setNetworkSelectionModeManual(String operatorNumeric, Message response) {
+        setNetworkSelectionModeManualWithRadioTech(operatorNumeric, "0", response);
+    }
+
+
+    public void
+    setNetworkSelectionModeManualWithRadioTech(String operatorNumeric, String radioTech,
+            Message response) {
         RILRequest rr
                 = RILRequest.obtain(RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL,
                                     response);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
-                    + " " + operatorNumeric);
+                    + " " + operatorNumeric +" "+radioTech);
 
+        rr.mp.writeInt(2);
         rr.mp.writeString(operatorNumeric);
+        rr.mp.writeString(radioTech);
 
         send(rr);
     }
