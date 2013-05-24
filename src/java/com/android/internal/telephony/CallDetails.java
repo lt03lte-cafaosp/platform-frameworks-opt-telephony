@@ -103,6 +103,7 @@ public class CallDetails {
                                                       */
 
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
+    public static final String EXTRAS_PARENT_CALL_ID = "parentCallId";
 
     public int call_type;
     public int call_domain;
