@@ -582,8 +582,6 @@ public final class CallManager {
             }
         }
 
-        updateAudioFocus(audioManager);
-
         Log.d(LOG_TAG, "setAudioAndInCallMode inCallMode = " + inCallMode);
         if (isInCallModeActive(inCallMode)) {
             Log.d(LOG_TAG, "Calling setInCallMode(" + inCallModeToString(inCallMode) + ")");
@@ -647,12 +645,16 @@ public final class CallManager {
                     // enable IN_COMMUNICATION audio mode instead for sipPhone
                     newAudioMode = AudioManager.MODE_IN_COMMUNICATION;
                 }
-
-                updateAudioFocus(audioManager);
-
-                if (audioManager.getMode() != newAudioMode || mSpeedUpAudioForMtCall)
+                int currMode = audioManager.getMode();
+                if (currMode != newAudioMode || mSpeedUpAudioForMtCall) {
+                    // request audio focus before setting the new mode
+                    if (VDBG) Log.d(LOG_TAG, "requestAudioFocus on STREAM_VOICE_CALL");
+                    audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
+                            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                    Log.d(LOG_TAG, "setAudioMode Setting audio mode from "
+                            + currMode + " to " + newAudioMode);
                     audioManager.setMode(newAudioMode);
-
+                }
                 mSpeedUpAudioForMtCall = false;
                 break;
             case IDLE:
@@ -664,20 +666,6 @@ public final class CallManager {
                 }
                 mSpeedUpAudioForMtCall = false;
                 break;
-        }
-    }
-
-    private void updateAudioFocus(AudioManager audioManager) {
-        if (hasActiveRingingCall() || hasActiveFgCall()) {
-            // request audio focus before setting the new mode
-            if (VDBG) Log.d(LOG_TAG, "Calling requestAudioFocusForCall on STREAM_VOICE_CALL");
-            audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-        } else {
-            // abandon audio focus when no call is ACTIVE
-            if (VDBG) Log.d(LOG_TAG, "Calling abandonAudioFocusForCall " +
-                    "as no calls are ACTIVE");
-            audioManager.abandonAudioFocusForCall();
         }
     }
 
