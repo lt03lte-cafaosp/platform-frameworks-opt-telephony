@@ -809,7 +809,7 @@ public abstract class DataConnectionTracker extends Handler {
         return result;
     }
 
-    protected int apnTypeToId(String type) {
+    public int apnTypeToId(String type) {
         if (TextUtils.equals(type, PhoneConstants.APN_TYPE_DEFAULT)) {
             return DctConstants.APN_DEFAULT_ID;
         } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_MMS)) {
