@@ -489,10 +489,13 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         return false;
     }
 
-    // Receiver for Service Category Program Data results.
-    // We already ACK'd the original SCPD SMS, so this sends a new response SMS.
-    // TODO: handle retries if the RIL returns an error.
-    private final BroadcastReceiver mScpResultsReceiver = new BroadcastReceiver() {
+    /**
+     * Receiver for Service Category Program Data results.
+     * We already ACK'd the original SCPD SMS, so this sends a new response SMS.
+     * TODO: handle retries if the RIL returns an error.
+     * @hide
+     */
+    protected final BroadcastReceiver mScpResultsReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             int rc = getResultCode();
