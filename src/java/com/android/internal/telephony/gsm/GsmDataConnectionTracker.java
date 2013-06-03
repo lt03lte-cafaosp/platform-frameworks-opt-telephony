@@ -809,7 +809,7 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             return true;
         }
 
-        if (FeatureQuery.FEATURE_WLAN_CMCC_SUPPORT) {
+        if (FeatureQuery.FEATURE_WLAN_CMCC_SUPPORT && !FeatureQuery.FEATURE_CTS_TEST_SUPPORT) {
             if((mIsWifiConnected)&&(apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DEFAULT)))
             {
                 log("trySetupData fail as wifi connected, " + apnContext);

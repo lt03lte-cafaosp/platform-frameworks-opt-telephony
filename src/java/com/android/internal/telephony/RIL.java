@@ -1754,14 +1754,23 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
     public void
     setNetworkSelectionModeManual(String operatorNumeric, Message response) {
+        setNetworkSelectionModeManualWithRadioTech(operatorNumeric, "0", response);
+    }
+
+
+    public void
+    setNetworkSelectionModeManualWithRadioTech(String operatorNumeric, String radioTech,
+            Message response) {
         RILRequest rr
                 = RILRequest.obtain(RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL,
                                     response);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
-                    + " " + operatorNumeric);
+                    + " " + operatorNumeric +" "+radioTech);
 
+        rr.mp.writeInt(2);
         rr.mp.writeString(operatorNumeric);
+        rr.mp.writeString(radioTech);
 
         send(rr);
     }
@@ -3102,7 +3111,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 if (RILJ_LOGD) unsljLogRet(response, ret);
 
                 // Initial conditions
-                setRadioPower(false, null);
+                setRadioPower(true, null);
                 //setPreferredNetworkType(mPreferredNetworkType, null);
                 //setCdmaSubscriptionSource(mCdmaSubscription, null);
                 notifyRegistrantsRilConnectionChanged(((int[])ret)[0]);
@@ -3509,21 +3518,22 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         String strings[] = (String [])responseStrings(p);
         ArrayList<OperatorInfo> ret;
 
-        if (strings.length % 4 != 0) {
+        if (strings.length % 5 != 0) {
             throw new RuntimeException(
                 "RIL_REQUEST_QUERY_AVAILABLE_NETWORKS: invalid response. Got "
-                + strings.length + " strings, expected multible of 4");
+                + strings.length + " strings, expected multible of 5");
         }
 
-        ret = new ArrayList<OperatorInfo>(strings.length / 4);
+        ret = new ArrayList<OperatorInfo>(strings.length / 5);
 
-        for (int i = 0 ; i < strings.length ; i += 4) {
+        for (int i = 0 ; i < strings.length ; i += 5) {
             ret.add (
                 new OperatorInfo(
                     strings[i+0],
                     strings[i+1],
                     strings[i+2],
-                    strings[i+3]));
+                    strings[i+3],
+                    strings[i+4]));
         }
 
         return ret;
