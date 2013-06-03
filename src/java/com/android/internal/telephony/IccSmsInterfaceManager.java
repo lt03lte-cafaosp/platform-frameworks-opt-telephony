@@ -133,6 +133,15 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                         mLock.notifyAll();
                     }
                     break;
+                /* Cindy add */
+                case EVENT_SET_SMS_READ_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    synchronized (mLock) {
+                        mSuccess = (ar.exception == null);
+                        mLock.notifyAll();
+                    }
+                    break;   
+                /* Cindy add end */
             }
         }
     };
