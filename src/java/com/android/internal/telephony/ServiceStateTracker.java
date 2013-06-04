@@ -154,6 +154,9 @@ public abstract class ServiceStateTracker extends Handler {
     protected static final int EVENT_RADIO_ON                          = 41;
     public static final int EVENT_ICC_CHANGED                       = 42;
 
+    /*get prefer mode (nv10) just for check nv10*/
+    protected static final int EVENT_GET_NV_TEN_DONE            = 45;
+
     protected static final String TIMEZONE_PROPERTY = "persist.sys.timezone";
 
     /**
