@@ -525,7 +525,7 @@ public class CommandParamsFactory extends Handler {
         input.digitOnly = (cmdDet.commandQualifier & 0x01) == 0;
         input.ucs2 = (cmdDet.commandQualifier & 0x02) != 0;
         if (input.ucs2){
-            input.maxLen = input.maxLen/2;
+           input.maxLen = input.maxLen/2;
         }
         input.echo = (cmdDet.commandQualifier & 0x04) == 0;
         input.packed = (cmdDet.commandQualifier & 0x08) != 0;
