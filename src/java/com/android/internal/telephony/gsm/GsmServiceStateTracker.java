@@ -741,28 +741,28 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                             mnc = Integer.MAX_VALUE;
                         }
                         try {
-                            tac = Integer.decode(states[6]);
+                            tac = Integer.parseInt(states[6], 16);
                         } catch (Exception e) {
                             loge("handlePollStateResult: bad tac states[6]=" +
                                     states[6] + " e=" + e);
                             tac = Integer.MAX_VALUE;
                         }
                         try {
-                            pci = Integer.decode(states[7]);
+                            pci = Integer.parseInt(states[7], 16);
                         } catch (Exception e) {
                             loge("handlePollStateResultMessage: bad pci states[7]=" +
                                     states[7] + " e=" + e);
                             pci = Integer.MAX_VALUE;
                         }
                         try {
-                            eci = Integer.decode(states[8]);
+                            eci = Integer.parseInt(states[8], 16);
                         } catch (Exception e) {
                             loge("handlePollStateResultMessage: bad eci states[8]=" +
                                     states[8] + " e=" + e);
                             eci = Integer.MAX_VALUE;
                         }
                         try {
-                            csgid = Integer.decode(states[9]);
+                            csgid = Integer.parseInt(states[9], 16);
                         } catch (Exception e) {
                             // FIX: Always bad so don't pollute the logs
                             // loge("handlePollStateResultMessage: bad csgid states[9]=" +
