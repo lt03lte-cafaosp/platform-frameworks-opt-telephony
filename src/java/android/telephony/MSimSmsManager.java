@@ -24,6 +24,7 @@ import android.app.PendingIntent;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.android.internal.telephony.uicc.IccConstants;
 import com.android.internal.telephony.msim.ISmsMSim;
@@ -46,6 +47,7 @@ import java.util.List;
  * @hide
  */
 public class MSimSmsManager {
+    private static final String TAG = "MSimSmsManager";
     /** Singleton object constructed during class initialization. */
     private static final MSimSmsManager sInstance = new MSimSmsManager();
     protected static boolean isMultiSimEnabled = MSimTelephonyManager.
@@ -510,6 +512,136 @@ public class MSimSmsManager {
         return success;
     }
 
+    /**
+     * Enable reception of cdma broadcast messages with the given message
+     * identifier. Note that if two different clients enable the same message
+     * identifier, they must both disable it for the device to stop receiving
+     * those messages. All received messages will be broadcast in an intent with
+     * the action "android.provider.telephony.SMS_CB_RECEIVED".
+     * Note: This call is blocking, callers may want to avoid calling it from
+     * the main thread of an application.
+     *
+     * @param messageIdentifier Message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be enabled
+     * @return true if successful, false otherwise
+     * @see #enableCdmaBroadcast(int) {@hide}
+     */
+    public boolean enableCdmaBroadcast(int messageIdentifier, int subscription) {
+        boolean success = false;
+
+        try {
+            ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (iccISms != null) {
+                success = iccISms.enableCdmaBroadcast(messageIdentifier, subscription);
+            }
+        } catch (RemoteException ex) {
+            Log.e(TAG, "enableCdmaBroadcast get RemoteException:", ex);
+        }
+
+        return success;
+    }
+
+    /**
+     * Disable reception of cdma broadcast messages with the given message
+     * identifier. Note that if two different clients enable the same message
+     * identifier, they must both disable it for the device to stop receiving
+     * those messages. Note: This call is blocking, callers may want to avoid
+     * calling it from the main thread of an application.
+     *
+     * @param messageIdentifier Message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be disabled
+     * @return true if successful, false otherwise
+     * @see #disableCdmaBroadcast(int) {@hide}
+     */
+    public boolean disableCdmaBroadcast(int messageIdentifier, int subscription) {
+        boolean success = false;
+
+        try {
+            ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (iccISms != null) {
+                success = iccISms.disableCdmaBroadcast(messageIdentifier, subscription);
+            }
+        } catch (RemoteException ex) {
+            Log.e(TAG, "disableCdmaBroadcast get RemoteException:", ex);
+        }
+
+        return success;
+    }
+
+    /**
+     * Enable reception of cdma broadcast messages within the given message
+     * identifier range. Note that if two different clients enable the same
+     * message identifier, they must both disable it for the device to stop
+     * receiving those messages. All received messages will be broadcast in an
+     * intent with the action
+     * "android.provider.telephony.SMS_CB_RECEIVED". Note: This call
+     * is blocking, callers may want to avoid calling it from the main thread of
+     * an application.
+     *
+     * @param startMessageId Start Message identifier as specified in C.R1001-G
+     * @param endMessageId End Message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be enabled
+     * @return true if successful, false otherwise
+     * @see #enableCdmaBroadcastRange(int, int)
+     *
+     * @throws IllegalArgumentException if endMessageId < startMessageId
+     * {@hide}
+     */
+    public boolean enableCdmaBroadcastRange(int startMessageId, int endMessageId,
+            int subscription) {
+        boolean success = false;
+
+        if (endMessageId < startMessageId) {
+            throw new IllegalArgumentException("endMessageId < startMessageId");
+        }
+        try {
+            ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (iccISms != null) {
+                success = iccISms.enableCdmaBroadcastRange(startMessageId, endMessageId,
+                    subscription);
+            }
+        } catch (RemoteException ex) {
+            Log.e(TAG, "enableCdmaBroadcastRange get RemoteException:", ex);
+        }
+
+        return success;
+    }
+
+    /**
+     * Disable reception of cdma broadcast messages within the given message
+     * identifier range. Note that if two different clients enable the same
+     * message identifier, they must both disable it for the device to stop
+     * receiving those messages. Note: This call is blocking, callers may want
+     * to avoid calling it from the main thread of an application.
+     *
+     * @param startMessageId Start Message identifier as specified in C.R1001-G
+     * @param endMessageId End Message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be disabled
+     * @return true if successful, false otherwise
+     * @see #disableCdmaBroadcastRange(int, int)
+     *
+     * @throws IllegalArgumentException if endMessageId < startMessageId
+     * {@hide}
+     */
+    public boolean disableCdmaBroadcastRange(int startMessageId, int endMessageId,
+            int subscription) {
+        boolean success = false;
+
+        if (endMessageId < startMessageId) {
+            throw new IllegalArgumentException("endMessageId < startMessageId");
+        }
+        try {
+            ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (iccISms != null) {
+                success = iccISms.disableCdmaBroadcastRange(startMessageId, endMessageId,
+                    subscription);
+            }
+        } catch (RemoteException ex) {
+            Log.e(TAG, "disableCdmaBroadcastRange get RemoteException:", ex);
+        }
+
+        return success;
+    }
     /**
      * Create a list of <code>SmsMessage</code>s from a list of RawSmsData
      * records returned by <code>getAllMessagesFromIcc()</code>

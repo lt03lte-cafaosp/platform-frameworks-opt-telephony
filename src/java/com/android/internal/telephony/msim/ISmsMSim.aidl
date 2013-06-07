@@ -183,6 +183,33 @@ interface ISmsMSim {
     boolean disableCellBroadcast(int messageIdentifier, in int subscription);
 
     /**
+     * Enable reception of cdma broadcast messages with the given
+     * message identifier. Note that if two different clients enable the same
+     * message identifier, they must both disable it for the device to stop
+     * receiving those messages.
+     *
+     * @param messageIdentifier Message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be enabled
+     * @return true if successful, false otherwise
+     * @see #enableCdmaBroadcast(int)
+     */
+    boolean enableCdmaBroadcast(int messageIdentifier, in int subscription);
+
+    /**
+     * Disable reception of cdma broadcast messages with the given
+     * message identifier. Note that if two different clients enable the same
+     * message identifier, they must both disable it for the device to stop
+     * receiving those messages.
+     *
+     * @param messageIdentifier Message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be disabled
+     * @return true if successful, false otherwise
+     *
+     * @see #disableCdmaBroadcast(int)
+     */
+    boolean disableCdmaBroadcast(int messageIdentifier, in int subscription);
+
+    /*
      * Enable reception of cell broadcast (SMS-CB) messages with the given
      * message identifier range. Note that if two different clients enable
      * a message identifier range, they must both disable it for the device
@@ -212,6 +239,35 @@ interface ISmsMSim {
      */
     boolean disableCellBroadcastRange(int startMessageId, int endMessageId, int subscription);
 
+    /*
+     * Enable reception of cdma broadcast messages with the given
+     * message identifier range. Note that if two different clients enable
+     * a message identifier range, they must both disable it for the device
+     * to stop receiving those messages.
+     *
+     * @param startMessageId first message identifier as specified in C.R1001-G
+     * @param endMessageId last message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be enabled
+     * @return true if successful, false otherwise
+     *
+     * @see #enableCdmaBroadcastRange(int, int)
+     */
+    boolean enableCdmaBroadcastRange(int startMessageId, int endMessageId, int subscription);
+
+    /**
+     * Disable reception of cdma broadcast messages with the given
+     * message identifier range. Note that if two different clients enable
+     * a message identifier range, they must both disable it for the device
+     * to stop receiving those messages.
+     *
+     * @param startMessageId first message identifier as specified in C.R1001-G
+     * @param endMessageId last message identifier as specified in C.R1001-G
+     * @param subscription for which the broadcast has to be disabled
+     * @return true if successful, false otherwise
+     *
+     * @see #disableCdmaBroadcastRange(int, int)
+     */
+    boolean disableCdmaBroadcastRange(int startMessageId, int endMessageId, int subscription);
     /*
      * get user prefered SMS subscription
      * @return subscription id
