@@ -82,6 +82,7 @@ public class CdmaConnection extends Connection {
     Handler mHandler;
 
     private PowerManager.WakeLock mPartialWakeLock;
+    private boolean mConnTimerReset = false;
 
     //***** Event Constants
     static final int EVENT_DTMF_DONE = 1;
@@ -946,5 +947,17 @@ public class CdmaConnection extends Connection {
     public UUSInfo getUUSInfo() {
         // UUS information not supported in CDMA
         return null;
+    }
+
+    void resetConnectionTimer() {
+        mConnectTime = System.currentTimeMillis();
+        mConnectTimeReal = SystemClock.elapsedRealtime();
+        mDuration = 0;
+        mConnTimerReset = true;
+        log("CdmaConnection time reseted");
+    }
+
+    public boolean isConnectionTimerReset() {
+        return mConnTimerReset;
     }
 }
