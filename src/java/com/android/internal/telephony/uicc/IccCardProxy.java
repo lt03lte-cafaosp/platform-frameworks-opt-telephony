@@ -168,7 +168,7 @@ public class IccCardProxy extends Handler implements IccCard {
      * In case of 3gpp2 we need to find out if subscription used is coming from
      * NV in which case we shouldn't broadcast any sim states changes.
      */
-    private void updateQuietMode() {
+    protected void updateQuietMode() {
         synchronized (mLock) {
             boolean oldQuietMode = mQuietMode;
             boolean newQuietMode;
