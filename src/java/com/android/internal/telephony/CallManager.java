@@ -4,10 +4,6 @@
  * for attribution purposes only.
  *
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (c) 2012 The Linux Foundation. All rights reserved.
- *
- * Not a Contribution, Apache license notifications and license are retained
- * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,11 +58,11 @@ import java.util.List;
  *
  *
  */
-public final class CallManager {
+public class CallManager {
 
     private static final String LOG_TAG ="CallManager";
     private static final boolean DBG = true;
-    private static final boolean VDBG = false;
+    private static final boolean VDBG = true; //false;
 
     private static final int EVENT_DISCONNECT = 100;
     private static final int EVENT_PRECISE_CALL_STATE_CHANGED = 101;
@@ -89,6 +85,8 @@ public final class CallManager {
     private static final int EVENT_SERVICE_STATE_CHANGED = 118;
     private static final int EVENT_POST_DIAL_CHARACTER = 119;
     private static final int EVENT_SUPP_SERVICE_NOTIFY = 120;
+    private static final int EVENT_VOICE_SYSTEM_ID = 121;
+    protected static final int EVENT_LOCAL_CALL_HOLD = 122;
 
     // Used to route the audio in SgLte scenarios
     private static final String PROPERTY_BASEBAND = "ro.baseband";
@@ -114,22 +112,22 @@ public final class CallManager {
     };
 
     // Singleton instance
-    private static final CallManager INSTANCE = new CallManager();
+    protected static CallManager INSTANCE;
 
     // list of registered phones, which are PhoneBase objs
-    private final ArrayList<Phone> mPhones;
+    protected final ArrayList<Phone> mPhones;
 
     // list of supported ringing calls
-    private final ArrayList<Call> mRingingCalls;
+    protected final ArrayList<Call> mRingingCalls;
 
     // list of supported background calls
-    private final ArrayList<Call> mBackgroundCalls;
+    protected final ArrayList<Call> mBackgroundCalls;
 
     // list of supported foreground calls
-    private final ArrayList<Call> mForegroundCalls;
+    protected final ArrayList<Call> mForegroundCalls;
 
     // empty connection list
-    private final ArrayList<Connection> emptyConnections = new ArrayList<Connection>();
+    protected final ArrayList<Connection> emptyConnections = new ArrayList<Connection>();
 
     // default phone as the first phone registered, which is PhoneBase obj
     private Phone mDefaultPhone;
@@ -137,7 +135,7 @@ public final class CallManager {
     private boolean mSpeedUpAudioForMtCall = false;
 
     // This variable tells us the type of baseband
-    private String mBaseband = SystemProperties.get(PROPERTY_BASEBAND, "msm");
+    private static String mBaseband = SystemProperties.get(PROPERTY_BASEBAND, "msm");
 
     // state registrants
     protected final RegistrantList mPreciseCallStateRegistrants
@@ -206,7 +204,10 @@ public final class CallManager {
     protected final RegistrantList mPostDialCharacterRegistrants
     = new RegistrantList();
 
-    private CallManager() {
+    protected final RegistrantList mActiveSubChangeRegistrants
+    = new RegistrantList();
+
+    protected CallManager() {
         mPhones = new ArrayList<Phone>();
         mRingingCalls = new ArrayList<Call>();
         mBackgroundCalls = new ArrayList<Call>();
@@ -219,6 +220,15 @@ public final class CallManager {
      * @return CallManager
      */
     public static CallManager getInstance() {
+        if (INSTANCE == null) {
+            if (SystemProperties.getBoolean(TelephonyProperties.CALLS_ON_IMS_ENABLED_PROPERTY,
+                false) || MSimTelephonyManager.getDefault().isMultiSimEnabled()
+                || mBaseband.equals(SGLTE) || mBaseband.equals(SGLTE_TYPE2)) {
+                INSTANCE = new ExtCallManager();
+            } else {
+                INSTANCE = new CallManager();
+            }
+        }
         return INSTANCE;
     }
 
@@ -230,7 +240,7 @@ public final class CallManager {
      * is a PhoneProxy obj
      * or the Phone itself if Phone is not a PhoneProxy obj
      */
-    private static Phone getPhoneBase(Phone phone) {
+    protected static Phone getPhoneBase(Phone phone) {
         if (phone instanceof PhoneProxy) {
             return phone.getForegroundCall().getPhone();
         }
@@ -671,6 +681,7 @@ public final class CallManager {
                 mSpeedUpAudioForMtCall = false;
                 break;
         }
+        Log.d(LOG_TAG, "setAudioMode state = " + getState());
     }
 
     private void updateAudioFocus(AudioManager audioManager) {
@@ -687,7 +698,7 @@ public final class CallManager {
         }
     }
 
-    private Context getContext() {
+    protected Context getContext() {
         Phone defaultPhone = getDefaultPhone();
         return ((defaultPhone == null) ? null : defaultPhone.getContext());
     }
@@ -709,6 +720,8 @@ public final class CallManager {
         phone.registerForMmiComplete(mHandler, EVENT_MMI_COMPLETE, phone);
         phone.registerForSuppServiceFailed(mHandler, EVENT_SUPP_SERVICE_FAILED, null);
         phone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
+        phone.registerForUnsolVoiceSystemId(mHandler, EVENT_VOICE_SYSTEM_ID,
+                phone.getSubscription());
         if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ||
                 phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
             phone.registerForSuppServiceNotification(mHandler, EVENT_SUPP_SERVICE_NOTIFY, null);
@@ -2098,7 +2111,26 @@ public final class CallManager {
         return false;
     }
 
-    private Handler mHandler = new Handler() {
+    protected void handleEventRingingConnection(Message msg) {
+        if (VDBG) Log.d(LOG_TAG, " handleMessage (EVENT_NEW_RINGING_CONNECTION)");
+        if (getActiveFgCallState().isDialing() || hasMoreThanOneRingingCall()) {
+            Connection c = (Connection) ((AsyncResult) msg.obj).result;
+            try {
+                Log.d(LOG_TAG, "silently drop incoming call: " + c.getCall());
+                c.getCall().hangup();
+            } catch (CallStateException e) {
+                Log.w(LOG_TAG, "new ringing connection", e);
+            }
+        } else {
+            mNewRingingConnectionRegistrants.notifyRegistrants((AsyncResult) msg.obj);
+        }
+    }
+
+    protected void handleEventVoiceSysId(Message msg) {
+        Log.e(LOG_TAG, " handleEventVoiceSysId not supported");
+    }
+
+    protected Handler mHandler = new Handler() {
 
         @Override
         public void handleMessage(Message msg) {
@@ -2113,18 +2145,7 @@ public final class CallManager {
                     mPreciseCallStateRegistrants.notifyRegistrants((AsyncResult) msg.obj);
                     break;
                 case EVENT_NEW_RINGING_CONNECTION:
-                    if (VDBG) Log.d(LOG_TAG, " handleMessage (EVENT_NEW_RINGING_CONNECTION)");
-                    if (getActiveFgCallState().isDialing() || hasMoreThanOneRingingCall()) {
-                        Connection c = (Connection) ((AsyncResult) msg.obj).result;
-                        try {
-                            Log.d(LOG_TAG, "silently drop incoming call: " + c.getCall());
-                            c.getCall().hangup();
-                        } catch (CallStateException e) {
-                            Log.w(LOG_TAG, "new ringing connection", e);
-                        }
-                    } else {
-                        mNewRingingConnectionRegistrants.notifyRegistrants((AsyncResult) msg.obj);
-                    }
+                    handleEventRingingConnection(msg);
                     break;
                 case EVENT_UNKNOWN_CONNECTION:
                     if (VDBG) Log.d(LOG_TAG, " handleMessage (EVENT_UNKNOWN_CONNECTION)");
@@ -2209,6 +2230,13 @@ public final class CallManager {
                         notifyMsg.sendToTarget();
                     }
                     break;
+                case EVENT_VOICE_SYSTEM_ID:
+                    if (VDBG) Log.d(LOG_TAG, " handleMessage (EVENT_VOICE_SYSTEM_ID)");
+                    handleEventVoiceSysId(msg);
+                    break;
+                case EVENT_LOCAL_CALL_HOLD:
+                    if (VDBG) Log.d(LOG_TAG, " handleMessage (EVENT_LOCAL_CALL_HOLD)");
+                    break;
             }
         }
     };
@@ -2246,5 +2274,117 @@ public final class CallManager {
         }
         b.append("\n}");
         return b.toString();
+    }
+
+    public void registerForSubscriptionChange(Handler h, int what, Object obj) {
+        mActiveSubChangeRegistrants.addUnique(h, what, obj);
+    }
+
+    public void unregisterForSubscriptionChange(Handler h) {
+        mActiveSubChangeRegistrants.remove(h);
+    }
+
+    public boolean hasActiveFgCallAnyPhone() {
+        return hasActiveFgCall();
+    }
+
+    public int getServiceState(int subscription) {
+        Log.e(LOG_TAG, " getServiceState for subscription not supported");
+        return ServiceState.STATE_OUT_OF_SERVICE;
+    }
+
+    public PhoneConstants.State getState(int subscription) {
+        Log.e(LOG_TAG, " getState for subscription not supported");
+        return PhoneConstants.State.IDLE;
+    }
+
+    public Phone getFgPhone(int subscription) {
+        Log.e(LOG_TAG, " getFgPhone for subscription not supported");
+        return null;
+    }
+
+    public Phone getBgPhone(int subscription) {
+        Log.e(LOG_TAG, " getBgPhone for subscription not supported");
+        return null;
+    }
+
+    public Phone getRingingPhone(int subscription) {
+        Log.e(LOG_TAG, " getRingingPhone for subscription not supported");
+        return null;
+    }
+
+    public Phone getPhoneInCall(int subscription) {
+        Log.e(LOG_TAG, " getPhoneInCall for subscription not supported");
+        return null;
+    }
+
+    public Call getFirstActiveRingingCall(int subscription) {
+        return getFirstActiveRingingCall();
+    }
+
+    public Call getFirstActiveBgCall(int subscription) {
+        return getFirstActiveBgCall();
+    }
+
+    public Call getActiveFgCall(int subscription) {
+        Log.e(LOG_TAG, " getActiveFgCall for subscription not supported");
+        return null;
+    }
+
+    public Call.State getActiveFgCallState(int subscription) {
+        Log.e(LOG_TAG, " getActiveFgCallState for subscription not supported");
+        return Call.State.IDLE;
+    }
+
+    public boolean hasActiveRingingCall(int subscription) {
+        Log.e(LOG_TAG, " hasActiveRingingCall for subscription not supported");
+        return false;
+    }
+
+    public boolean hasActiveFgCall(int subscription) {
+        Log.e(LOG_TAG, " hasActiveFgCall for subscription not supported");
+        return false;
+    }
+
+    public boolean hasActiveBgCall(int subscription) {
+        Log.e(LOG_TAG, " hasActiveBgCall for subscription not supported");
+        return false;
+    }
+
+    public boolean hasDisconnectedFgCall(int subscription) {
+        Log.e(LOG_TAG, " hasDisconnectedFgCall for subscription not supported");
+        return false;
+    }
+
+    public boolean hasDisconnectedBgCall(int subscription) {
+        Log.e(LOG_TAG, " hasDisconnectedBgCall for subscription not supported");
+        return false;
+    }
+
+    public void clearDisconnected(int subscription) {
+        Log.e(LOG_TAG, " clearDisconnected for subscription not supported");
+    }
+
+    public List<Connection> getFgCallConnections(int subscription) {
+        Log.e(LOG_TAG, " getFgCallConnections for subscription not supported");
+        return null;
+    }
+
+    public Connection getFgCallLatestConnection(int subscription) {
+        Log.e(LOG_TAG, " getFgCallLatestConnection for subscription not supported");
+        return null;
+    }
+
+    public void setActiveSubscription(int subscription) {
+        Log.e(LOG_TAG, " setActiveSubscription for subscription not supported");
+    }
+
+    public int getActiveSubscription() {
+        Log.e(LOG_TAG, " getActiveSubscription for subscription not supported");
+        return 0;
+    }
+
+    public void switchToLocalHold(int subscription, boolean switchTo) {
+        Log.e(LOG_TAG, " switchToLocalHold for subscription not supported");
     }
 }

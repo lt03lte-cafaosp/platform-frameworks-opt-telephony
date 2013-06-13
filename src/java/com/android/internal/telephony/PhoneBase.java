@@ -616,6 +616,14 @@ public abstract class PhoneBase extends Handler implements Phone {
         mCM.unregisterForResendIncallMute(h);
     }
 
+    public void registerForUnsolVoiceSystemId(Handler h, int what, Object obj) {
+        mCM.registerForUnsolVoiceSystemId(h,what,obj);
+    }
+
+    public void unregisterForUnsolVoiceSystemId(Handler h) {
+        mCM.unregisterForUnsolVoiceSystemId(h);
+    }
+
     public void setEchoSuppressionEnabled(boolean enabled) {
         // no need for regular phone
     }
