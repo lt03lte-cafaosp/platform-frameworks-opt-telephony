@@ -111,7 +111,7 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
                         {
                             update_err=-1;
                         }
-                        else if(ar.exception.equals("java.lang.RuntimeException: anr sparecount is 0"))
+                        else if(ar.exception.toString().equals("java.lang.RuntimeException: anr sparecount is 0"))
                         {
                             update_err=-3;
                         }
