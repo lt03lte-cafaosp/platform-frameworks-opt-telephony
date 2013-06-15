@@ -510,6 +510,14 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.unregisterForSimRecordsLoaded(h);
     }
 
+    public void registerForUnsolVoiceSystemId(Handler h, int what, Object obj) {
+        mActivePhone.registerForUnsolVoiceSystemId(h,what,obj);
+    }
+
+    public void unregisterForUnsolVoiceSystemId(Handler h) {
+        mActivePhone.unregisterForUnsolVoiceSystemId(h);
+    }
+
     public boolean getIccRecordsLoaded() {
         return mIccCardProxy.getIccRecordsLoaded();
     }
