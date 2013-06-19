@@ -85,8 +85,8 @@ public class CatService extends Handler implements AppInterface {
     protected RilMessageDecoder mMsgDecoder = null;
     protected boolean mStkAppInstalled = false;
 
-    private UiccController mUiccController;
-    private CardState mCardState;
+    protected UiccController mUiccController;
+    protected CardState mCardState;
 
     // Service constants.
     protected static final int MSG_ID_SESSION_END              = 1;
@@ -96,16 +96,16 @@ public class CatService extends Handler implements AppInterface {
     static final int MSG_ID_REFRESH                  = 5;
     static final int MSG_ID_RESPONSE                 = 6;
     protected static final int MSG_ID_SIM_READY                = 7;
-    static final int MSG_ID_ALPHA_NOTIFY                       = 8;
+    protected static final int MSG_ID_ALPHA_NOTIFY             = 8;
 
     static final int MSG_ID_RIL_MSG_DECODED          = 10;
 
     // Events to signal SIM presence or absent in the device.
     protected static final int MSG_ID_ICC_RECORDS_LOADED       = 20;
-    private static final int MSG_ID_ICC_CHANGED      = 21;
+    protected static final int MSG_ID_ICC_CHANGED      = 21;
 
     //Events to signal SIM REFRESH notificatations
-    private static final int MSG_ID_ICC_REFRESH  = 30;
+    protected static final int MSG_ID_ICC_REFRESH  = 30;
 
     private static final int DEV_ID_KEYPAD      = 0x01;
     private static final int DEV_ID_DISPLAY     = 0x02;
@@ -180,12 +180,16 @@ public class CatService extends Handler implements AppInterface {
             mUiccController.unregisterForIccChanged(this);
             mUiccController = null;
         }
+        disposeHandlerThread();
         sInstance = null;
-        mhandlerThread.quit();
-        mhandlerThread = null;
         mCmdIf.unSetOnCatCcAlphaNotify(this);
 
         this.removeCallbacksAndMessages(null);
+    }
+
+    protected void disposeHandlerThread() {
+        mhandlerThread.quit();
+        mhandlerThread = null;
     }
 
     protected void finalize() {
@@ -436,7 +440,7 @@ public class CatService extends Handler implements AppInterface {
      * Handles RIL_UNSOL_STK_SESSION_END unsolicited command from RIL.
      *
      */
-    private void handleSessionEnd() {
+    protected void handleSessionEnd() {
         CatLog.d(this, "SESSION END");
 
         mCurrntCmd = mMenuCmd;
@@ -648,10 +652,10 @@ public class CatService extends Handler implements AppInterface {
         /* TODO: eventDownload should be extended for other Envelope Commands */
         switch (event) {
             case IDLE_SCREEN_AVAILABLE_EVENT:
-                CatLog.d(sInstance, " Sending Idle Screen Available event download to ICC");
+                CatLog.d(this, " Sending Idle Screen Available event download to ICC");
                 break;
             case LANGUAGE_SELECTION_EVENT:
-                CatLog.d(sInstance, " Sending Language Selection event download to ICC");
+                CatLog.d(this, " Sending Language Selection event download to ICC");
                 tag = 0x80 | ComprehensionTlvTag.LANGUAGE.value();
                 buf.write(tag);
                 // Language length should be 2 byte
@@ -827,7 +831,7 @@ public class CatService extends Handler implements AppInterface {
      ** REFRESH, additional information is sent in 'refresh_result'
      **
      **/
-    private void  broadcastCardStateAndIccRefreshResp(CardState cardState,
+    protected void  broadcastCardStateAndIccRefreshResp(CardState cardState,
             IccRefreshResponse IccRefreshState) {
         Intent intent = new Intent(AppInterface.CAT_ICC_STATUS_CHANGE);
         boolean cardStatus = (cardState == CardState.CARDSTATE_PRESENT);
@@ -847,7 +851,7 @@ public class CatService extends Handler implements AppInterface {
         mContext.sendBroadcast(intent);
     }
 
-    private void broadcastAlphaMessage(String alphaString) {
+    protected void broadcastAlphaMessage(String alphaString) {
         CatLog.d(this, "Broadcasting STK Alpha message from card: " + alphaString);
         Intent intent = new Intent(AppInterface.CAT_ALPHA_NOTIFY_ACTION);
         intent.putExtra(AppInterface.ALPHA_STRING, alphaString);
@@ -1016,7 +1020,7 @@ public class CatService extends Handler implements AppInterface {
         return (numReceiver > 0);
     }
 
-    void updateIccAvailability() {
+    protected void updateIccAvailability() {
         CardState newState = CardState.CARDSTATE_ABSENT;
         if(null == mUiccController) {
             return;
