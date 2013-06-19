@@ -87,7 +87,10 @@ public interface IccConstants {
     static final int EF_IIDF3 = 0x4f03;
     static final int EF_IIDF4 = 0x4f04;
     static final int EF_IIDF5 = 0x4f05;
-
+    
+    //plmnwact    
+    static final int EF_PLMNWACT = 0x6F60;
+    
     // SMS record length from TS 51.011 10.5.3
     static public final int SMS_RECORD_LENGTH = 176;
     // SMS record length from C.S0023 3.4.27
