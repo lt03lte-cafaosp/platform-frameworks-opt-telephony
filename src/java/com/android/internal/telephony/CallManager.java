@@ -91,6 +91,7 @@ public class CallManager {
     // Used to route the audio in SgLte scenarios
     private static final String PROPERTY_BASEBAND = "ro.baseband";
     private static final String PROPERTY_VOICE_MODEM_INDEX = "persist.radio.voice.modem.index";
+    private static final String PROPERTY_QCHAT_ENABLED = "persist.atel.qchat_enabled";
     private static final int LOCAL_MODEM = 0;
     private static final int REMOTE_MODEM = 1;
     private static final String SGLTE = "sglte";
@@ -223,7 +224,8 @@ public class CallManager {
         if (INSTANCE == null) {
             if (SystemProperties.getBoolean(TelephonyProperties.CALLS_ON_IMS_ENABLED_PROPERTY,
                 false) || MSimTelephonyManager.getDefault().isMultiSimEnabled()
-                || mBaseband.equals(SGLTE) || mBaseband.equals(SGLTE_TYPE2)) {
+                || mBaseband.equals(SGLTE) || mBaseband.equals(SGLTE_TYPE2) ||
+                SystemProperties.getBoolean(PROPERTY_QCHAT_ENABLED, false)) {
                 INSTANCE = new ExtCallManager();
             } else {
                 INSTANCE = new CallManager();
