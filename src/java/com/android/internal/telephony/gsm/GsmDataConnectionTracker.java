@@ -166,6 +166,12 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
 
         if (dcac != null) {
             for (ApnContext apnContext : dcac.getApnListSync()) {
+                //when process data-attach msg before alarm msg, donot change apn's dc to null.
+                DctConstants.State apnContextState = apnContext.getState();
+                if(apnContextState == DctConstants.State.INITING){
+                    log("apnContextState is INITING ignore reconnect.");
+                    continue;
+                }
                 if (dcac.isInactiveSync()) {
                     log("DataConnectionAC is Inactive.");
                     apnContext.setDataConnectionAc(null);
@@ -173,7 +179,7 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
                 }
                 apnContext.setReason(reason);
                 apnContext.setRetryCount(retryCount);
-                DctConstants.State apnContextState = apnContext.getState();
+                //DctConstants.State apnContextState = apnContext.getState();
                 if (DBG) {
                     log("onActionIntentReconnectAlarm: apnContext state=" + apnContextState);
                 }
@@ -2057,6 +2063,7 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
             }
         } else {
             cause = (DataConnection.FailCause) (ar.result);
+
             if (DBG) {
                 DataProfile apn = apnContext.getApnSetting();
                 log(String.format("onDataSetupComplete: error apn=%s cause=%s",
