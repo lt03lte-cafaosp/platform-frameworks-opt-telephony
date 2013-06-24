@@ -1211,6 +1211,18 @@ public final class GsmMmiCode extends Handler implements MmiCode {
                         } else {
                             sb.append(context.getText(
                                     com.android.internal.R.string.badPin));
+                            // get attempts remaining times from the modem
+                            // return value.the first array is attempts
+                            // remaining times.
+                            int[] pinAttemptsRemaining = (int[]) ar.result;
+                            if (ar.result != null) {
+                                if (pinAttemptsRemaining.length > 0 &&
+                                        pinAttemptsRemaining[0] >= 0){
+                                    sb.append(context.getText(
+                                            com.android.internal.R.string.pinpuk_attempts));
+                                    sb.append(pinAttemptsRemaining[0]);
+                                }
+                            }
                         }
                     } else {
                         sb.append(context.getText(

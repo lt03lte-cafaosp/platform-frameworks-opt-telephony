@@ -1972,6 +1972,12 @@ public final class Telephony {
          * "APN" or "NAI". Default is "APN".
          */
         public static final String PROFILE_TYPE = "profile_type";
+
+        /**
+         * Read only APN.
+         * true : read only APN, false :  APN. Default is false.
+         */
+        public static final String READ_ONLY = "read_only";
     }
 
     /**
