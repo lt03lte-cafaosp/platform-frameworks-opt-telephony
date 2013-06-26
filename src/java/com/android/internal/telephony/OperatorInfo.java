@@ -36,8 +36,6 @@ public class OperatorInfo implements Parcelable {
 
     private State state = State.UNKNOWN;
 
-    private String radioTech;
-    private String radioTechDes; // displayed in UI, "2G" or "3G"
 
     public String
     getOperatorAlphaLong() {
@@ -59,46 +57,25 @@ public class OperatorInfo implements Parcelable {
         return state;
     }
 
-    public String
-    getRadioTech() {
-        return radioTech;
-    }
-
-    public String
-    getRadioTechDes() {
-        return radioTechDes;
-    }
-
-    public OperatorInfo(String operatorAlphaLong,
+    OperatorInfo(String operatorAlphaLong,
                 String operatorAlphaShort,
                 String operatorNumeric,
-                State state,
-                String radioTech) {
+                State state) {
 
         this.operatorAlphaLong = operatorAlphaLong;
         this.operatorAlphaShort = operatorAlphaShort;
         this.operatorNumeric = operatorNumeric;
 
         this.state = state;
-
-        this.radioTech = radioTech;
-        this.radioTechDes = getRadioTechDes(radioTech);
     }
+
 
     public OperatorInfo(String operatorAlphaLong,
                 String operatorAlphaShort,
                 String operatorNumeric,
-                State state) {
+                String stateString) {
         this (operatorAlphaLong, operatorAlphaShort,
-                operatorNumeric, state,"");
-    }
-
-    public OperatorInfo(String operatorAlphaLong,
-                String operatorAlphaShort,
-                String operatorNumeric,
-                String stateString, String radioTech) {
-        this (operatorAlphaLong, operatorAlphaShort,
-                operatorNumeric, rilStateToState(stateString),radioTech );
+                operatorNumeric, rilStateToState(stateString));
     }
 
     /**
@@ -119,60 +96,12 @@ public class OperatorInfo implements Parcelable {
         }
     }
 
-    private static String getRadioTechDes(String s) {
-   /*
-    RADIO_TECH_UNKNOWN = 0,
-    RADIO_TECH_GPRS = 1,
-    RADIO_TECH_EDGE = 2,
-    RADIO_TECH_UMTS = 3,
-    RADIO_TECH_IS95A = 4,
-    RADIO_TECH_IS95B = 5,
-    RADIO_TECH_1xRTT =  6,
-    RADIO_TECH_EVDO_0 = 7,
-    RADIO_TECH_EVDO_A = 8,
-    RADIO_TECH_HSDPA = 9,
-    RADIO_TECH_HSUPA = 10,
-    RADIO_TECH_HSPA = 11,
-    RADIO_TECH_EVDO_B = 12,
-    RADIO_TECH_EHRPD = 13,
-    RADIO_TECH_LTE = 14,
-    RADIO_TECH_HSPAP = 15, // HSPA+
-    RADIO_TECH_GSM = 16, // Only supports voice
-    RADIO_TECH_TD_SCDMA = 17
-   */
-        if (s == null)
-            return "";
-        if ( s.equals("1")
-                || s.equals("2")
-                || s.equals("4")
-                || s.equals("5")
-                || s.equals("6")
-                || s.equals("16")){
-            return "2G";
-        } else if (s.equals("3")
-            ||s.equals("17")
-            ||s.equals("7")
-            ||s.equals("8")
-            ||s.equals("9")
-            ||s.equals("10")
-            ||s.equals("11")
-            ||s.equals("12")
-            ||s.equals("13")
-            ||s.equals("15")) {
-            return "3G";
-        }else if(s.equals("14")){
-            return "4G";
-        }else{
-            return "";
-        }
-    }
 
     public String toString() {
         return "OperatorInfo " + operatorAlphaLong
                 + "/" + operatorAlphaShort
                 + "/" + operatorNumeric
-                + "/" + state
-                +"/"  + radioTechDes;
+                + "/" + state;
     }
 
     /**
@@ -196,7 +125,6 @@ public class OperatorInfo implements Parcelable {
         dest.writeString(operatorAlphaShort);
         dest.writeString(operatorNumeric);
         dest.writeSerializable(state);
-        dest.writeString(radioTech);
     }
 
     /**
@@ -210,8 +138,7 @@ public class OperatorInfo implements Parcelable {
                         in.readString(), /*operatorAlphaLong*/
                         in.readString(), /*operatorAlphaShort*/
                         in.readString(), /*operatorNumeric*/
-                        (State) in.readSerializable(), /*state*/
-                        in.readString());/*radioTech*/
+                        (State) in.readSerializable()); /*state*/
                 return opInfo;
             }
 

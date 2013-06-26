@@ -448,12 +448,6 @@ class UsimDataDownloadCommands extends BaseCommands {
     }
 
     @Override
-    public void setNetworkSelectionModeManualWithRadioTech(
-            String operatorNumeric, String radioTech, Message response){
-    }
-
-
-    @Override
     public void getNetworkSelectionMode(Message response) {
     }
 

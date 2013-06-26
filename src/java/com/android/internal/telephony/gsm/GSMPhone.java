@@ -1082,8 +1082,7 @@ public class GSMPhone extends PhoneBase {
         // get the message
         Message msg = obtainMessage(EVENT_SET_NETWORK_MANUAL_COMPLETE, nsm);
 
-        mCM.setNetworkSelectionModeManualWithRadioTech(network.getOperatorNumeric(),
-                    network.getRadioTech(), msg);
+        mCM.setNetworkSelectionModeManual(network.getOperatorNumeric(), msg);
     }
 
     public void
