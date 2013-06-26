@@ -53,7 +53,7 @@ public final class SmsStorageMonitor extends Handler {
 
     /** Wake lock to ensure device stays awake while dispatching the SMS intent. */
     private PowerManager.WakeLock mWakeLock;
-
+    private PhoneBase mPhone;
     private boolean mReportMemoryStatusPending;
     private int mSubId = 0;
 
@@ -75,7 +75,7 @@ public final class SmsStorageMonitor extends Handler {
         mContext = phone.getContext();
         mCm = phone.mCM;
         mSubId = phone.getSubscription();
-
+        mPhone = phone;
         createWakelock();
 
         mCm.setOnIccSmsFull(this, EVENT_ICC_FULL, null);
@@ -145,7 +145,9 @@ public final class SmsStorageMonitor extends Handler {
     private void handleIccFull() {
         // broadcast SIM_FULL intent
         Intent intent = new Intent(Intents.SIM_FULL_ACTION);
-        intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, mSubId);
+        intent.putExtra(MSimConstants.SUBSCRIPTION_KEY,mPhone.getSubscription());
+        Log.d(TAG, "handleIccFull : mSubId = " + mSubId + ",mPhone.getSubscription()="
+            + mPhone.getSubscription());
         mWakeLock.acquire(WAKE_LOCK_TIMEOUT);
         mContext.sendBroadcast(intent, SMSDispatcher.RECEIVE_SMS_PERMISSION);
     }
