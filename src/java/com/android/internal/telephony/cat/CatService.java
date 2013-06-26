@@ -650,10 +650,10 @@ public class CatService extends Handler implements AppInterface {
         /* TODO: eventDownload should be extended for other Envelope Commands */
         switch (event) {
             case IDLE_SCREEN_AVAILABLE_EVENT:
-                CatLog.d(sInstance, " Sending Idle Screen Available event download to ICC");
+                CatLog.d(this, " Sending Idle Screen Available event download to ICC");
                 break;
             case LANGUAGE_SELECTION_EVENT:
-                CatLog.d(sInstance, " Sending Language Selection event download to ICC");
+                CatLog.d(this, " Sending Language Selection event download to ICC");
                 tag = 0x80 | ComprehensionTlvTag.LANGUAGE.value();
                 buf.write(tag);
                 // Language length should be 2 byte

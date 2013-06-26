@@ -209,7 +209,7 @@ public abstract class IccRecords extends Handler implements IccConstants {
      * @return null if SIM is not yet ready or unavailable
      */
     public String getIMSI() {
-        return null;
+        return mImsi;
     }
 
     /**

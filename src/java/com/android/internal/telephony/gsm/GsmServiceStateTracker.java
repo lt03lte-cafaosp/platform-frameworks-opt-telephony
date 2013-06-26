@@ -106,6 +106,8 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
     private int mReasonDataDenied = -1;
     private int mNewReasonDataDenied = -1;
 
+    private boolean mHasGetPreferMode = false;
+
     /**
      * GSM roaming status solely based on TS 27.007 7.2 CREG. Only used by
      * handlePollStateResult to store CREG roaming result.
@@ -295,6 +297,22 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
             return;
         }
         switch (msg.what) {
+            case EVENT_GET_NV_TEN_DONE:
+                 log("Received message " + msg +
+                    "[" + msg.what + "]");
+
+                ar = (AsyncResult) msg.obj;
+
+                if (ar.exception == null) {
+                    int nv10 = ((int[])ar.result)[0];
+                    log("EVENT_GET_NV_TEN_DONE, nv10 = " + nv10);
+                } else {
+                    mHasGetPreferMode = false;
+                    log("EVENT_GET_NV_TEN_DONE, exception");
+                }
+
+                break;
+
             case EVENT_RADIO_AVAILABLE:
                 //this is unnecessary
                 //setPowerStateToDesired();
@@ -886,6 +904,12 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                 // Issue all poll-related commands at once
                 // then count down the responses, which
                 // are allowed to arrive out-of-order
+
+                log("pollState: mHasGetPreferMode= " + mHasGetPreferMode);
+                if( false == mHasGetPreferMode){
+                    mHasGetPreferMode = true;
+                    cm.getPreferredNetworkType(obtainMessage(EVENT_GET_NV_TEN_DONE));
+                }
 
                 pollingContext[0]++;
                 cm.getOperator(

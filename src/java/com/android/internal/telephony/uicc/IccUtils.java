@@ -64,6 +64,39 @@ public class IccUtils {
     }
 
     /**
+     * Many fields in GSM SIM's are stored as nibble-swizzled BCD
+     *
+     * Assumes 0xf as normal value .
+     *
+     *  returning string
+     */
+    public static String
+    iccidBcdToString(byte[] data, int offset, int length) {
+        StringBuilder ret = new StringBuilder(length*2);
+
+        for (int i = offset ; i < offset + length ; i++) {
+            byte b;
+            int v;
+
+            v = data[i] & 0xf;
+            if (0 <= v && v <= 9){
+                ret.append((char)('0' + v));
+            } else {
+                ret.append((char)('a' + v - 0xa));
+            }
+
+            v = (data[i] >> 4) & 0xf;
+            if (0 <= v && v <= 9){
+                ret.append((char)('0' + v));
+            } else {
+                ret.append((char)('a' + v - 0xa));
+            }
+        }
+
+        return ret.toString();
+    }
+
+    /**
      * Decode cdma byte into String.
      */
     public static String
