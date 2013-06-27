@@ -18,6 +18,8 @@
 
 package com.android.internal.telephony;
 
+import android.text.TextUtils;
+
 public abstract class DataProfile {
 
     protected final static String LOG_TAG = "DataProfile";
@@ -74,7 +76,7 @@ public abstract class DataProfile {
         this.bearer = bearer;
 
         if (authType == -1) {
-            authType = (user != null) ? RILConstants.SETUP_DATA_AUTH_PAP_CHAP :
+            authType = !TextUtils.isEmpty(user) ? RILConstants.SETUP_DATA_AUTH_PAP_CHAP :
                 RILConstants.SETUP_DATA_AUTH_NONE;
         }
         this.authType = authType;
