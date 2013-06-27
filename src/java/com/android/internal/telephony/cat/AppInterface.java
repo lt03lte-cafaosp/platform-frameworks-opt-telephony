@@ -32,7 +32,7 @@ public interface AppInterface {
     public static final String CAT_SESSION_END_ACTION =
                                     "android.intent.action.stk.session_end";
     public static final String CAT_ALPHA_NOTIFY_ACTION =
-                                    "qualcomm.intent.action.stk.alpha_notify";
+                                    "android.intent.action.stk.alpha_notify";
 
     //This is used to send ALPHA string from card to STK App.
     public static final String ALPHA_STRING = "alpha_string";
@@ -57,7 +57,7 @@ public interface AppInterface {
     public static final String CARD_STATUS = "card_status";
     //Intent's actions are broadcasted by Telephony once IccRefresh occurs.
     public static final String CAT_ICC_STATUS_CHANGE =
-                                    "qualcomm.intent.action.stk.icc_status_change";
+                                    "android.intent.action.stk.icc_status_change";
     /*
      * Callback function from app to telephony to pass a result code and user's
      * input back to the ICC.

@@ -79,6 +79,7 @@ public class CatService extends Handler implements AppInterface {
     private static HandlerThread mhandlerThread;
     protected CommandsInterface mCmdIf;
     protected Context mContext;
+    protected int mSlotId;
     protected CatCmdMessage mCurrntCmd = null;
     protected CatCmdMessage mMenuCmd = null;
 
@@ -102,7 +103,7 @@ public class CatService extends Handler implements AppInterface {
 
     // Events to signal SIM presence or absent in the device.
     protected static final int MSG_ID_ICC_RECORDS_LOADED       = 20;
-    private static final int MSG_ID_ICC_CHANGED      = 21;
+    protected static final int MSG_ID_ICC_CHANGED      = 21;
 
     //Events to signal SIM REFRESH notificatations
     private static final int MSG_ID_ICC_REFRESH  = 30;
@@ -756,6 +757,7 @@ public class CatService extends Handler implements AppInterface {
     @Override
     public void handleMessage(Message msg) {
 
+        CatLog.d(this, msg.what + "arrived on slotid  : "+ mSlotId);
         switch (msg.what) {
         case MSG_ID_SESSION_END:
         case MSG_ID_PROACTIVE_COMMAND:
@@ -769,6 +771,7 @@ public class CatService extends Handler implements AppInterface {
                     try {
                         data = (String) ar.result;
                     } catch (ClassCastException e) {
+                        CatLog.d(this,"Exception caught for proactive cmd");
                         break;
                     }
                 }
@@ -829,7 +832,7 @@ public class CatService extends Handler implements AppInterface {
      ** REFRESH, additional information is sent in 'refresh_result'
      **
      **/
-    private void  broadcastCardStateAndIccRefreshResp(CardState cardState,
+    protected void  broadcastCardStateAndIccRefreshResp(CardState cardState,
             IccRefreshResponse IccRefreshState) {
         Intent intent = new Intent(AppInterface.CAT_ICC_STATUS_CHANGE);
         boolean cardStatus = (cardState == CardState.CARDSTATE_PRESENT);
@@ -843,6 +846,7 @@ public class CatService extends Handler implements AppInterface {
 
         // This sends an intent with CARD_ABSENT (0 - false) /CARD_PRESENT (1 - true).
         intent.putExtra(AppInterface.CARD_STATUS, cardStatus);
+        intent.putExtra("SLOT_ID", mSlotId);
         CatLog.d(this, "Sending Card Status: "
                 + cardState + " " + "cardStatus: " + cardStatus);
 
