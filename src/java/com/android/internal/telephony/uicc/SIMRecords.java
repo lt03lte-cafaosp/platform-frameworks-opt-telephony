@@ -47,15 +47,18 @@ import com.android.internal.telephony.gsm.SimTlv;
 import com.android.internal.telephony.gsm.SmsMessage;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppType;
+import com.android.internal.telephony.TelephonyIntents;
+
+import com.qrd.plugin.feature_query.FeatureQuery;
 
 import java.util.ArrayList;
-
+import android.content.Intent;
 
 /**
  * {@hide}
  */
 public class SIMRecords extends IccRecords {
-    protected static final String LOG_TAG = "GSM";
+    protected static final String LOG_TAG = "SIMRecords";
 
     private static final boolean CRASH_RIL = false;
 
@@ -1268,6 +1271,11 @@ public class SIMRecords extends IccRecords {
             case IccRefreshResponse.REFRESH_RESULT_FILE_UPDATE:
                 if (DBG) log("handleSimRefresh with SIM_FILE_UPDATED");
                 handleFileUpdate(refreshResponse.efId);
+                if (FeatureQuery.FEATURE_SUPPORT_REFRESH_BROADCAST){
+                    Intent intent = new Intent(TelephonyIntents.ACTION_SIM_REFRESH_UPDATE);
+                    log("Broadcasting intent ACTION_SIM_REFRESH_UPDATE ");
+                    mContext.sendBroadcast(intent,null);
+                }
                 break;
             case IccRefreshResponse.REFRESH_RESULT_INIT:
                 if (DBG) log("handleSimRefresh with SIM_REFRESH_INIT");
@@ -1277,6 +1285,11 @@ public class SIMRecords extends IccRecords {
                 // if app is ready
                 mParentApp.unregisterForReady(this);
                 mParentApp.registerForReady(this, EVENT_APP_READY, null);
+                if (FeatureQuery.FEATURE_SUPPORT_REFRESH_BROADCAST){
+                    Intent intent = new Intent(TelephonyIntents.ACTION_SIM_REFRESH_UPDATE);
+                    log("Broadcasting intent ACTION_SIM_REFRESH_UPDATE ");
+                    mContext.sendBroadcast(intent,null);
+                }
                 break;
             case IccRefreshResponse.REFRESH_RESULT_RESET:
                 if (DBG) log("handleSimRefresh with SIM_REFRESH_RESET");
