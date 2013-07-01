@@ -1044,17 +1044,17 @@ public class SIMRecords extends IccRecords {
                 } else {
                     log("READ EF_SMS RECORD index=" + index[0]);
                     mFh.loadEFLinearFixed(EF_SMS,index[0],
-                            obtainMessage(EVENT_GET_SMS_DONE,index[0],0));
+                            obtainMessage(EVENT_GET_SMS_DONE,(Object)index));
                 }
                 break;
 
             case EVENT_GET_SMS_DONE:
                 isRecordLoadResponse = false;
                 ar = (AsyncResult)msg.obj;
-                int smsIndexOnSim = msg.arg1;
-                log("Cindy EVENT_GET_SMS_DONE smsIndexOnSim=" + smsIndexOnSim);
+                int[] smsIndexOnSim = (int[])ar.userObj;
+                log("Cindy EVENT_GET_SMS_DONE smsIndexOnSim=" + smsIndexOnSim[0]);
                 if (ar.exception == null) {
-                    handleSms((byte[])ar.result, smsIndexOnSim);
+                    handleSms((byte[])ar.result, smsIndexOnSim[0]);
                 } else {
                     loge("Error on GET_SMS with exp " + ar.exception);
                 }
