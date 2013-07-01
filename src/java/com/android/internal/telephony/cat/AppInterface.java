@@ -58,6 +58,13 @@ public interface AppInterface {
     //Intent's actions are broadcasted by Telephony once IccRefresh occurs.
     public static final String CAT_ICC_STATUS_CHANGE =
                                     "android.intent.action.stk.icc_status_change";
+
+    public static final String CAT_ICC_STATE_CHANGED0 =
+                                    "android.intent.action.SIM_STATE_CHANGED0";
+    public static final String CAT_ICC_STATE_CHANGED1 =
+                                    "android.intent.action.SIM_STATE_CHANGED1";
+    
+    public static final String CARD_STATE = "card_state";
     /*
      * Callback function from app to telephony to pass a result code and user's
      * input back to the ICC.
