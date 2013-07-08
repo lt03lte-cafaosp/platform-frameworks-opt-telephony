@@ -749,6 +749,7 @@ public final class RuimRecords extends IccRecords {
             case IccRefreshResponse.REFRESH_RESULT_INIT:
                 if (DBG) log("handleRuimRefresh with SIM_REFRESH_INIT");
                 // need to reload all files (that we care about)
+                adnCache.reset();
                 fetchRuimRecords();
                 break;
             case IccRefreshResponse.REFRESH_RESULT_RESET:
