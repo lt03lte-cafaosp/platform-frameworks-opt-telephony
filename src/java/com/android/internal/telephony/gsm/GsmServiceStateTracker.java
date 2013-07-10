@@ -83,6 +83,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.TimeZone;
 
+import android.preference.PreferenceManager;
+import android.content.SharedPreferences;
+
 /**
  * {@hide}
  */
@@ -177,6 +180,11 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
     /** Notification id. */
     static final int PS_NOTIFICATION = 888;  // Id to update and cancel PS restricted
     static final int CS_NOTIFICATION = 999;  // Id to update and cancel CS restricted
+
+    // Key used to read and write the saved network selection numeric value
+    public static final String NETWORK_SELECTION_KEY = "network_selection_key";
+    // Key used to read and write the saved network selection operator name
+    public static final String NETWORK_SELECTION_NAME_KEY = "network_selection_name_key";
 
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
@@ -800,6 +808,40 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                 case EVENT_POLL_STATE_NETWORK_SELECTION_MODE:
                     ints = (int[])ar.result;
                     newSS.setIsManualSelection(ints[0] == 1);
+
+                    //add checked measure for network selection mode
+                    if (ints[0] == 0) {
+                       /*
+                    *modem is currently in auto selection but AP is NOT in
+                    *auto selection,so set AP as auto selection
+                    */
+                        SharedPreferences sp =
+                                        PreferenceManager.getDefaultSharedPreferences(phone.getContext());
+                        String networkSelection = sp.getString(NETWORK_SELECTION_KEY, "");
+                        if (!TextUtils.isEmpty(networkSelection)) {
+                            SharedPreferences.Editor editor = sp.edit();
+                            editor.putString(NETWORK_SELECTION_KEY, "");
+                            editor.putString(NETWORK_SELECTION_NAME_KEY, "");
+                            if (!editor.commit()) {
+                                Log.e(LOG_TAG, "failed to commit network selection preference");
+                            }
+                            Log.d(LOG_TAG, " Forcing  setting AP as Automatic Network Selection!");
+                        }
+                    }else if(ints[0] == 1){
+                       /*
+                    *modem is currently in manual selection but AP is NOT in
+                    *manual selection, it maybe caused by phone recovery,
+                    *so switch to automatic registration
+                    */
+                        SharedPreferences sp =
+                                        PreferenceManager.getDefaultSharedPreferences(phone.getContext());
+                        String networkSelection = sp.getString(NETWORK_SELECTION_KEY, "");
+                        if (TextUtils.isEmpty(networkSelection)) {
+                            phone.setNetworkSelectionModeAutomatic (null);
+                            Log.d(LOG_TAG," Forcing  setting Modem as Automatic Network Selection");
+                        }
+                    }
+
                 break;
             }
 
