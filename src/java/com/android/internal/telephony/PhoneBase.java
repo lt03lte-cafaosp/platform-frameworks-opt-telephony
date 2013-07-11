@@ -1396,5 +1396,12 @@ public abstract class PhoneBase extends Handler implements Phone {
     public abstract int getUimLoaderStatus() ;
     //Interface add for usim phonebook end 
      
+    public void setInternalDataEnabled(boolean enable) {
+        ((DataConnectionTracker)mDataConnectionTracker).setInternalDataEnabled(enable);
+    }
+
+    public void setInternalDataEnabled(boolean enable, Message onCompleteMsg) {
+        ((DataConnectionTracker)mDataConnectionTracker).setInternalDataEnabled(enable, onCompleteMsg);
+    }
 
 }

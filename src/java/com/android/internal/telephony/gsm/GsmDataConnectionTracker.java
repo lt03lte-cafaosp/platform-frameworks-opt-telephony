@@ -2147,6 +2147,12 @@ public class GsmDataConnectionTracker extends DataConnectionTracker {
         // if all data connection are gone, check whether Airplane mode request was
         // pending.
         if (isDisconnected()) {
+			//lihui add for notify  for none dsds notify 20130302
+			if(TelephonyManager.isMultiSimEnabled()==false)
+			{
+				notifyDataDisconnectComplete();
+			}
+			//add end
             if (mPhone.getServiceStateTracker().processPendingRadioPowerOffAfterDataOff()) {
                 // Radio will be turned off. No need to retry data setup
                 apnContext.setApnSetting(null);
