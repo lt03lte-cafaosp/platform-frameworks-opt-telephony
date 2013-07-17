@@ -582,11 +582,21 @@ public class CallManager {
         switch (getState()) {
             case RINGING:
                 mode = AudioManager.MODE_RINGTONE;
+                if (audioManager.getMode() != mode) {
+                    // only request audio focus if the ringtone is going to be heard
+                    if (audioManager.getStreamVolume(AudioManager.STREAM_RING) > 0) {
+                        if (VDBG) Log.d(LOG_TAG, "requestAudioFocus on STREAM_RING");
+                        audioManager.requestAudioFocusForCall(AudioManager.STREAM_RING,
+                                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                    }
+                    Log.d(LOG_TAG, "Calling setMode( " + mode + ")");
+                    audioManager.setMode(AudioManager.MODE_RINGTONE);
+                }
                 break;
-            case OFFHOOK: {
+
+            case OFFHOOK:
                 // For off-hook we need to set in-call mode to notify of the state
                 // of ims and cs.
-
                 for (Phone phone: mPhones) {
                     if (phone instanceof SipPhone) {
                         // enable IN_COMMUNICATION audio mode for sipPhone
@@ -595,21 +605,38 @@ public class CallManager {
                         inCallMode |= inCallAudioModeForPhone(phone);
                     }
                 }
+
+                if (isInCallModeActive(inCallMode)) {
+                    if (inCallMode != audioManager.getInCallMode()) {
+                        // request audio focus before setting the new inCallMode
+                        if (VDBG) Log.d(LOG_TAG, "requestAudioFocus on STREAM_VOICE_CALL");
+                        audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
+                                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                        Log.d(LOG_TAG, "Calling setInCallMode(" + inCallModeToString(inCallMode)
+                                + ")");
+                        audioManager.setInCallMode(inCallMode);
+                    }
+                } else if (mode == AudioManager.MODE_IN_COMMUNICATION) {
+                    if (audioManager.getMode() != mode) {
+                        // request audio focus before setting the new mode
+                        if (VDBG) Log.d(LOG_TAG, "requestAudioFocus on STREAM_VOICE_CALL");
+                        audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
+                                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                        Log.d(LOG_TAG, "Calling setMode( " + mode + ") OFFHOOK");
+                        audioManager.setMode(mode);
+                    }
+                }
                 break;
-            }
-        }
 
-        updateAudioFocus(audioManager);
-
-        Log.d(LOG_TAG, "setAudioAndInCallMode inCallMode = " + inCallMode);
-        if (isInCallModeActive(inCallMode)) {
-            Log.d(LOG_TAG, "Calling setInCallMode(" + inCallModeToString(inCallMode) + ")");
-            if (inCallMode != audioManager.getInCallMode()) {
-                audioManager.setInCallMode(inCallMode);
-            }
-        } else {
-            Log.d(LOG_TAG, "Calling setMode( " + mode + ")");
-            if (audioManager.getMode() != mode) audioManager.setMode(mode);
+            case IDLE:
+                if (audioManager.getMode() != mode) {
+                    Log.d(LOG_TAG, "Calling setMode( " + mode + ")");
+                    audioManager.setMode(mode);
+                    // abandon audio focus after the mode has been set back to normal
+                    if (VDBG) Log.d(LOG_TAG, "abandonAudioFocus");
+                    audioManager.abandonAudioFocusForCall();
+                }
+                break;
         }
     }
 
@@ -665,12 +692,16 @@ public class CallManager {
                     // enable IN_COMMUNICATION audio mode instead for sipPhone
                     newAudioMode = AudioManager.MODE_IN_COMMUNICATION;
                 }
-
-                updateAudioFocus(audioManager);
-
-                if (audioManager.getMode() != newAudioMode || mSpeedUpAudioForMtCall)
+                int currMode = audioManager.getMode();
+                if (currMode != newAudioMode || mSpeedUpAudioForMtCall) {
+                    // request audio focus before setting the new mode
+                    if (VDBG) Log.d(LOG_TAG, "requestAudioFocus on STREAM_VOICE_CALL");
+                    audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
+                            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                    Log.d(LOG_TAG, "setAudioMode Setting audio mode from "
+                            + currMode + " to " + newAudioMode);
                     audioManager.setMode(newAudioMode);
-
+                }
                 mSpeedUpAudioForMtCall = false;
                 break;
             case IDLE:
@@ -684,20 +715,6 @@ public class CallManager {
                 break;
         }
         Log.d(LOG_TAG, "setAudioMode state = " + getState());
-    }
-
-    private void updateAudioFocus(AudioManager audioManager) {
-        if (hasActiveRingingCall() || hasActiveFgCall()) {
-            // request audio focus before setting the new mode
-            if (VDBG) Log.d(LOG_TAG, "Calling requestAudioFocusForCall on STREAM_VOICE_CALL");
-            audioManager.requestAudioFocusForCall(AudioManager.STREAM_VOICE_CALL,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-        } else {
-            // abandon audio focus when no call is ACTIVE
-            if (VDBG) Log.d(LOG_TAG, "Calling abandonAudioFocusForCall " +
-                    "as no calls are ACTIVE");
-            audioManager.abandonAudioFocusForCall();
-        }
     }
 
     protected Context getContext() {
