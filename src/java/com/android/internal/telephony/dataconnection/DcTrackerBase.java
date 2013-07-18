@@ -260,6 +260,7 @@ public abstract class DcTrackerBase extends Handler {
     static LinkedHashMap<String, Integer> mApnPriorities =
         new LinkedHashMap<String, Integer>() {
             {
+                put(PhoneConstants.APN_TYPE_DM,      8);
                 put(PhoneConstants.APN_TYPE_CBS,     7);
                 put(PhoneConstants.APN_TYPE_IMS,     6);
                 put(PhoneConstants.APN_TYPE_FOTA,    5);
@@ -854,6 +855,8 @@ public abstract class DcTrackerBase extends Handler {
             return DctConstants.APN_FOTA_ID;
         } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_CBS)) {
             return DctConstants.APN_CBS_ID;
+        } else if (TextUtils.equals(type, PhoneConstants.APN_TYPE_DM)) {
+            return DctConstants.APN_DM_ID;
         } else {
             return DctConstants.APN_INVALID_ID;
         }
@@ -877,6 +880,8 @@ public abstract class DcTrackerBase extends Handler {
             return PhoneConstants.APN_TYPE_FOTA;
         case DctConstants.APN_CBS_ID:
             return PhoneConstants.APN_TYPE_CBS;
+        case DctConstants.APN_DM_ID:
+            return PhoneConstants.APN_TYPE_DM;
         default:
             log("Unknown id (" + id + ") in apnIdToType");
             return PhoneConstants.APN_TYPE_DEFAULT;
