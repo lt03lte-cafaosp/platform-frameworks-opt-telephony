@@ -743,6 +743,22 @@ public final class SmsManager {
         return ret;
     }
 
+    /**
+     * Process reduce long sms overtime in raw table
+     *
+     * @hide
+     */
+    public void processCachedLongSms() {
+        try {
+            ISms iccISms = ISms.Stub.asInterface(ServiceManager.getService("isms"));
+            if (iccISms != null) {
+                iccISms.processCachedLongSms();
+            }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+    }
+
     // see SmsMessage.getStatusOnIcc
 
     /** Free space (TS 51.011 10.5.3 / 3GPP2 C.S0023 3.4.27). */
