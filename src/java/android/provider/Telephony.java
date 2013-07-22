@@ -1975,6 +1975,22 @@ public final class Telephony {
           * gid: 4E, 33, ...
           */
         public static final String MVNO_MATCH_DATA = "mvno_match_data";
+
+        /**
+         * PPP number
+         */
+        public static final String PPP_NUMBER = "ppp_number";
+
+        /**
+         * Localized APN name.
+         */
+        public static final String LOCALIZED_NAME = "localized_name";
+
+        /**
+         * Read only APN.
+         * true if read-only APN else editable APN; false by default.
+         */
+        public static final String READ_ONLY = "read_only";
     }
 
     /**
