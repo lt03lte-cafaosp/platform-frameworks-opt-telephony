@@ -68,6 +68,8 @@ public class CallDetails {
                                                      * link is setup
                                                      */
 
+    public static final int CALL_TYPE_SMS = 9;    /* SMS Type */
+
     public static final int CALL_TYPE_UNKNOWN = 10; /*
                                                      * Unknown Call type, may be
                                                      * used for answering call
@@ -76,6 +78,8 @@ public class CallDetails {
                                                      * only for telephony, not
                                                      * meant to be passed to RIL
                                                      */
+
+
 
     public static final int CALL_DOMAIN_UNKNOWN = 0; /*
                                                       * Unknown domain. Sent by
@@ -102,6 +106,10 @@ public class CallDetails {
                                                       * until domain is set
                                                       */
 
+    public static final int CALL_RESTRICT_CAUSE_NONE = 0; /* Default cause, not restricted */
+    public static final int CALL_RESTRICT_CAUSE_RAT = 1; /* Service not supported by RAT */
+    public static final int CALL_RESTRICT_CAUSE_DISABLED = 2; /* Service disabled */
+
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
     public static final String EXTRAS_PARENT_CALL_ID = "parentCallId";
 
@@ -109,6 +117,21 @@ public class CallDetails {
     public int call_domain;
 
     public String[] extras;
+
+    public static class ServiceStatus{
+        public boolean isValid;
+        public int type;
+        public int status;
+        public byte[] userdata;
+        public int restrictCause;
+
+        public ServiceStatus() {
+            this.isValid = false;
+        }
+    }
+
+    public ServiceStatus[] localAbility;
+    public ServiceStatus[] peerAbility;
 
     public CallDetails() {
         call_type = CALL_TYPE_VOICE;
@@ -127,6 +150,8 @@ public class CallDetails {
             call_type = srcCall.call_type;
             call_domain = srcCall.call_domain;
             extras = srcCall.extras;
+            localAbility = srcCall.localAbility;
+            peerAbility = srcCall.peerAbility;
         }
     }
 
@@ -174,14 +199,37 @@ public class CallDetails {
      */
     @Override
     public String toString() {
-        String extrasResult = "";
+        String extrasResult = "", localSrvAbility = "", peerSrvAbility = "";
         if (extras != null) {
             for (String s : extras) {
                 extrasResult += s;
             }
         }
+
+        if(localAbility != null) {
+            for(ServiceStatus srv : localAbility) {
+                if (srv != null) {
+                    localSrvAbility += "isValid = " + srv.isValid + " type = "
+                            + srv.type + " status = " + srv.status + " restrictCause = "
+                            + srv.restrictCause;
+                }
+            }
+        }
+
+        if(peerAbility != null) {
+            for(ServiceStatus srv : peerAbility) {
+                if (srv != null) {
+                    peerSrvAbility += "isValid = " + srv.isValid + " type = "
+                            + srv.type + " status = " + srv.status + " restrictCause = "
+                            + srv.restrictCause;
+                }
+            }
+        }
+
         return (" " + call_type
                 + " " + call_domain
-                + " " + extrasResult);
+                + " " + extrasResult
+                + " Local Ability " + localSrvAbility
+                + " Peer Ability " + peerSrvAbility);
     }
 }
