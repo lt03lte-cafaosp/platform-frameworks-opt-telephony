@@ -363,6 +363,15 @@ public class GsmSMSDispatcher extends SMSDispatcher {
 
     /** {@inheritDoc} */
     @Override
+    protected void sendNewSubmitPduWithPriority(String destinationAddress, String scAddress,
+            String message, SmsHeader smsHeader, int encoding,
+            PendingIntent sentIntent, PendingIntent deliveryIntent,
+            boolean lastPart, int priority) {
+        Rlog.e(TAG, "priority is not supported in 3gpp text message!");
+    }
+
+    /** {@inheritDoc} */
+    @Override
     protected void sendSms(SmsTracker tracker) {
         HashMap<String, Object> map = tracker.mData;
 

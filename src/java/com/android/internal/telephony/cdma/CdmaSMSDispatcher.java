@@ -375,6 +375,35 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         sendSubmitPdu(tracker);
     }
 
+    @Override
+    protected void sendNewSubmitPduWithPriority(String destinationAddress, String scAddress,
+            String message, SmsHeader smsHeader, int encoding,
+            PendingIntent sentIntent, PendingIntent deliveryIntent,
+            boolean lastPart, int priority) {
+        UserData uData = new UserData();
+        uData.payloadStr = message;
+        uData.userDataHeader = smsHeader;
+        if (encoding == SmsConstants.ENCODING_7BIT) {
+            uData.msgEncoding = UserData.ENCODING_GSM_7BIT_ALPHABET;
+        } else { // assume UTF-16
+            uData.msgEncoding = UserData.ENCODING_UNICODE_16;
+        }
+        uData.msgEncodingSet = true;
+
+        /* By setting the statusReportRequested bit only for the
+         * last message fragment, this will result in only one
+         * callback to the sender when that last fragment delivery
+         * has been acknowledged. */
+        SmsMessage.SubmitPdu submitPdu = SmsMessage.getSubmitPduWithPriority(
+                destinationAddress, uData, (deliveryIntent != null) && lastPart, priority);
+
+        HashMap map =  SmsTrackerMapFactory(destinationAddress, scAddress,
+                message, submitPdu);
+        SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
+                deliveryIntent, getFormat());
+        sendSubmitPdu(tracker);
+    }
+
     protected void sendSubmitPdu(SmsTracker tracker) {
         if (SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false)) {
             if (tracker.mSentIntent != null) {

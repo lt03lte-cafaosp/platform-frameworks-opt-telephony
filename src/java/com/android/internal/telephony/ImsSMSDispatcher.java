@@ -328,6 +328,13 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     }
 
     @Override
+    protected void sendNewSubmitPduWithPriority(String destinationAddress, String scAddress,
+            String message, SmsHeader smsHeader, int format, PendingIntent sentIntent,
+            PendingIntent deliveryIntent, boolean lastPart, int priority) {
+        Rlog.e(TAG, "Error! Not implemented for IMS.");
+    }
+
+    @Override
     public boolean isIms() {
         return mIms;
     }
