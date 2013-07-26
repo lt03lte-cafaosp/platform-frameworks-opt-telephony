@@ -547,10 +547,6 @@ class SipCommandInterface extends BaseCommands implements CommandsInterface {
     }
 
     @Override
-    public void getDataCallProfile(int appType, Message result) {
-    }
-
-    @Override
     public void getCellInfoList(Message result) {
     }
 

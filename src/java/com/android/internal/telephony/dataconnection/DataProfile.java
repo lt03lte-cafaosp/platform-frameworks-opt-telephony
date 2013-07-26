@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
- * Not a Contribution.
+ * Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,6 @@
  */
 
 package com.android.internal.telephony.dataconnection;
-import com.android.internal.telephony.RILConstants;
 
 public abstract class DataProfile {
 
@@ -30,23 +30,6 @@ public abstract class DataProfile {
     public final String protocol;
     public final String roamingProtocol;
     public final String numeric;
-
-    public String carrier;
-    public String proxy;
-    public String port;
-    public String mmsc;
-    public String mmsProxy;
-    public String mmsPort;
-
-    /* ID of the profile in the modem */
-    protected int mProfileId = 0;
-
-    /**
-     * Current status of APN
-     * true : enabled APN, false : disabled APN.
-     */
-    public boolean carrierEnabled;
-
     /**
      * Radio Access Technology info
      * To check what values can hold, refer to ServiceState.java.
@@ -55,7 +38,7 @@ public abstract class DataProfile {
      */
     public final int bearer;
 
-    public String[] types;
+    public final String[] types;
 
     public enum DataProfileType {
         PROFILE_TYPE_APN(0),
@@ -73,8 +56,6 @@ public abstract class DataProfile {
         }
     }
 
-    public boolean mTetheredCallOn = false;
-
     private DataConnection mDc = null;
 
     public DataProfile (int id, String numeric, String apn, String user, String password,
@@ -89,22 +70,6 @@ public abstract class DataProfile {
         this.protocol = protocol;
         this.roamingProtocol = roamingProtocol;
         this.bearer = bearer;
-    }
-
-    /* package */ boolean isActive() {
-      return mDc != null;
-    }
-
-    /* package */void setAsActive(DataConnection dc) {
-        mDc = dc;
-    }
-
-    /* package */void setAsInactive() {
-        mDc = null;
-    }
-
-    public String[] getServiceTypes() {
-        return types.clone();
     }
 
     public String toString() {
@@ -124,10 +89,6 @@ public abstract class DataProfile {
         sb.append(", ").append(roamingProtocol);
         sb.append(", ").append(bearer);
         return sb.toString();
-    }
-
-    public void setProfileId(int profileId) {
-        mProfileId = profileId;
     }
 
     /* some way to identify this data profile uniquely */
