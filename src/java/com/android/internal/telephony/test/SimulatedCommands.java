@@ -1699,9 +1699,4 @@ public final class SimulatedCommands extends BaseCommands
     public void setDataSubscription (Message response) {
         unimplemented(response);
     }
-
-    @Override
-    public void getDataCallProfile(int appType, Message response){
-        unimplemented(response);
-    }
 }
