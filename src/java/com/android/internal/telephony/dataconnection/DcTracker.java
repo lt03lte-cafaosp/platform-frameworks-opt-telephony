@@ -57,6 +57,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.DctConstants;
 import com.android.internal.telephony.EventLogTags;
+import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.gsm.GSMPhone;
 import com.android.internal.telephony.cdma.CDMAPhone;
 import com.android.internal.telephony.PhoneConstants;
@@ -122,6 +123,8 @@ public class DcTracker extends DcTrackerBase {
     /** Watches for changes to the APN db. */
     private ApnChangeObserver mApnObserver;
 
+    private boolean mIsOmhEnabled =
+            SystemProperties.getBoolean(CdmaDataProfileTracker.PROPERTY_OMH_ENABLED, false);
     private CdmaDataProfileTracker mDpt;
 
     //***** Constructor
@@ -160,7 +163,7 @@ public class DcTracker extends DcTrackerBase {
 
         mDataConnectionTracker = this;
 
-        if (p.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
+        if (mIsOmhEnabled && p.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
             mDpt = new CdmaDataProfileTracker((CDMAPhone)p);
             mDpt.registerForModemProfileReady(this, DctConstants.EVENT_MODEM_DATA_PROFILE_READY,
                     null);
@@ -1406,7 +1409,7 @@ public class DcTracker extends DcTrackerBase {
         log("onRecordsLoaded");
 
         boolean needModemProfiles = false;
-        if (mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA ) {
+        if (mDpt != null) {
             log("OMH: onRecordsLoaded(): calling loadProfiles()");
             /* query for data profiles stored in the modem */
             mDpt.loadProfiles();
@@ -1997,6 +2000,26 @@ public class DcTracker extends DcTrackerBase {
         }
 
         if (mAllDps.isEmpty()) {
+            if (mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
+                // Create dummy data profile.
+                if (DBG) log("createAllApnList: Creating dummy apn for cdma operator:" + operator);
+                String[] defaultApnTypes = {
+                    PhoneConstants.APN_TYPE_DEFAULT,
+                    PhoneConstants.APN_TYPE_MMS,
+                    PhoneConstants.APN_TYPE_SUPL,
+                    PhoneConstants.APN_TYPE_HIPRI,
+                    PhoneConstants.APN_TYPE_FOTA,
+                    PhoneConstants.APN_TYPE_IMS,
+                    PhoneConstants.APN_TYPE_CBS };
+                ApnSetting apn = new ApnSetting(DctConstants.APN_DEFAULT_ID, operator, null, null,
+                        null, null, null, null, null, null, null,
+                        RILConstants.SETUP_DATA_AUTH_PAP_CHAP, defaultApnTypes,"IP", "IP", true,
+                        0);
+                mAllDps.add(apn);
+            }
+        }
+
+        if (mAllDps.isEmpty()) {
             if (DBG) log("createAllApnList: No APN found for carrier: " + operator);
             mPreferredDp = null;
             // TODO: What is the right behavior?
@@ -2345,10 +2368,17 @@ public class DcTracker extends DcTrackerBase {
 
         IccRecords newIccRecords = null;
 
-        if (mPhone.getPhoneType() ==  PhoneConstants.PHONE_TYPE_GSM) {
-            newIccRecords = mUiccController.getIccRecords(UiccController.APP_FAM_3GPP);
-        } else if (mPhone.getPhoneType() ==  PhoneConstants.PHONE_TYPE_CDMA) {
-            newIccRecords = mUiccController.getIccRecords(UiccController.APP_FAM_3GPP2);
+        if (mIsOmhEnabled) {
+            if (mPhone.getPhoneType() ==  PhoneConstants.PHONE_TYPE_GSM) {
+                newIccRecords = mUiccController.getIccRecords(UiccController.APP_FAM_3GPP);
+            } else if (mPhone.getPhoneType() ==  PhoneConstants.PHONE_TYPE_CDMA) {
+                newIccRecords = mUiccController.getIccRecords(UiccController.APP_FAM_3GPP2);
+            }
+        } else {
+            newIccRecords = getUiccCardApplication();
+            if (newIccRecords == null) {
+                return;
+            }
         }
 
         IccRecords r = mIccRecords.get();
