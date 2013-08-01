@@ -1155,27 +1155,25 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         }
 
         synchronized(mCellInfo) {
-            if (mRilRadioTechnology == ServiceState.RIL_RADIO_TECHNOLOGY_LTE) {
-                boolean cidChanged = ! mNewCellIdentityLte.equals(mLasteCellIdentityLte);
-                if (hasRegistered || hasDeregistered || cidChanged) {
-                    // TODO: Handle the absence of LteCellIdentity
-                    long timeStamp = SystemClock.elapsedRealtime() * 1000;
-                    boolean registered = ss.getState() == ServiceState.STATE_IN_SERVICE;
-                    mLasteCellIdentityLte = mNewCellIdentityLte;
+            ArrayList<CellInfo> arrayCi = new ArrayList<CellInfo>();
+            boolean cidChanged = ! mNewCellIdentityLte.equals(mLasteCellIdentityLte);
+            if (hasRegistered || hasDeregistered || cidChanged) {
+                // TODO: Handle the absence of LteCellIdentity
+                long timeStamp = SystemClock.elapsedRealtime() * 1000;
+                boolean registered = ss.getState() == ServiceState.STATE_IN_SERVICE;
+                mLasteCellIdentityLte = mNewCellIdentityLte;
 
-                    mCellInfoLte.setRegisterd(registered);
-                    mCellInfoLte.setCellIdentity(mLasteCellIdentityLte);
-                    if (DBG) {
-                        log("pollStateDone: hasRegistered=" + hasRegistered +
-                                " hasDeregistered=" + hasDeregistered +
-                                " cidChanged=" + cidChanged +
-                                " mCellInfoLte=" + mCellInfoLte);
-                    }
+                mCellInfoLte.setRegisterd(registered);
+                mCellInfoLte.setCellIdentity(mLasteCellIdentityLte);
+                if (DBG) {
+                    log("pollStateDone: hasRegistered=" + hasRegistered +
+                            " hasDeregistered=" + hasDeregistered +
+                            " cidChanged=" + cidChanged +
+                            " mCellInfoLte=" + mCellInfoLte);
                 }
+                arrayCi.add(mCellInfoLte);
             }
             if (mCellInfoLte.getCellIdentity() != null) {
-                ArrayList<CellInfo> arrayCi = new ArrayList<CellInfo>();
-                arrayCi.add(mCellInfoLte);
                 phone.notifyCellInfo(arrayCi);
             }
         }
