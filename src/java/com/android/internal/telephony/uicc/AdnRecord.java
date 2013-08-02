@@ -25,6 +25,7 @@ import android.telephony.Rlog;
 import com.android.internal.telephony.GsmAlphabet;
 
 import java.util.Arrays;
+import java.io.UnsupportedEncodingException;
 
 
 /**
@@ -243,9 +244,29 @@ public class AdnRecord implements Parcelable {
             adnString[footerOffset + ADN_EXTENSION_ID]
                     = (byte) 0xFF; // Extension Record Id
 
-            if (!TextUtils.isEmpty(mAlphaTag)) {
+            if (TextUtils.isEmpty(mAlphaTag)){
+                Rlog.d(LOG_TAG, " mAlphaTag is empty");
+            } else if (GsmAlphabet.isStringToGsm8Bit(mAlphaTag)) {
                 byteTag = GsmAlphabet.stringToGsm8BitPacked(mAlphaTag);
+                if (byteTag.length > footerOffset) {
+                    System.arraycopy(byteTag, 0, adnString, 0, footerOffset);
+                } else {
                 System.arraycopy(byteTag, 0, adnString, 0, byteTag.length);
+                }
+                Rlog.w(LOG_TAG,"use stringToGsm8BitPacked to encode");
+            } else {
+                adnString[0] = (byte)0x80;
+                try {
+                    byteTag = mAlphaTag.getBytes("UTF-16BE");
+                    if (byteTag.length > (footerOffset - 1)) {
+                        System.arraycopy(byteTag, 0, adnString, 1, footerOffset-1);
+                    } else {
+                        System.arraycopy(byteTag, 0, adnString, 1, byteTag.length);
+                    }
+                    Rlog.w(LOG_TAG,"use UTF-16BE to encode");
+                } catch(UnsupportedEncodingException e) {
+                    Rlog.w(LOG_TAG,"encoding mAlphaTag failed : UnsupportedEncodingException");
+                }
             }
 
             return adnString;
