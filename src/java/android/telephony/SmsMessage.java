@@ -25,7 +25,9 @@ import android.telephony.Rlog;
 import com.android.internal.telephony.GsmAlphabet;
 import com.android.internal.telephony.GsmAlphabet.TextEncodingDetails;
 import com.android.internal.telephony.SmsConstants;
+import com.android.internal.telephony.SmsHeader;
 import com.android.internal.telephony.SmsMessageBase;
+import com.android.internal.telephony.SmsMessageBase.DeliveryPduBase;
 import com.android.internal.telephony.SmsMessageBase.SubmitPduBase;
 
 import java.lang.Math;
@@ -475,6 +477,30 @@ public class SmsMessage {
     }
 
     /**
+     * get a submit pdu with the timestamp.
+     * { @hide }
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress, String destinationAddress,
+                String message, boolean statusReportRequested, byte[] date, int subscription) {
+        SubmitPduBase spb;
+
+        int activePhone = MSimTelephonyManager.getDefault().isMultiSimEnabled() ?
+                MSimTelephonyManager.getDefault().getCurrentPhoneType(subscription) :
+                    TelephonyManager.getDefault().getPhoneType();
+
+        if (PHONE_TYPE_CDMA == activePhone) {
+            //We can not store time stamp into RUIM card now.
+            spb = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, null);
+        } else {
+            spb = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, null, date);
+        }
+
+        return new SubmitPdu(spb);
+    }
+
+    /**
      * Returns the address of the SMS service center that relayed this message
      * or null if there is none.
      */
@@ -743,5 +769,75 @@ public class SmsMessage {
     private static boolean isCdmaVoice() {
         int activePhone = TelephonyManager.getDefault().getCurrentPhoneType();
         return (PHONE_TYPE_CDMA == activePhone);
+    }
+
+    /**
+     * {@hide}
+     * Returns the recipient address,  Returns null if recipient address
+     * unavailable. Only used in GSM sms message.
+     */
+    public String getRecipientAddress() {
+        if(mWrappedSmsMessage == null) {
+            Rlog.d(LOG_TAG, "mWrappedSmsMessage = null");
+            return null;
+        } else {
+            return mWrappedSmsMessage.getRecipientAddress();
+        }
+    }
+
+    /**
+     * Get an SMS-Delivery PDU for a destination address and a message.
+     * This method will not attempt to use any GSM national language 7 bit encodings.
+     *
+     * @param scAddress Service Centre address.  Null means use default.
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     * { @hide }
+     */
+    public static DeliveryPdu getDeliveryPdu(String scAddress,
+            String destinationAddress, String message, boolean statusReportRequested,
+            byte[] date, int subscription) {
+        DeliveryPduBase spb;
+
+        int activePhone = MSimTelephonyManager.getDefault().isMultiSimEnabled() ?
+                MSimTelephonyManager.getDefault().getCurrentPhoneType(subscription) :
+                    TelephonyManager.getDefault().getPhoneType();
+
+        if (PHONE_TYPE_CDMA == activePhone) {
+            spb = com.android.internal.telephony.cdma.SmsMessage.getDeliveryPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, null, date);
+        } else {
+            spb = com.android.internal.telephony.gsm.SmsMessage.getDeliveryPdu(scAddress,
+                    destinationAddress, message, statusReportRequested, null, date);
+        }
+
+        return new DeliveryPdu(spb);
+    }
+
+    /**
+     * Pdu of Delivery , add for copy delivery pdu from mobile to ICC card
+     * @hide
+     */
+    public static class DeliveryPdu {
+
+        public byte[] encodedScAddress; // Null if not applicable.
+        public byte[] encodedMessage;
+
+        public String toString() {
+            return "DeliverPdu: encodedScAddress = "
+                    + Arrays.toString(encodedScAddress)
+                    + ", encodedMessage = "
+                    + Arrays.toString(encodedMessage);
+        }
+
+        /**
+         * @hide
+         */
+        protected DeliveryPdu(DeliveryPduBase spb) {
+            this.encodedMessage = spb.encodedMessage;
+            this.encodedScAddress = spb.encodedScAddress;
+        }
+
     }
 }

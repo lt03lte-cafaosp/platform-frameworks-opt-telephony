@@ -418,6 +418,40 @@ public class MSimSmsManager {
     }
 
     /**
+     * Copy a raw SMS PDU to the ICC, and return the index on ICC
+     * ICC (Integrated Circuit Card) is the card of the device.
+     * For example, this can be the SIM or USIM for GSM.
+     *
+     * @param smsc the SMSC for this message, or NULL for the default SMSC
+     * @param pdu the raw PDU to store
+     * @param status message status (STATUS_ON_ICC_READ, STATUS_ON_ICC_UNREAD,
+     *               STATUS_ON_ICC_SENT, STATUS_ON_ICC_UNSENT)
+     * @return index of ICC, -1 means copy failed
+     * @throws IllegalArgumentException if pdu is NULL
+     *
+     * {@hide}
+     */
+    public int copyMessageToIccGetEfIndex(byte[] smsc, byte[] pdu, int status,
+            int subscription){
+        int index = -1;
+
+        if (null == pdu) {
+            throw new IllegalArgumentException("pdu is NULL");
+        }
+        try {
+            ISmsMSim iccISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (iccISms != null) {
+                index = iccISms.copyMessageToIccGetEfIndex(status, pdu,
+                                  smsc, subscription);
+           }
+        } catch (RemoteException ex) {
+            // ignore it
+        }
+
+        return index;
+    }
+
+    /**
      * Delete the specified message from the ICC.
      * ICC (Integrated Circuit Card) is the card of the device.
      * For example, this can be the SIM or USIM for GSM.
@@ -750,6 +784,25 @@ public class MSimSmsManager {
         } catch (NullPointerException ex) {
             return false;
         }
+    }
+
+    /**
+     * Get the capacity count of sms on Icc card
+     *
+     * @return the capacity count of sms on Icc card
+     * @hide
+     */
+    public static int getSmsCapacityOnIcc(int subscription) {
+        int ret = -1;
+        try {
+            ISmsMSim simISms = ISmsMSim.Stub.asInterface(ServiceManager.getService("isms_msim"));
+            if (simISms != null) {
+                ret = simISms.getSmsCapacityOnIcc(subscription);
+            }
+        } catch (RemoteException ex) {
+            //ignore it
+        }
+        return ret;
     }
 
     // see SmsMessage.getStatusOnIcc
