@@ -356,6 +356,9 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         uData.userDataHeader = smsHeader;
         if (encoding == SmsConstants.ENCODING_7BIT) {
             uData.msgEncoding = UserData.ENCODING_GSM_7BIT_ALPHABET;
+            if (SystemProperties.getBoolean("persist.env.mms.7bitascii", false)) {
+                uData.msgEncoding = UserData.ENCODING_7BIT_ASCII;
+            }
         } else { // assume UTF-16
             uData.msgEncoding = UserData.ENCODING_UNICODE_16;
         }
@@ -385,6 +388,9 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         uData.userDataHeader = smsHeader;
         if (encoding == SmsConstants.ENCODING_7BIT) {
             uData.msgEncoding = UserData.ENCODING_GSM_7BIT_ALPHABET;
+            if (SystemProperties.getBoolean("persist.env.mms.7bitascii", false)) {
+                uData.msgEncoding = UserData.ENCODING_7BIT_ASCII;
+            }
         } else { // assume UTF-16
             uData.msgEncoding = UserData.ENCODING_UNICODE_16;
         }

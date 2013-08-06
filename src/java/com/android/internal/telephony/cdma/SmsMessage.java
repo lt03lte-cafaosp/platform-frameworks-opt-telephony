@@ -944,6 +944,9 @@ public class SmsMessage extends SmsMessageBase {
 
         int teleservice = bearerData.hasUserDataHeader ?
                 SmsEnvelope.TELESERVICE_WEMT : SmsEnvelope.TELESERVICE_WMT;
+        if (SystemProperties.getBoolean("persist.env.mms.7bitascii", false)) {
+            teleservice = SmsEnvelope.TELESERVICE_WMT;
+        }
 
         SmsEnvelope envelope = new SmsEnvelope();
         envelope.messageType = SmsEnvelope.MESSAGE_TYPE_POINT_TO_POINT;
