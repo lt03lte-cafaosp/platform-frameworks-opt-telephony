@@ -1969,4 +1969,10 @@ public interface Phone {
      * @param response is callback message
      */
     void setLocalCallHold(int lchStatus, Message response);
+
+    /**
+     * Checks the radioState
+     * @return, true if radio state = RADIO_ON, false otherwise
+     */
+    boolean isRadioOn();
 }
