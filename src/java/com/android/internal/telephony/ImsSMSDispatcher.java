@@ -335,6 +335,18 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     }
 
     @Override
+    protected void sendMultipartTextWithPriority(String destinationAddress, String scAddress,
+            ArrayList<String> parts, ArrayList<PendingIntent> sentIntents,
+            ArrayList<PendingIntent> deliveryIntents, int priority) {
+            if (isCdmaMo()) {
+                mCdmaDispatcher.sendMultipartTextWithPriority(destinationAddress, scAddress,
+                        parts, sentIntents, deliveryIntents, priority);
+            } else {
+                Rlog.e(TAG, "Error! Not implemented for IMS.");
+            }
+    }
+
+    @Override
     public boolean isIms() {
         return mIms;
     }
