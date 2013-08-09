@@ -36,6 +36,7 @@ public class OperatorInfo implements Parcelable {
 
     private State mState = State.UNKNOWN;
 
+    private String mRadioTech;
 
     public String
     getOperatorAlphaLong() {
@@ -57,25 +58,33 @@ public class OperatorInfo implements Parcelable {
         return mState;
     }
 
+    public String
+    getRadioTech() {
+        return mRadioTech;
+    }
+
     OperatorInfo(String operatorAlphaLong,
                 String operatorAlphaShort,
                 String operatorNumeric,
-                State state) {
+                State state,
+                String radioTech) {
 
         mOperatorAlphaLong = operatorAlphaLong;
         mOperatorAlphaShort = operatorAlphaShort;
         mOperatorNumeric = operatorNumeric;
 
         mState = state;
+        mRadioTech = radioTech;
     }
 
 
     public OperatorInfo(String operatorAlphaLong,
                 String operatorAlphaShort,
                 String operatorNumeric,
-                String stateString) {
+                String stateString,
+                String technology) {
         this (operatorAlphaLong, operatorAlphaShort,
-                operatorNumeric, rilStateToState(stateString));
+                operatorNumeric, rilStateToState(stateString), technology);
     }
 
     /**
@@ -95,7 +104,6 @@ public class OperatorInfo implements Parcelable {
                 "RIL impl error: Invalid network state '" + s + "'");
         }
     }
-
 
     @Override
     public String toString() {
@@ -128,6 +136,7 @@ public class OperatorInfo implements Parcelable {
         dest.writeString(mOperatorAlphaShort);
         dest.writeString(mOperatorNumeric);
         dest.writeSerializable(mState);
+        dest.writeString(mRadioTech);
     }
 
     /**
@@ -142,7 +151,8 @@ public class OperatorInfo implements Parcelable {
                         in.readString(), /*operatorAlphaLong*/
                         in.readString(), /*operatorAlphaShort*/
                         in.readString(), /*operatorNumeric*/
-                        (State) in.readSerializable()); /*state*/
+                        (State) in.readSerializable(), /*state*/
+                        in.readString()); /*radioTech*/
                 return opInfo;
             }
 
