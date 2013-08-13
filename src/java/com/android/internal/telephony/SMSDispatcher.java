@@ -19,6 +19,7 @@ package com.android.internal.telephony;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.AppOpsManager;
 import android.app.PendingIntent;
@@ -102,6 +103,10 @@ public abstract class SMSDispatcher extends Handler {
     private static final String SEND_SMS_NO_CONFIRMATION_PERMISSION =
             "android.permission.SEND_SMS_NO_CONFIRMATION";
 
+    /** Long sms alarm action **/
+    protected static final String LONG_SMS_OVERTIME_ACTION =
+            "qualcomm.intent.action.LONG_SMS_OVERTIME";
+
     /** Query projection for checking for duplicate message segments. */
     private static final String[] PDU_PROJECTION = new String[] {
             "pdu"
@@ -179,6 +184,11 @@ public abstract class SMSDispatcher extends Handler {
     private static final int MAX_SEND_RETRIES = 3;
     /** Delay before next send attempt on a failed SMS, in milliseconds. */
     private static final int SEND_RETRY_DELAY = 2000;
+    /**
+     * If can't receive all parts of a long sms , will be delete in raw table
+     * over this time , in milliseconds.
+     */
+    private static final int LONG_SMS_OVERTIME_MILSECONDS = 48 * 60 * 60 * 1000;
     /** single part SMS */
     private static final int SINGLE_PART_SMS = 1;
     /** Message sending queue limit */
@@ -711,6 +721,13 @@ public abstract class SMSDispatcher extends Handler {
                     values.put("destination_port", destPort);
                 }
                 mResolver.insert(mRawUri, values);
+
+                // set long sms overtime alarm
+                if (cursorCount == 0) {
+                    setLongSmsOverTimeAlarm(referenceNumber, address);
+                    Rlog.d(TAG, "Start long sms overtime alarm from address=" + address
+                            + " referenceNumber=" + referenceNumber);
+                }
                 return Intents.RESULT_SMS_HANDLED;
             }
 
@@ -1723,4 +1740,55 @@ public abstract class SMSDispatcher extends Handler {
     public abstract boolean isIms();
 
     public abstract String getImsSmsFormat();
+
+    /**
+     * Delete overtime long sms part on raw table.
+     */
+    protected int deleteIncompleteLongSmsParts() {
+        int count = 0;
+        // Delete overtime long sms part
+        StringBuilder where = new StringBuilder("date < ");
+        where.append(System.currentTimeMillis() - LONG_SMS_OVERTIME_MILSECONDS);
+
+        count = mResolver.delete(mRawUri, where.toString(), null);
+        Rlog.d(TAG, "deleteIncompleteLongSmsParts count = " + count);
+        return count;
+    }
+
+    /**
+     * Delete overtime sms part on raw table with the same referenceNumber and sender.
+     */
+    protected int deleteSpecLongSmsOnRaw(int referenceNumber, String address) {
+        int count = 0;
+        // Lookup all other related parts
+        StringBuilder where = new StringBuilder("reference_number =");
+        where.append(referenceNumber);
+        where.append(" AND address = ?");
+        String[] whereArgs = new String[] {address};
+
+        count = mResolver.delete(mRawUri, where.toString(), whereArgs);
+        Rlog.d(TAG, "deleteSpecLongSmsOnRaw count = " + count);
+        return count;
+    }
+
+    /**
+     * Set long sms overtime alarm.
+     */
+    private void setLongSmsOverTimeAlarm(int msgRef, String address) {
+        // When the alarm goes off, we want to broadcast an Intent to our
+        // BroadcastReceiver.  Here we make an Intent with an explicit class
+        // name to have our own receiver instantiated and called, and then create an
+        // IntentSender to have the intent executed as a broadcast.
+        // We want the alarm to go off shortestInterval seconds from now.
+        // Schedule the alarm!
+        Intent intent = new Intent(LONG_SMS_OVERTIME_ACTION);
+        intent.putExtra("messageRef", msgRef);
+        intent.putExtra("address", address);
+        AlarmManager am =
+                (AlarmManager) mPhone.getContext().getSystemService(Context.ALARM_SERVICE);
+        PendingIntent sender = PendingIntent.getBroadcast(
+                mPhone.getContext(), 0, intent, 0);
+        am.set(AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + LONG_SMS_OVERTIME_MILSECONDS, sender);
+    }
 }

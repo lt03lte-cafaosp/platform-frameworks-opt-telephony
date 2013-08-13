@@ -1037,4 +1037,8 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         Log.d(LOG_TAG, "getSmsCapacityOnIcc().numberOnIcc = " + numberOnIcc);
         return numberOnIcc;
     }
+
+    public void processCachedLongSms() {
+        mDispatcher.deleteIncompleteLongSmsParts();
+    }
 }
