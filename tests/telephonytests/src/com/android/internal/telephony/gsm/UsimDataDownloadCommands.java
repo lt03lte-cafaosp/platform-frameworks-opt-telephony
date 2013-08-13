@@ -660,5 +660,4 @@ class UsimDataDownloadCommands extends BaseCommands {
     @Override
     public void getDataCallProfile(int appType, Message result) {
     }
-
 }
