@@ -213,6 +213,14 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         if (SmsEnvelope.TELESERVICE_WAP == teleService) {
             return processCdmaWapPdu(sms.getUserData(), sms.mMessageRef,
                     sms.getOriginatingAddress());
+        } else if (SmsEnvelope.TELESERVICE_CT_WAP == teleService) {
+            /* China Telecom WDP header contains Message identifier
+               and User data subparametrs extract these fields */
+            if (!sms.processCdmaCTWdpHeader(sms)) {
+                return Intents.RESULT_SMS_HANDLED;
+            }
+            return processCdmaWapPdu(sms.getUserData(), sms.mMessageRef,
+                    sms.getOriginatingAddress());
         }
 
         // Reject (NAK) any messages with teleservice ids that have
@@ -322,6 +330,18 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
                 scAddr, destAddr, text, (deliveryIntent != null), null);
         HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, text, pdu);
+        SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
+                deliveryIntent, getFormat());
+        sendSubmitPdu(tracker);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected void sendTextWithPriority(String destAddr, String scAddr, String text,
+            PendingIntent sentIntent, PendingIntent deliveryIntent, int priority) {
+        SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPduWithPriority(
+                scAddr, destAddr, text, (deliveryIntent != null), null, priority);
+        HashMap map = SmsTrackerMapFactory(destAddr, scAddr, text, pdu);
         SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
                 deliveryIntent, getFormat());
         sendSubmitPdu(tracker);

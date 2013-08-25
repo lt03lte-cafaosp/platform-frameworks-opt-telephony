@@ -34,6 +34,7 @@ import android.os.Message;
 import android.os.SystemProperties;
 import android.telephony.MSimTelephonyManager;
 import android.telephony.Rlog;
+import android.text.TextUtils;
 
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.GsmAlphabet;
@@ -97,8 +98,6 @@ public final class RuimRecords extends IccRecords {
     private static final int EVENT_SMS_ON_RUIM = 21;
     private static final int EVENT_GET_SMS_DONE = 22;
 
-    private static final int EVENT_RUIM_REFRESH = 31;
-
     public RuimRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
 
@@ -110,7 +109,6 @@ public final class RuimRecords extends IccRecords {
         mRecordsToLoad = 0;
 
         // NOTE the EVENT_SMS_ON_RUIM is not registered
-        mCi.registerForIccRefresh(this, EVENT_RUIM_REFRESH, null);
 
         // Start off by setting empty state
         resetRecords();
@@ -123,7 +121,6 @@ public final class RuimRecords extends IccRecords {
     public void dispose() {
         if (DBG) log("Disposing RuimRecords " + this);
         //Unregister for all events
-        mCi.unregisterForIccRefresh(this);
         mParentApp.unregisterForReady(this);
         resetRecords();
         super.dispose();
@@ -201,6 +198,11 @@ public final class RuimRecords extends IccRecords {
         digits = ((digits / 10) % 10 == 0)?(digits - 100):digits;
         digits = ((digits / 100) % 10 == 0)?(digits - 1000):digits;
         return digits;
+    }
+
+    @Override
+    public String getOperatorNumeric() {
+        return getRUIMOperatorNumeric();
     }
 
     /**
@@ -541,14 +543,6 @@ public final class RuimRecords extends IccRecords {
                 log("Event EVENT_GET_SST_DONE Received");
             break;
 
-            case EVENT_RUIM_REFRESH:
-                isRecordLoadResponse = false;
-                ar = (AsyncResult)msg.obj;
-                if (ar.exception == null) {
-                    handleRuimRefresh((IccRefreshResponse)ar.result);
-                }
-                break;
-
             default:
                 super.handleMessage(msg);   // IccRecords handles generic record load responses
 
@@ -634,15 +628,20 @@ public final class RuimRecords extends IccRecords {
         // Further records that can be inserted are Operator/OEM dependent
 
         String operator = getRUIMOperatorNumeric();
-        log("RuimRecords: onAllRecordsLoaded set 'gsm.sim.operator.numeric' to operator='" +
-                operator + "'");
-        if (operator != null) {
+        if (!TextUtils.isEmpty(operator)) {
+            log("onAllRecordsLoaded set 'gsm.sim.operator.numeric' to operator='" +
+                    operator + "'");
             setSystemProperty(PROPERTY_ICC_OPERATOR_NUMERIC, operator);
+        } else {
+            log("onAllRecordsLoaded empty 'gsm.sim.operator.numeric' skipping");
         }
 
-        if (mImsi != null) {
+        if (!TextUtils.isEmpty(mImsi)) {
+            log("onAllRecordsLoaded set mcc imsi=" + mImsi);
             setSystemProperty(PROPERTY_ICC_OPERATOR_ISO_COUNTRY,
                     MccTable.countryCodeForMcc(Integer.parseInt(mImsi.substring(0,3))));
+        } else {
+            log("onAllRecordsLoaded empty imsi skipping setting mcc");
         }
 
         setLocaleFromCsim();
@@ -781,52 +780,10 @@ public final class RuimRecords extends IccRecords {
         return 0;
     }
 
-    private void handleRuimRefresh(IccRefreshResponse refreshResponse) {
-        if (refreshResponse == null) {
-            if (DBG) log("handleRuimRefresh received without input");
-            return;
-        }
-
-        if (refreshResponse.aid != null &&
-                !refreshResponse.aid.equals(mParentApp.getAid())) {
-            // This is for different app. Ignore.
-            return;
-        }
-
-        switch (refreshResponse.refreshResult) {
-            case IccRefreshResponse.REFRESH_RESULT_FILE_UPDATE:
-                if (DBG) log("handleRuimRefresh with SIM_REFRESH_FILE_UPDATED");
-                mAdnCache.reset();
-                fetchRuimRecords();
-                break;
-            case IccRefreshResponse.REFRESH_RESULT_INIT:
-                if (DBG) log("handleRuimRefresh with SIM_REFRESH_INIT");
-                // need to reload all files (that we care about)
-                onIccRefreshInit();
-                break;
-            case IccRefreshResponse.REFRESH_RESULT_RESET:
-                if (DBG) log("handleRuimRefresh with SIM_REFRESH_RESET");
-                if (powerOffOnSimReset()) {
-                    mCi.setRadioPower(false, null);
-                    /* Note: no need to call setRadioPower(true).  Assuming the desired
-                    * radio power state is still ON (as tracked by ServiceStateTracker),
-                    * ServiceStateTracker will call setRadioPower when it receives the
-                    * RADIO_STATE_CHANGED notification for the power off.  And if the
-                    * desired power state has changed in the interim, we don't want to
-                    * override it with an unconditional power on.
-                    */
-                } else {
-                    if (mParentApp.getState() == AppState.APPSTATE_READY) {
-                        log("handleRuimRefresh APPSTATE_READY");
-                        fetchRuimRecords();
-                    }
-                }
-                break;
-            default:
-                // unknown refresh operation
-                if (DBG) log("handleRuimRefresh with unknown operation");
-                break;
-        }
+    @Override
+    protected void handleFileUpdate(int efid) {
+        mAdnCache.reset();
+        fetchRuimRecords();
     }
 
     public String getMdn() {

@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ *
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -292,7 +294,6 @@ public class SmsMessage extends SmsMessageBase {
      * value.  Is there no similar notion in CDMA? Or do we just not
      * have it hooked up?
      */
-
     /**
      * Get an SMS-SUBMIT PDU for a destination address and a message
      *
@@ -323,6 +324,34 @@ public class SmsMessage extends SmsMessageBase {
         uData.payloadStr = message;
         uData.userDataHeader = smsHeader;
         return privateGetSubmitPdu(destAddr, statusReportRequested, uData);
+    }
+
+    /**
+     * Get an SMS-SUBMIT PDU for a destination address and a message
+     *
+     * @param scAddr                Service Centre address.  Null means use default.
+     * @param destAddr              Address of the recipient.
+     * @param message               String representation of the message payload.
+     * @param statusReportRequested Indicates whether a report is requested for this message.
+     * @param smsHeader             Array containing the data for the User Data Header, preceded
+     *                              by the Element Identifiers.
+     * @param priority              Priority level of the message
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     * @hide
+     */
+    public static SubmitPdu getSubmitPduWithPriority(String scAddr, String destAddr, String message,
+            boolean statusReportRequested, SmsHeader smsHeader, int priority) {
+
+        if (message == null || destAddr == null) {
+            return null;
+        }
+
+        UserData uData = new UserData();
+        uData.payloadStr = message;
+        uData.userDataHeader = smsHeader;
+        return privateGetSubmitPdu(destAddr, statusReportRequested, uData, priority);
     }
 
     /**
@@ -844,6 +873,15 @@ public class SmsMessage extends SmsMessageBase {
      */
     private static SubmitPdu privateGetSubmitPdu(String destAddrStr, boolean statusReportRequested,
             UserData userData) {
+        return privateGetSubmitPdu(destAddrStr, statusReportRequested, userData, -1);
+    }
+
+    /**
+     * Creates BearerData and Envelope from parameters for a Submit SMS.
+     * @return byte stream for SubmitPdu.
+     */
+    private static SubmitPdu privateGetSubmitPdu(String destAddrStr, boolean statusReportRequested,
+            UserData userData, int priority) {
 
         /**
          * TODO(cleanup): give this function a more meaningful name.
@@ -872,6 +910,10 @@ public class SmsMessage extends SmsMessageBase {
         bearerData.userAckReq = false;
         bearerData.readAckReq = false;
         bearerData.reportReq = false;
+        if (priority != -1) {
+            bearerData.priorityIndicatorSet = true;
+            bearerData.priority = priority;
+        }
 
         bearerData.userData = userData;
 
@@ -1041,5 +1083,60 @@ public class SmsMessage extends SmsMessageBase {
      */
     public ArrayList<CdmaSmsCbProgramData> getSmsCbProgramData() {
         return mBearerData.serviceCategoryProgramData;
+    }
+
+    /**
+    * CT WDP header contains WDP Msg Identifier and WDP Userdata
+    */
+    protected boolean processCdmaCTWdpHeader(SmsMessage sms) {
+        int subparamId = 0;
+        int subParamLen = 0;
+        int msgID = 0;
+        boolean decodeSuccess = false;
+        try {
+            BitwiseInputStream inStream = new BitwiseInputStream(sms.getUserData());
+
+            /* Decode WDP Messsage Identifier */
+            subparamId = inStream.read(8);
+            if (subparamId != 0) {
+                Log.e(LOG_TAG, "Invalid WDP SubparameterId");
+                return false;
+            }
+            subParamLen = inStream.read(8);
+            if (subParamLen != 3) {
+                Log.e(LOG_TAG, "Invalid WDP subparameter length");
+                return false;
+            }
+            sms.mBearerData.messageType = inStream.read(4);
+            msgID = inStream.read(8) << 8;
+            msgID |= inStream.read(8);
+            sms.mBearerData.hasUserDataHeader = (inStream.read(1) == 1);
+            if (sms.mBearerData.hasUserDataHeader) {
+                Log.e(LOG_TAG, "Invalid WDP UserData header value");
+                return false;
+            }
+            inStream.skip(3);
+            sms.mBearerData.messageId = msgID;
+            sms.mMessageRef = msgID;
+
+            /* Decode WDP User Data */
+            subparamId = inStream.read(8);
+            subParamLen = inStream.read(8) * 8;
+            sms.mBearerData.userData.msgEncoding = inStream.read(5);
+            int consumedBits = 5;
+            if (sms.mBearerData.userData.msgEncoding != 0) {
+                Log.e(LOG_TAG, "Invalid WDP encoding");
+                return false;
+            }
+            sms.mBearerData.userData.numFields = inStream.read(8);
+            consumedBits += 8;
+            int dataBits = subParamLen - consumedBits;
+            sms.mBearerData.userData.payload = inStream.readByteArray(dataBits);
+            sms.mUserData = sms.mBearerData.userData.payload;
+            decodeSuccess = true;
+        } catch (BitwiseInputStream.AccessException ex) {
+            Log.e(LOG_TAG, "CT WDP Header decode failed: " + ex);
+        }
+        return decodeSuccess;
     }
 }

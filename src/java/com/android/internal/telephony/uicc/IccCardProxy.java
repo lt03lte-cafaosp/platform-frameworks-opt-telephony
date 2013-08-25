@@ -160,7 +160,7 @@ public class IccCardProxy extends Handler implements IccCard {
      * This method sets the IccRecord, corresponding to the currently active
      * subscription, as the active record.
      */
-    private void updateActiveRecord() {
+    protected void updateActiveRecord() {
         log("updateActiveRecord app type = " + mCurrentAppType +
                 "mIccRecords = " + mIccRecords);
 
@@ -313,6 +313,10 @@ public class IccCardProxy extends Handler implements IccCard {
         }
     }
 
+    protected void HandleDetectedState() {
+        setExternalState(State.UNKNOWN);
+    }
+
     protected void updateExternalState() {
         if (mUiccCard == null || mUiccCard.getCardState() == CardState.CARDSTATE_ABSENT) {
             if (mRadioOn) {
@@ -335,8 +339,10 @@ public class IccCardProxy extends Handler implements IccCard {
 
         switch (mUiccApplication.getState()) {
             case APPSTATE_UNKNOWN:
-            case APPSTATE_DETECTED:
                 setExternalState(State.UNKNOWN);
+                break;
+            case APPSTATE_DETECTED:
+                HandleDetectedState();
                 break;
             case APPSTATE_PIN:
                 setExternalState(State.PIN_REQUIRED);

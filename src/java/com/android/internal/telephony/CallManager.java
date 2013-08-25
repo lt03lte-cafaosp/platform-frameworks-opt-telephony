@@ -87,6 +87,10 @@ public class CallManager {
 
     private static final String PROPERTY_QCHAT_ENABLED = "persist.atel.qchat_enabled";
 
+    // Used to route the audio in SgLte scenarios
+    protected static final String SGLTE = "sglte";
+    protected static final String SGLTE_TYPE2 = "sglte2";
+
     // Singleton instance
     protected static CallManager INSTANCE;
 
@@ -111,6 +115,10 @@ public class CallManager {
     private boolean mSpeedUpAudioForMtCall = false;
 
     protected CmHandler mHandler;
+
+    // This variable tells us the type of baseband
+    protected static String sBaseband = SystemProperties.get(
+            ExtTelephonyProperties.PROPERTY_BASEBAND, "msm");
 
     // state registrants
     protected final RegistrantList mPreciseCallStateRegistrants
@@ -206,7 +214,8 @@ public class CallManager {
     private static boolean isUseExtCallManager() {
         if (SystemProperties.getBoolean(TelephonyProperties.CALLS_ON_IMS_ENABLED_PROPERTY,
                 false) || MSimTelephonyManager.getDefault().isMultiSimEnabled() ||
-                SystemProperties.getBoolean(PROPERTY_QCHAT_ENABLED, false)) {
+                SystemProperties.getBoolean(PROPERTY_QCHAT_ENABLED, false) ||
+                sBaseband.equals(SGLTE) || sBaseband.equals(SGLTE_TYPE2)) {
             return true;
         }
         return false;
@@ -264,6 +273,14 @@ public class CallManager {
     public static boolean isCallOnImsEnabled() {
         return SystemProperties.getBoolean(
                 TelephonyProperties.CALLS_ON_IMS_ENABLED_PROPERTY, false);
+    }
+
+    /**
+     * Returns true if Android supports Csvt calls.
+     */
+    public static boolean isCallOnCsvtEnabled() {
+        return isCallOnImsEnabled() && SystemProperties.getBoolean(
+                TelephonyProperties.PROPERTY_CSVT_ENABLED, false);
     }
 
     /**
@@ -2161,6 +2178,10 @@ public class CallManager {
 
     public void setActiveSubscription(int subscription) {
         Rlog.e(LOG_TAG, " setActiveSubscription for subscription not supported");
+    }
+
+    public void setCallAudioDrivers(int phoneType, Call.State state) {
+        Rlog.e(LOG_TAG, " setCallAudioDrivers not supported");
     }
 
     public int getActiveSubscription() {
