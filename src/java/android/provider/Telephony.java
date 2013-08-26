@@ -2022,6 +2022,13 @@ public final class Telephony {
          * true if read-only APN else editable APN; false by default.
          */
         public static final String READ_ONLY = "read_only";
+
+        /**
+         * Initial Preferred APN
+         * true : initial preferred APN, false : not initial preferred APN.
+         * Default is false.
+         */
+        public static final String PREFERRED = "preferred";
     }
 
     /**
