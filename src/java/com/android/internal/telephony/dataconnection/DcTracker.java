@@ -562,6 +562,24 @@ public class DcTracker extends DcTrackerBase {
         }
     }
 
+    private boolean getAnyDataEnabled(ApnContext apnCon) {
+        synchronized (mDataEnabledLock) {
+            // If set the special property, enable mms data even if mobile data is turned off.
+            boolean enableMmsData = SystemProperties.getBoolean("persist.env.mms.setupmmsdata",
+                    false) && apnCon.getDataProfileType().equals(PhoneConstants.APN_TYPE_MMS);
+            if (!(mInternalDataEnabled && (mUserDataEnabled ||
+                    enableMmsData) && sPolicyDataEnabled)) return false;
+            for (ApnContext apnContext : mApnContexts.values()) {
+                // Make sure we don't have a context that is going down
+                // and is explicitly disabled.
+                if (isDataAllowed(apnContext)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     protected boolean isDataAllowed(ApnContext apnContext) {
         return apnContext.isReady() && isDataAllowed();
     }
@@ -747,7 +765,7 @@ public class DcTracker extends DcTrackerBase {
         }
 
         if (apnContext.isConnectable() &&
-                isDataAllowed(apnContext) && getAnyDataEnabled() && !isEmergency()) {
+                isDataAllowed(apnContext) && getAnyDataEnabled(apnContext) && !isEmergency()) {
             if (apnContext.getState() == DctConstants.State.FAILED) {
                 if (DBG) log("trySetupData: make a FAILED ApnContext IDLE so its reusable");
                 apnContext.setState(DctConstants.State.IDLE);
