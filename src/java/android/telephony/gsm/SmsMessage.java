@@ -555,6 +555,14 @@ public class SmsMessage {
     }
 
     /**
+     * Sets the record index of the message on the ICC (1-based index).
+     * @hide
+     */
+    public void setIndexOnIcc(int index) {
+        mWrappedSmsMessage.setIndexOnIcc(index);
+    }
+
+    /**
      * Returns the record index of the message on the ICC (1-based index).
      * @return the record index of the message on the ICC, or -1 if this
      *         SmsMessage was not created from a ICC SMS EF record.
