@@ -286,6 +286,7 @@ public class DcTracker extends DcTrackerBase {
         cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_FOTA, new Messenger(this));
         cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_IMS, new Messenger(this));
         cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_CBS, new Messenger(this));
+        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_DM, new Messenger(this));
     }
 
     protected void initApnContextsAndDataConnection() {
@@ -330,6 +331,10 @@ public class DcTracker extends DcTrackerBase {
             case ConnectivityManager.TYPE_MOBILE_CBS:
                 apnContext = addApnContext(PhoneConstants.APN_TYPE_CBS);
                 break;
+            case ConnectivityManager.TYPE_MOBILE_DM:
+                apnContext = addApnContext(PhoneConstants.APN_TYPE_DM);
+            break;
+
             default:
                 // skip unknown types
                 continue;
@@ -567,7 +572,9 @@ public class DcTracker extends DcTrackerBase {
             // If set the special property, enable mms data even if mobile data is turned off.
             boolean enableMmsData = SystemProperties.getBoolean("persist.env.mms.setupmmsdata",
                     false) && apnCon.getDataProfileType().equals(PhoneConstants.APN_TYPE_MMS);
-            if (!(mInternalDataEnabled && (mUserDataEnabled ||
+            boolean enableDMData = SystemProperties.getBoolean("persist.env.data.setupdmdata",
+                    false) && apnCon.getDataProfileType().equals(PhoneConstants.APN_TYPE_DM);
+            if (!(mInternalDataEnabled && (mUserDataEnabled || enableDMData ||
                     enableMmsData) && sPolicyDataEnabled)) return false;
             for (ApnContext apnContext : mApnContexts.values()) {
                 // Make sure we don't have a context that is going down
