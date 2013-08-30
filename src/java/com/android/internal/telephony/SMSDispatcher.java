@@ -19,6 +19,7 @@ package com.android.internal.telephony;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.AppOpsManager;
 import android.app.PendingIntent;
@@ -102,6 +103,10 @@ public abstract class SMSDispatcher extends Handler {
     private static final String SEND_SMS_NO_CONFIRMATION_PERMISSION =
             "android.permission.SEND_SMS_NO_CONFIRMATION";
 
+    /** Long sms alarm action **/
+    protected static final String LONG_SMS_OVERTIME_ACTION =
+            "qualcomm.intent.action.LONG_SMS_OVERTIME";
+
     /** Query projection for checking for duplicate message segments. */
     private static final String[] PDU_PROJECTION = new String[] {
             "pdu"
@@ -179,6 +184,11 @@ public abstract class SMSDispatcher extends Handler {
     private static final int MAX_SEND_RETRIES = 3;
     /** Delay before next send attempt on a failed SMS, in milliseconds. */
     private static final int SEND_RETRY_DELAY = 2000;
+    /**
+     * If can't receive all parts of a long sms , will be delete in raw table
+     * over this time , in milliseconds.
+     */
+    private static final int LONG_SMS_OVERTIME_MILSECONDS = 48 * 60 * 60 * 1000;
     /** single part SMS */
     private static final int SINGLE_PART_SMS = 1;
     /** Message sending queue limit */
@@ -711,6 +721,13 @@ public abstract class SMSDispatcher extends Handler {
                     values.put("destination_port", destPort);
                 }
                 mResolver.insert(mRawUri, values);
+
+                // set long sms overtime alarm
+                if (cursorCount == 0) {
+                    setLongSmsOverTimeAlarm(referenceNumber, address);
+                    Rlog.d(TAG, "Start long sms overtime alarm from address=" + address
+                            + " referenceNumber=" + referenceNumber);
+                }
                 return Intents.RESULT_SMS_HANDLED;
             }
 
@@ -879,6 +896,35 @@ public abstract class SMSDispatcher extends Handler {
             String text, PendingIntent sentIntent, PendingIntent deliveryIntent);
 
     /**
+     * Send a text based SMS.
+     *
+     * @param destAddr the address to send the message to
+     * @param scAddr is the service center address or null to use
+     *  the current default SMSC
+     * @param text the body of the message to send
+     * @param sentIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is successfully sent, or failed.
+     *  The result code will be <code>Activity.RESULT_OK<code> for success,
+     *  or one of these errors:<br>
+     *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+     *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+     *  <code>RESULT_ERROR_NULL_PDU</code><br>
+     *  <code>RESULT_ERROR_NO_SERVICE</code><br>.
+     *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+     *  the extra "errorCode" containing a radio technology specific value,
+     *  generally only useful for troubleshooting.<br>
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applications,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     * @param priority Priority level of the message
+     */
+    protected abstract void sendTextWithPriority(String destAddr, String scAddr, String text,
+            PendingIntent sentIntent, PendingIntent deliveryIntent, int priority);
+
+    /**
      * Calculate the number of septets needed to encode the message.
      *
      * @param messageBody the message to encode
@@ -973,11 +1019,104 @@ public abstract class SMSDispatcher extends Handler {
     }
 
     /**
+     * Send a multi-part text based SMS.
+     *
+     * @param destAddr the address to send the message to
+     * @param scAddr is the service center address or null to use
+     *   the current default SMSC
+     * @param parts an <code>ArrayList</code> of strings that, in order,
+     *   comprise the original message
+     * @param sentIntents if not null, an <code>ArrayList</code> of
+     *   <code>PendingIntent</code>s (one for each message part) that is
+     *   broadcast when the corresponding message part has been sent.
+     *   The result code will be <code>Activity.RESULT_OK<code> for success,
+     *   or one of these errors:
+     *   <code>RESULT_ERROR_GENERIC_FAILURE</code>
+     *   <code>RESULT_ERROR_RADIO_OFF</code>
+     *   <code>RESULT_ERROR_NULL_PDU</code>
+     *   <code>RESULT_ERROR_NO_SERVICE</code>.
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applications,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntents if not null, an <code>ArrayList</code> of
+     *   <code>PendingIntent</code>s (one for each message part) that is
+     *   broadcast when the corresponding message part has been delivered
+     *   to the recipient.  The raw pdu of the status report is in the
+     *   extended data ("pdu").
+     * @param priority Priority level of the message
+     */
+    protected void sendMultipartTextWithPriority(String destAddr, String scAddr,
+            ArrayList<String> parts, ArrayList<PendingIntent> sentIntents,
+            ArrayList<PendingIntent> deliveryIntents, int priority) {
+
+        int refNumber = getNextConcatenatedRef() & 0x00FF;
+        int msgCount = parts.size();
+        int encoding = SmsConstants.ENCODING_UNKNOWN;
+
+        mRemainingMessages = msgCount;
+
+        TextEncodingDetails[] encodingForParts = new TextEncodingDetails[msgCount];
+        for (int i = 0; i < msgCount; i++) {
+            TextEncodingDetails details = calculateLength(parts.get(i), false);
+            if (encoding != details.codeUnitSize
+                    && (encoding == SmsConstants.ENCODING_UNKNOWN
+                            || encoding == SmsConstants.ENCODING_7BIT)) {
+                encoding = details.codeUnitSize;
+            }
+            encodingForParts[i] = details;
+        }
+
+        for (int i = 0; i < msgCount; i++) {
+            SmsHeader.ConcatRef concatRef = new SmsHeader.ConcatRef();
+            concatRef.refNumber = refNumber;
+            concatRef.seqNumber = i + 1;  // 1-based sequence
+            concatRef.msgCount = msgCount;
+            // TODO: We currently set this to true since our messaging app will never
+            // send more than 255 parts (it converts the message to MMS well before that).
+            // However, we should support 3rd party messaging apps that might need 16-bit
+            // references
+            // Note:  It's not sufficient to just flip this bit to true; it will have
+            // ripple effects (several calculations assume 8-bit ref).
+            concatRef.isEightBits = true;
+            SmsHeader smsHeader = new SmsHeader();
+            smsHeader.concatRef = concatRef;
+
+            // Set the national language tables for 3GPP 7-bit encoding, if enabled.
+            if (encoding == SmsConstants.ENCODING_7BIT) {
+                smsHeader.languageTable = encodingForParts[i].languageTable;
+                smsHeader.languageShiftTable = encodingForParts[i].languageShiftTable;
+            }
+
+            PendingIntent sentIntent = null;
+            if (sentIntents != null && sentIntents.size() > i) {
+                sentIntent = sentIntents.get(i);
+            }
+
+            PendingIntent deliveryIntent = null;
+            if (deliveryIntents != null && deliveryIntents.size() > i) {
+                deliveryIntent = deliveryIntents.get(i);
+            }
+
+            sendNewSubmitPduWithPriority(destAddr, scAddr, parts.get(i), smsHeader, encoding,
+                    sentIntent, deliveryIntent, (i == (msgCount - 1)), priority);
+        }
+
+    }
+
+    /**
      * Create a new SubmitPdu and send it.
      */
     protected abstract void sendNewSubmitPdu(String destinationAddress, String scAddress,
             String message, SmsHeader smsHeader, int encoding,
             PendingIntent sentIntent, PendingIntent deliveryIntent, boolean lastPart);
+
+    /**
+     * Create a new SubmitPdu and send it.
+     */
+    protected abstract void sendNewSubmitPduWithPriority(String destinationAddress,
+            String scAddress, String message, SmsHeader smsHeader, int encoding,
+            PendingIntent sentIntent, PendingIntent deliveryIntent,
+            boolean lastPart, int priority);
 
     /**
      * Send a SMS
@@ -1390,6 +1529,7 @@ public abstract class SMSDispatcher extends Handler {
         public int mRetryCount;
         public int mImsRetry; // nonzero indicates initial message was sent over Ims
         public int mMessageRef;
+        public boolean mExpectMore;
         String mFormat;
 
         public final PendingIntent mSentIntent;
@@ -1400,6 +1540,12 @@ public abstract class SMSDispatcher extends Handler {
 
         private SmsTracker(HashMap<String, Object> data, PendingIntent sentIntent,
                 PendingIntent deliveryIntent, PackageInfo appInfo, String destAddr, String format) {
+            this(data, sentIntent, deliveryIntent, appInfo, destAddr, format, false);
+        }
+
+        private SmsTracker(HashMap<String, Object> data, PendingIntent sentIntent,
+                PendingIntent deliveryIntent, PackageInfo appInfo, String destAddr, String format,
+                boolean isExpectMore) {
             mData = data;
             mSentIntent = sentIntent;
             mDeliveryIntent = deliveryIntent;
@@ -1407,6 +1553,7 @@ public abstract class SMSDispatcher extends Handler {
             mAppInfo = appInfo;
             mDestAddress = destAddr;
             mFormat = format;
+            mExpectMore = isExpectMore;
             mImsRetry = 0;
             mMessageRef = 0;
         }
@@ -1423,6 +1570,11 @@ public abstract class SMSDispatcher extends Handler {
 
     protected SmsTracker SmsTrackerFactory(HashMap<String, Object> data, PendingIntent sentIntent,
             PendingIntent deliveryIntent, String format) {
+        return SmsTrackerFactory(data, sentIntent, deliveryIntent, format, false);
+    }
+
+    protected SmsTracker SmsTrackerFactory(HashMap<String, Object> data, PendingIntent sentIntent,
+            PendingIntent deliveryIntent, String format, boolean isExpectMore) {
         // Get calling app package name via UID from Binder call
         PackageManager pm = mContext.getPackageManager();
         String[] packageNames = pm.getPackagesForUid(Binder.getCallingUid());
@@ -1440,7 +1592,8 @@ public abstract class SMSDispatcher extends Handler {
         // Strip non-digits from destination phone number before checking for short codes
         // and before displaying the number to the user if confirmation is required.
         String destAddr = PhoneNumberUtils.extractNetworkPortion((String) data.get("destAddr"));
-        return new SmsTracker(data, sentIntent, deliveryIntent, appInfo, destAddr, format);
+        return new SmsTracker(data, sentIntent, deliveryIntent, appInfo, destAddr, format,
+                isExpectMore);
     }
 
     protected HashMap SmsTrackerMapFactory(String destAddr, String scAddr,
@@ -1587,4 +1740,55 @@ public abstract class SMSDispatcher extends Handler {
     public abstract boolean isIms();
 
     public abstract String getImsSmsFormat();
+
+    /**
+     * Delete overtime long sms part on raw table.
+     */
+    protected int deleteIncompleteLongSmsParts() {
+        int count = 0;
+        // Delete overtime long sms part
+        StringBuilder where = new StringBuilder("date < ");
+        where.append(System.currentTimeMillis() - LONG_SMS_OVERTIME_MILSECONDS);
+
+        count = mResolver.delete(mRawUri, where.toString(), null);
+        Rlog.d(TAG, "deleteIncompleteLongSmsParts count = " + count);
+        return count;
+    }
+
+    /**
+     * Delete overtime sms part on raw table with the same referenceNumber and sender.
+     */
+    protected int deleteSpecLongSmsOnRaw(int referenceNumber, String address) {
+        int count = 0;
+        // Lookup all other related parts
+        StringBuilder where = new StringBuilder("reference_number =");
+        where.append(referenceNumber);
+        where.append(" AND address = ?");
+        String[] whereArgs = new String[] {address};
+
+        count = mResolver.delete(mRawUri, where.toString(), whereArgs);
+        Rlog.d(TAG, "deleteSpecLongSmsOnRaw count = " + count);
+        return count;
+    }
+
+    /**
+     * Set long sms overtime alarm.
+     */
+    private void setLongSmsOverTimeAlarm(int msgRef, String address) {
+        // When the alarm goes off, we want to broadcast an Intent to our
+        // BroadcastReceiver.  Here we make an Intent with an explicit class
+        // name to have our own receiver instantiated and called, and then create an
+        // IntentSender to have the intent executed as a broadcast.
+        // We want the alarm to go off shortestInterval seconds from now.
+        // Schedule the alarm!
+        Intent intent = new Intent(LONG_SMS_OVERTIME_ACTION);
+        intent.putExtra("messageRef", msgRef);
+        intent.putExtra("address", address);
+        AlarmManager am =
+                (AlarmManager) mPhone.getContext().getSystemService(Context.ALARM_SERVICE);
+        PendingIntent sender = PendingIntent.getBroadcast(
+                mPhone.getContext(), 0, intent, 0);
+        am.set(AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + LONG_SMS_OVERTIME_MILSECONDS, sender);
+    }
 }

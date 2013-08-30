@@ -131,6 +131,37 @@ interface ISmsMSim {
             in int subscription);
 
     /**
+     * Send an SMS.
+     *
+     * @param destAddr the address to send the message to
+     * @param text the body of the message to send
+     * @param sentIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is sucessfully sent, or failed.
+     *  The result code will be <code>Activity.RESULT_OK<code> for success,
+     *  or one of these errors:<br>
+     *  <code>RESULT_ERROR_GENERIC_FAILURE</code><br>
+     *  <code>RESULT_ERROR_RADIO_OFF</code><br>
+     *  <code>RESULT_ERROR_NULL_PDU</code><br>
+     *  For <code>RESULT_ERROR_GENERIC_FAILURE</code> the sentIntent may include
+     *  the extra "errorCode" containing a radio technology specific value,
+     *  generally only useful for troubleshooting.<br>
+     *  The per-application based SMS control checks sentIntent. If sentIntent
+     *  is NULL the caller will be checked against all unknown applications,
+     *  which cause smaller number of SMS to be sent in checking period.
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     * @param deliveryIntent if not NULL this <code>PendingIntent</code> is
+     *  broadcast when the message is delivered to the recipient.  The
+     *  raw pdu of the status report is in the extended data ("pdu").
+     * @param priority Priority level of the message
+     * @param subscription the subscription on which the SMS has to be sent.
+     */
+    void sendTextWithPriority(in String destAddr, in String scAddr, in String text,
+            in PendingIntent sentIntent, in PendingIntent deliveryIntent,
+            in int priority, in int subscription);
+
+    /**
      * Send a multi-part text based SMS.
      *
      * @param destinationAddress the address to send the message to
@@ -156,6 +187,34 @@ interface ISmsMSim {
     void sendMultipartText(String callingPkg, in String destinationAddress, in String scAddress,
             in List<String> parts, in List<PendingIntent> sentIntents,
             in List<PendingIntent> deliveryIntents, in int subscription);
+
+    /**
+     * Send a multi-part text based SMS.
+     *
+     * @param destinationAddress the address to send the message to
+     * @param scAddress is the service center address or null to use
+     *   the current default SMSC
+     * @param parts an <code>ArrayList</code> of strings that, in order,
+     *   comprise the original message
+     * @param sentIntents if not null, an <code>ArrayList</code> of
+     *   <code>PendingIntent</code>s (one for each message part) that is
+     *   broadcast when the corresponding message part has been sent.
+     *   The result code will be <code>Activity.RESULT_OK<code> for success,
+     *   or one of these errors:
+     *   <code>RESULT_ERROR_GENERIC_FAILURE</code>
+     *   <code>RESULT_ERROR_RADIO_OFF</code>
+     *   <code>RESULT_ERROR_NULL_PDU</code>.
+     * @param deliveryIntents if not null, an <code>ArrayList</code> of
+     *   <code>PendingIntent</code>s (one for each message part) that is
+     *   broadcast when the corresponding message part has been delivered
+     *   to the recipient.  The raw pdu of the status report is in the
+     *   extended data ("pdu").
+     * @param priority Priority level of the message
+     * @param subscription the subscription on which the SMS has to be sent.
+     */
+    void sendMultipartTextWithPriority(String callingPkg, in String destinationAddress,
+            in String scAddress, in List<String> parts, in List<PendingIntent> sentIntents,
+            in List<PendingIntent> deliveryIntents, in int priority, in int subscription);
 
     /**
      * Enable reception of cell broadcast (SMS-CB) messages with the given
@@ -272,5 +331,27 @@ interface ISmsMSim {
      */
     boolean isSMSPromptEnabled();
 
+    /**
+     * Get the capacity count of sms on Icc card.
+     *
+     * @return capacity of ICC
+     */
+    int getSmsCapacityOnIcc(int subscription);
+
+    /**
+     * Copy a raw SMS PDU to the ICC, and return the index on ICC
+     * ICC (Integrated Circuit Card) is the card of the device.
+     * For example, this can be the SIM or USIM for GSM.
+     *
+     * @param smsc the SMSC for this message, or NULL for the default SMSC
+     * @param pdu the raw PDU to store
+     * @param status message status (STATUS_ON_ICC_READ, STATUS_ON_ICC_UNREAD,
+     *               STATUS_ON_ICC_SENT, STATUS_ON_ICC_UNSENT)
+     * @return index of ICC, -1 means copy failed
+     * @throws IllegalArgumentException if pdu is NULL
+     *
+     */
+    int copyMessageToIccGetEfIndex(int status, in byte[] pdu,
+           in byte[] smsc, in int subscription);
 
 }

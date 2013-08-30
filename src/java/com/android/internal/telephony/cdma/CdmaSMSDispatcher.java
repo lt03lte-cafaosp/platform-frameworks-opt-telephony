@@ -213,6 +213,14 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         if (SmsEnvelope.TELESERVICE_WAP == teleService) {
             return processCdmaWapPdu(sms.getUserData(), sms.mMessageRef,
                     sms.getOriginatingAddress());
+        } else if (SmsEnvelope.TELESERVICE_CT_WAP == teleService) {
+            /* China Telecom WDP header contains Message identifier
+               and User data subparametrs extract these fields */
+            if (!sms.processCdmaCTWdpHeader(sms)) {
+                return Intents.RESULT_SMS_HANDLED;
+            }
+            return processCdmaWapPdu(sms.getUserData(), sms.mMessageRef,
+                    sms.getOriginatingAddress());
         }
 
         // Reject (NAK) any messages with teleservice ids that have
@@ -329,6 +337,18 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
 
     /** {@inheritDoc} */
     @Override
+    protected void sendTextWithPriority(String destAddr, String scAddr, String text,
+            PendingIntent sentIntent, PendingIntent deliveryIntent, int priority) {
+        SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPduWithPriority(
+                scAddr, destAddr, text, (deliveryIntent != null), null, priority);
+        HashMap map = SmsTrackerMapFactory(destAddr, scAddr, text, pdu);
+        SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
+                deliveryIntent, getFormat());
+        sendSubmitPdu(tracker);
+    }
+
+    /** {@inheritDoc} */
+    @Override
     protected GsmAlphabet.TextEncodingDetails calculateLength(CharSequence messageBody,
             boolean use7bitOnly) {
         return SmsMessage.calculateLength(messageBody, use7bitOnly);
@@ -344,6 +364,9 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         uData.userDataHeader = smsHeader;
         if (encoding == SmsConstants.ENCODING_7BIT) {
             uData.msgEncoding = UserData.ENCODING_GSM_7BIT_ALPHABET;
+            if (SystemProperties.getBoolean("persist.env.mms.7bitascii", false)) {
+                uData.msgEncoding = UserData.ENCODING_7BIT_ASCII;
+            }
         } else { // assume UTF-16
             uData.msgEncoding = UserData.ENCODING_UNICODE_16;
         }
@@ -355,6 +378,38 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
          * has been acknowledged. */
         SmsMessage.SubmitPdu submitPdu = SmsMessage.getSubmitPdu(destinationAddress,
                 uData, (deliveryIntent != null) && lastPart);
+
+        HashMap map =  SmsTrackerMapFactory(destinationAddress, scAddress,
+                message, submitPdu);
+        SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
+                deliveryIntent, getFormat());
+        sendSubmitPdu(tracker);
+    }
+
+    @Override
+    protected void sendNewSubmitPduWithPriority(String destinationAddress, String scAddress,
+            String message, SmsHeader smsHeader, int encoding,
+            PendingIntent sentIntent, PendingIntent deliveryIntent,
+            boolean lastPart, int priority) {
+        UserData uData = new UserData();
+        uData.payloadStr = message;
+        uData.userDataHeader = smsHeader;
+        if (encoding == SmsConstants.ENCODING_7BIT) {
+            uData.msgEncoding = UserData.ENCODING_GSM_7BIT_ALPHABET;
+            if (SystemProperties.getBoolean("persist.env.mms.7bitascii", false)) {
+                uData.msgEncoding = UserData.ENCODING_7BIT_ASCII;
+            }
+        } else { // assume UTF-16
+            uData.msgEncoding = UserData.ENCODING_UNICODE_16;
+        }
+        uData.msgEncodingSet = true;
+
+        /* By setting the statusReportRequested bit only for the
+         * last message fragment, this will result in only one
+         * callback to the sender when that last fragment delivery
+         * has been acknowledged. */
+        SmsMessage.SubmitPdu submitPdu = SmsMessage.getSubmitPduWithPriority(
+                destinationAddress, uData, (deliveryIntent != null) && lastPart, priority);
 
         HashMap map =  SmsTrackerMapFactory(destinationAddress, scAddress,
                 message, submitPdu);

@@ -110,6 +110,7 @@ public interface Phone {
     static final String REASON_CONNECTED = "connected";
     static final String REASON_TETHERED_MODE_STATE_CHANGED = "tetheredModeStateChanged";
     static final String REASON_SINGLE_PDN_ARBITRATION = "SinglePdnArbitration";
+    static final String REASON_NV_READY = "nvReady";
 
     // Used for band mode selection methods
     static final int BM_UNSPECIFIED = 0; // selected by baseband automatically
@@ -1862,6 +1863,13 @@ public interface Phone {
      */
     void removeReferences();
 
+    void getCallBarringOption(String facility, String password, Message onComplete);
+
+    void setCallBarringOption(String facility, boolean lockState, String password,
+            Message onComplete);
+
+    void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result);
+
     /**
      * When the remote party in an IMS Call wants to upgrade or downgrade a
      * call, a CallModifyRequest message is received. This function registers
@@ -1969,4 +1977,10 @@ public interface Phone {
      * @param response is callback message
      */
     void setLocalCallHold(int lchStatus, Message response);
+
+    /**
+     * Checks the radioState
+     * @return, true if radio state = RADIO_ON, false otherwise
+     */
+    boolean isRadioOn();
 }

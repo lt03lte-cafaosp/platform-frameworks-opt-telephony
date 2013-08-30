@@ -793,6 +793,15 @@ public abstract class PhoneBase extends Handler implements Phone {
         return uiccApplication.getIccFileHandler();
     }
 
+    /**
+     * Retrieves the IccRecords of the Phone instance
+     */
+    public IccRecords getIccRecords(){
+        UiccCardApplication uiccApplication = mUiccApplication.get();
+        if (uiccApplication == null) return null;
+        return uiccApplication.getIccRecords();
+    }
+
     /*
      * Retrieves the Handler of the Phone instance
      */
@@ -1456,6 +1465,19 @@ public abstract class PhoneBase extends Handler implements Phone {
         pw.println(" needsOtaServiceProvisioning=" + needsOtaServiceProvisioning());
     }
 
+    public void getCallBarringOption(String facility, String password, Message onComplete) {
+        logUnexpectedCdmaMethodCall("getCallBarringOption");
+    }
+
+    public void setCallBarringOption(String facility, boolean lockState, String password,
+            Message onComplete) {
+        logUnexpectedCdmaMethodCall("setCallBarringOption");
+    }
+
+    public void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result) {
+        logUnexpectedCdmaMethodCall("requestChangeCbPsw");
+    }
+
     // IMS APIs - Implemented only in ImsPhone
     public void acceptCall(int callType) throws CallStateException {
         throw new CallStateException("Accept with CallType is not supported in this phone " + this);
@@ -1545,5 +1567,10 @@ public abstract class PhoneBase extends Handler implements Phone {
     @Override
     public void setLocalCallHold(int lchStatus, Message response) {
         mCi.setLocalCallHold(lchStatus, response);
+    }
+
+    @Override
+    public boolean isRadioOn() {
+        return mCi.getRadioState().isOn();
     }
 }
