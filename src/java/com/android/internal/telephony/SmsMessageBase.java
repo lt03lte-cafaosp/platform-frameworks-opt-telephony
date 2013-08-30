@@ -317,6 +317,14 @@ public abstract class SmsMessageBase {
         return mIndexOnIcc;
     }
 
+    /**
+     * Sets the record index of the message on the ICC (1-based index).
+     * @hide
+     */
+    public void setIndexOnIcc(int index) {
+        mIndexOnIcc = index;
+    }
+
     protected void parseMessageBody() {
         // originatingAddress could be null if this message is from a status
         // report.

@@ -1043,7 +1043,7 @@ public class SIMRecords extends IccRecords {
                 isRecordLoadResponse = false;
                 ar = (AsyncResult)msg.obj;
                 if (ar.exception == null) {
-                    handleSms((byte[])ar.result);
+                    handleSms((byte[])ar.result, msg.arg1);
                 } else {
                     loge("Error on GET_SMS with exp " + ar.exception);
                 }
@@ -1297,13 +1297,13 @@ public class SIMRecords extends IccRecords {
         } else {
             log("READ EF_SMS RECORD index= " + index[0]);
             mFh.loadEFLinearFixed(EF_SMS,index[0],
-                            obtainMessage(EVENT_GET_SMS_DONE));
+                    obtainMessage(EVENT_GET_SMS_DONE, index[0], 0));
         }
     }
 
-    private void handleSms(byte[] ba) {
+    private void handleSms(byte[] ba, int index) {
         if (ba[0] != 0)
-            Rlog.d("ENF", "status : " + ba[0]);
+            Rlog.d("ENF", "status : " + ba[0] + " index : " + index);
 
         // 3GPP TS 51.011 v5.0.0 (20011-12)  10.5.3
         // 3 == "received by MS from network; message to be read"
@@ -1315,6 +1315,7 @@ public class SIMRecords extends IccRecords {
             byte[] pdu = new byte[n - 1];
             System.arraycopy(ba, 1, pdu, 0, n - 1);
             SmsMessage message = SmsMessage.createFromPdu(pdu);
+            message.setIndexOnIcc(index);
 
             dispatchGsmMessage(message);
         }
