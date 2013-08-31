@@ -26,6 +26,10 @@ import java.util.HashMap;
 
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncResult;
 import android.os.Message;
 import android.provider.Telephony.Sms.Intents;
@@ -44,6 +48,28 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     private boolean mIms = false;
     private String mImsSmsFormat = SmsConstants.FORMAT_UNKNOWN;
 
+    private final IntentFilter mLongSmsAlarmFilter =
+            new IntentFilter(LONG_SMS_OVERTIME_ACTION);
+
+    /** Receiver for long sms alarm action **/
+    private final BroadcastReceiver mLongSmsAlarmReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (LONG_SMS_OVERTIME_ACTION.equals(intent.getAction())) {
+                int msgRef = intent.getIntExtra("messageRef", 0);
+                String address = intent.getStringExtra("address");
+
+                Rlog.d(TAG, "LONG_SMS_OVERTIME_ACTION onReceive messageRef = "
+                        + msgRef + ";address = " + address);
+                if (isCdmaMo()) {
+                    mCdmaDispatcher.deleteSpecLongSmsOnRaw(msgRef, address);
+                } else {
+                    mGsmDispatcher.deleteSpecLongSmsOnRaw(msgRef, address);
+                }
+            }
+        }
+    };
+
     public ImsSMSDispatcher(PhoneBase phone, SmsStorageMonitor storageMonitor,
             SmsUsageMonitor usageMonitor) {
         super(phone, storageMonitor, usageMonitor);
@@ -52,6 +78,8 @@ public class ImsSMSDispatcher extends SMSDispatcher {
 
         mCi.registerForOn(this, EVENT_RADIO_ON, null);
         mCi.registerForImsNetworkStateChanged(this, EVENT_IMS_STATE_CHANGED, null);
+        // register receiver for receive long sms alarm
+        mContext.registerReceiver(mLongSmsAlarmReceiver, mLongSmsAlarmFilter);
     }
 
     protected void initDispatchers(PhoneBase phone, SmsStorageMonitor storageMonitor,
@@ -205,6 +233,18 @@ public class ImsSMSDispatcher extends SMSDispatcher {
     }
 
     @Override
+    protected void sendTextWithPriority(String destAddr, String scAddr, String text,
+            PendingIntent sentIntent, PendingIntent deliveryIntent, int priority) {
+        Rlog.d(TAG, "sendTextWithPriority");
+        if (isCdmaMo()) {
+            mCdmaDispatcher.sendTextWithPriority(destAddr, scAddr,
+                    text, sentIntent, deliveryIntent, priority);
+        } else {
+            Rlog.e(TAG, "priority is not supported in 3gpp text message!");
+        }
+    }
+
+    @Override
     public void sendRetrySms(SmsTracker tracker) {
         String oldFormat = tracker.mFormat;
 
@@ -313,6 +353,25 @@ public class ImsSMSDispatcher extends SMSDispatcher {
             SmsHeader smsHeader, int format, PendingIntent sentIntent,
             PendingIntent deliveryIntent, boolean lastPart) {
         Rlog.e(TAG, "Error! Not implemented for IMS.");
+    }
+
+    @Override
+    protected void sendNewSubmitPduWithPriority(String destinationAddress, String scAddress,
+            String message, SmsHeader smsHeader, int format, PendingIntent sentIntent,
+            PendingIntent deliveryIntent, boolean lastPart, int priority) {
+        Rlog.e(TAG, "Error! Not implemented for IMS.");
+    }
+
+    @Override
+    protected void sendMultipartTextWithPriority(String destinationAddress, String scAddress,
+            ArrayList<String> parts, ArrayList<PendingIntent> sentIntents,
+            ArrayList<PendingIntent> deliveryIntents, int priority) {
+            if (isCdmaMo()) {
+                mCdmaDispatcher.sendMultipartTextWithPriority(destinationAddress, scAddress,
+                        parts, sentIntents, deliveryIntents, priority);
+            } else {
+                Rlog.e(TAG, "Error! Not implemented for IMS.");
+            }
     }
 
     @Override

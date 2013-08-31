@@ -101,10 +101,12 @@ public final class CdmaCallTracker extends CallTracker {
         mCi.registerForOn(this, EVENT_RADIO_AVAILABLE, null);
         mCi.registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, null);
         mCi.registerForCallWaitingInfo(this, EVENT_CALL_WAITING_INFO_CDMA, null);
+        mCi.registerForLineControlInfo(this, EVENT_CDMA_INFO_REC, null);
         mForegroundCall.setGeneric(false);
     }
 
     public void dispose() {
+        mCi.unregisterForLineControlInfo(this);
         mCi.unregisterForCallStateChanged(this);
         mCi.unregisterForOn(this);
         mCi.unregisterForNotAvailable(this);
@@ -441,7 +443,16 @@ public final class CdmaCallTracker extends CallTracker {
         }
     }
 
-
+    private void onControlInfoRec() {
+        if (SystemProperties.getBoolean("persist.env.phone.activetime", false)
+                && mState == PhoneConstants.State.OFFHOOK) {
+            Rlog.d(LOG_TAG, "on accepted, reset connection time");
+            CdmaConnection c = (CdmaConnection) mForegroundCall.getLatestConnection();
+            if (c.getDurationMillis() > 0 && !c.isConnectionTimerReset() && !c.isIncoming()) {
+                c.resetConnectionTimer();
+            }
+        }
+    }
 
     private void
     updatePhoneState() {
@@ -979,6 +990,10 @@ public final class CdmaCallTracker extends CallTracker {
 
             case EVENT_OPERATION_COMPLETE:
                 operationComplete();
+            break;
+
+            case EVENT_CDMA_INFO_REC:
+                onControlInfoRec();
             break;
 
             case EVENT_SWITCH_RESULT:

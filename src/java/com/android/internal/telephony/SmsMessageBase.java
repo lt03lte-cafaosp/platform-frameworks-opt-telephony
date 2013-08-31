@@ -1,5 +1,8 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * Not a Contribution.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +35,9 @@ public abstract class SmsMessageBase {
 
     /** {@hide} The address of the sender */
     protected SmsAddress mOriginatingAddress;
+
+    /** {@hide} The address of the receiver , only used in GSM message */
+    protected SmsAddress mRecipientAddress;
 
     /** {@hide} The message body as a string. May be null if the message isn't text */
     protected String mMessageBody;
@@ -344,6 +350,31 @@ public abstract class SmsMessageBase {
          mEmailFrom = parts[0];
          mEmailBody = parts[1];
          mIsEmail = Telephony.Mms.isEmailAddress(mEmailFrom);
+    }
+
+    /**
+     * {@hide}
+     * Returns the receiver address of this SMS message in String
+     * form or null if unavailable
+     */
+    public String getRecipientAddress() {
+        if (mRecipientAddress == null) {
+            return null;
+        }
+
+        return mRecipientAddress.getAddressString();
+    }
+
+    public static abstract class DeliveryPduBase  {
+        public byte[] encodedScAddress; // Null if not applicable.
+        public byte[] encodedMessage;
+
+        public String toString() {
+            return "DeliveryPduBase: encodedScAddress = "
+                    + Arrays.toString(encodedScAddress)
+                    + ", encodedMessage = "
+                    + Arrays.toString(encodedMessage);
+        }
     }
 
 }

@@ -19,6 +19,7 @@ package com.android.internal.telephony;
 import android.content.Context;
 import android.net.LocalServerSocket;
 import android.os.Looper;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.telephony.Rlog;
@@ -107,6 +108,12 @@ public class PhoneFactory {
                 int networkMode = Settings.Global.getInt(context.getContentResolver(),
                         Settings.Global.PREFERRED_NETWORK_MODE, preferredNetworkMode);
                 Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkMode));
+
+                if (SystemProperties.getBoolean("persist.env.phone.global", false)) {
+                    networkMode = Phone.NT_MODE_LTE_CMDA_EVDO_GSM_WCDMA;
+                    Settings.Global.putInt(context.getContentResolver(),
+                            Settings.Global.PREFERRED_NETWORK_MODE, networkMode);
+                }
 
                 // Get cdmaSubscription mode from Settings.Global
                 int cdmaSubscription;

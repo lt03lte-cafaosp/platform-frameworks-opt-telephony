@@ -330,6 +330,13 @@ public class GsmSMSDispatcher extends SMSDispatcher {
 
     /** {@inheritDoc} */
     @Override
+    protected void sendTextWithPriority(String destAddr, String scAddr, String text,
+            PendingIntent sentIntent, PendingIntent deliveryIntent, int priority) {
+        Rlog.e(TAG, "priority is not supported in 3gpp text message!");
+    }
+
+    /** {@inheritDoc} */
+    @Override
     protected GsmAlphabet.TextEncodingDetails calculateLength(CharSequence messageBody,
             boolean use7bitOnly) {
         return SmsMessage.calculateLength(messageBody, use7bitOnly);
@@ -347,11 +354,20 @@ public class GsmSMSDispatcher extends SMSDispatcher {
             HashMap map =  SmsTrackerMapFactory(destinationAddress, scAddress,
                     message, pdu);
             SmsTracker tracker = SmsTrackerFactory(map, sentIntent,
-                    deliveryIntent, getFormat());
+                    deliveryIntent, getFormat(), !lastPart);
             sendRawPdu(tracker);
         } else {
             Rlog.e(TAG, "GsmSMSDispatcher.sendNewSubmitPdu(): getSubmitPdu() returned null");
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected void sendNewSubmitPduWithPriority(String destinationAddress, String scAddress,
+            String message, SmsHeader smsHeader, int encoding,
+            PendingIntent sentIntent, PendingIntent deliveryIntent,
+            boolean lastPart, int priority) {
+        Rlog.e(TAG, "priority is not supported in 3gpp text message!");
     }
 
     /** {@inheritDoc} */
@@ -399,8 +415,13 @@ public class GsmSMSDispatcher extends SMSDispatcher {
                     pdu[1] = (byte) tracker.mMessageRef; // TP-MR
                 }
             }
-            mCi.sendSMS(IccUtils.bytesToHexString(smsc),
-                    IccUtils.bytesToHexString(pdu), reply);
+            if (tracker.mRetryCount == 0 && tracker.mExpectMore) {
+                mCi.sendSMSExpectMore(IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), reply);
+            } else {
+                mCi.sendSMS(IccUtils.bytesToHexString(smsc),
+                        IccUtils.bytesToHexString(pdu), reply);
+            }
         } else {
             mCi.sendImsGsmSms(IccUtils.bytesToHexString(smsc),
                     IccUtils.bytesToHexString(pdu), tracker.mImsRetry,
