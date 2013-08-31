@@ -849,6 +849,7 @@ public final class Telephony {
                     Intent intent) {
                 Object[] messages = (Object[]) intent.getSerializableExtra("pdus");
                 String format = intent.getStringExtra("format");
+                int indexOnIcc = intent.getIntExtra("index_on_icc", -1);
                 byte[][] pduObjs = new byte[messages.length][];
                 int subId = intent.getIntExtra(MSimConstants.SUBSCRIPTION_KEY, 0);
 
@@ -864,6 +865,7 @@ public final class Telephony {
                     pdus[i] = pduObjs[i];
                     msgs[i] = SmsMessage.createFromPdu(pdus[i], format);
                     msgs[i].setSubId(subId);
+                    msgs[i].setIndexOnIcc(indexOnIcc);
                 }
                 return msgs;
             }
