@@ -711,6 +711,14 @@ public class SmsMessage {
     }
 
     /**
+     * Sets the record index of the message on the ICC (1-based index).
+     * @hide
+     */
+    public void setIndexOnIcc(int index) {
+        mWrappedSmsMessage.setIndexOnIcc(index);
+    }
+
+    /**
      * GSM:
      * For an SMS-STATUS-REPORT message, this returns the status field from
      * the status report.  This field indicates the status of a previously

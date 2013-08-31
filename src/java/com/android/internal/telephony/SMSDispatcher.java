@@ -623,7 +623,7 @@ public abstract class SMSDispatcher extends Handler {
                 }
             } else {
                 // Normal short and non-port-addressed message, dispatch it.
-                dispatchPdus(pdus);
+                dispatchPdus(pdus, sms.getIndexOnIcc());
             }
             return Activity.RESULT_OK;
         } else {
@@ -816,12 +816,23 @@ public abstract class SMSDispatcher extends Handler {
      * Dispatches standard PDUs to interested applications
      *
      * @param pdus The raw PDUs making up the message
+     * @param indexOnIcc The index of message in SIM
      */
-    protected void dispatchPdus(byte[][] pdus) {
+    protected void dispatchPdus(byte[][] pdus, int indexOnIcc) {
         Intent intent = new Intent(Intents.SMS_RECEIVED_ACTION);
         intent.putExtra("pdus", pdus);
         intent.putExtra("format", getFormat());
+        intent.putExtra("index_on_icc", indexOnIcc);
         dispatch(intent, RECEIVE_SMS_PERMISSION, AppOpsManager.OP_RECEIVE_SMS);
+    }
+
+    /**
+     * Dispatches standard PDUs to interested applications
+     *
+     * @param pdus The raw PDUs making up the message
+     */
+    protected void dispatchPdus(byte[][] pdus) {
+        dispatchPdus(pdus, -1);
     }
 
     /**
