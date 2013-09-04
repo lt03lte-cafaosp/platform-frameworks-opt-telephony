@@ -2031,6 +2031,12 @@ public final class Telephony {
          * Default is false.
          */
         public static final String PREFERRED = "preferred";
+
+        /**
+         * Visiting MCCMNC
+         *
+         */
+        public static final String V_MCCMNC = "v_mccmnc";
     }
 
     /**
