@@ -1133,7 +1133,8 @@ public class GSMPhone extends PhoneBase {
         // get the message
         Message msg = obtainMessage(EVENT_SET_NETWORK_MANUAL_COMPLETE, nsm);
 
-        mCi.setNetworkSelectionModeManual(network.getOperatorNumeric(), msg);
+        mCi.setNetworkSelectionModeManualWithRadioTech(network.getOperatorNumeric(),
+                network.getRadioTech(), msg);
     }
 
     @Override
