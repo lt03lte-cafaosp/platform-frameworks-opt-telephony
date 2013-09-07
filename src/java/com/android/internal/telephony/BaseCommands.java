@@ -144,6 +144,10 @@ public abstract class BaseCommands implements CommandsInterface {
         mImsNetworkStateChangedRegistrants.remove(h);
     }
 
+    public void setNetworkSelectionModeManualWithRadioTech(
+            String operatorNumeric, String radioTech, Message result) {
+    }
+
     @Override
     public void registerForOn(Handler h, int what, Object obj) {
         Registrant r = new Registrant (h, what, obj);
