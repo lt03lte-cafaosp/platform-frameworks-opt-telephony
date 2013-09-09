@@ -425,20 +425,13 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
         }
 
         if (hasChanged) {
-            if (phone.isEriFileLoaded()) {
+            if ((cm.getRadioState().isOn()) && (phone.isEriFileLoaded())) {
                 String eriText;
                 // Now the CDMAPhone sees the new ServiceState so it can get the
                 // new ERI text
                 if ((ss.getState() == ServiceState.STATE_IN_SERVICE) ||
                         (mDataConnectionState == ServiceState.STATE_IN_SERVICE)) {
                     eriText = phone.getCdmaEriText();
-                } else if (ss.getState() == ServiceState.STATE_POWER_OFF) {
-                    eriText = (mIccRecords != null) ? mIccRecords.getServiceProviderName() : null;
-                    if (TextUtils.isEmpty(eriText)) {
-                        // Sets operator alpha property by retrieving from
-                        // build-time system property
-                        eriText = SystemProperties.get("ro.cdma.home.operator.alpha");
-                    }
                 } else {
                     // Note that ServiceState.STATE_OUT_OF_SERVICE is valid used
                     // for mRegistrationState 0,2,3 and 4
