@@ -115,8 +115,9 @@ public class DcTracker extends DcTrackerBase {
      * android will ensure that the higher priority service is active. Low
      * priority data calls may be pro-actively torn down to ensure this.
      */
-    private static final boolean SUPPORT_MPDN = SystemProperties.getBoolean(
-            "persist.telephony.mpdn", true);
+//    private static final boolean SUPPORT_MPDN = SystemProperties.getBoolean(
+//                "persist.telephony.mpdn", true);
+    private final boolean SUPPORT_MPDN;
 
     private static final boolean OMH_ENABLED = SystemProperties.getBoolean(
             CdmaDataProfileTracker.PROPERTY_OMH_ENABLED, false);
@@ -148,10 +149,13 @@ public class DcTracker extends DcTrackerBase {
         super(p);
         if (p.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM) {
             LOG_TAG = "GsmDCT";
+            SUPPORT_MPDN = true;
         } else if (p.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
             LOG_TAG = "CdmaDCT";
+            SUPPORT_MPDN = false;
         } else {
             LOG_TAG = "DCT";
+            SUPPORT_MPDN = true;
             loge("unexpected phone type [" + p.getPhoneType() + "]");
         }
         if (DBG) log(LOG_TAG + ".constructor");
