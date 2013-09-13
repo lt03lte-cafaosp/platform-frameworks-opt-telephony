@@ -969,6 +969,11 @@ public class ExtCallManager extends CallManager {
         mActiveSubChangeRegistrants.remove(h);
     }
 
+    private boolean isRingingDuplicateCall() {
+        return ((mRingingCalls.size() > 1) && (mRingingCalls.get(0).getLatestConnection().
+                getAddress().equals(mRingingCalls.get(1).getLatestConnection().getAddress())));
+    }
+
     protected class ExtCmHandler extends CmHandler {
 
         @Override
@@ -979,7 +984,8 @@ public class ExtCallManager extends CallManager {
                     if (VDBG) Rlog.d(LOG_TAG, " handleMessage (EVENT_NEW_RINGING_CONNECTION)");
                     Connection c = (Connection) ((AsyncResult) msg.obj).result;
                     int sub = c.getCall().getPhone().getSubscription();
-                    if (getActiveFgCallState(sub).isDialing() || hasMoreThanOneRingingCall()) {
+                    if (getActiveFgCallState(sub).isDialing()
+                            || (hasMoreThanOneRingingCall() && !isRingingDuplicateCall())) {
                         try {
                             Rlog.d(LOG_TAG, "silently drop incoming call: " + c.getCall());
                             c.getCall().hangup();
