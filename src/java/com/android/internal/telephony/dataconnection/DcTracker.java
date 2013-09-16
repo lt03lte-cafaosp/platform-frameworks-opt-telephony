@@ -96,6 +96,7 @@ public class DcTracker extends DcTrackerBase {
 
     private boolean mReregisterOnReconnectFailure = false;
 
+    private ApnContext mRequestedCdmaApnContext = null;
 
     //***** Constants
 
@@ -1640,9 +1641,42 @@ public class DcTracker extends DcTrackerBase {
             loge("onEnableApn(" + apnId + ", " + enabled + "): NO ApnContext");
             return;
         }
+
+        //enable apn for CDMA data connection,only one connection is supported
+        if (mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
+            enableCdmaApn(enabled, apnContext);
+            return;
+        }
         // TODO change our retry manager to use the appropriate numbers for the new APN
         if (DBG) log("onEnableApn: apnContext=" + apnContext + " call applyNewState");
         applyNewState(apnContext, enabled == DctConstants.ENABLED, apnContext.getDependencyMet());
+    }
+
+    private void enableCdmaApn(int enabled, ApnContext apnContext) {
+        if (enabled == DctConstants.ENABLED) {
+            for (ApnContext apncxt : mApnContexts.values()) {
+                if ((apncxt.getState() == DctConstants.State.CONNECTED) &&
+                        (apncxt.getDataProfile() != null)) {
+                    //check apn is compatible for current data connection
+                    if (apncxt.getDataProfile().canHandleType(
+                            apnContext.getDataProfileType())) {
+                        applyNewState(apnContext, true, apnContext.getDependencyMet());
+                        break;
+                    } else {
+                        applyNewState(apncxt, false, apncxt.getDependencyMet());
+                    }
+                }
+            }
+            mRequestedCdmaApnContext = apnContext;
+            log("onEnableApn(true): requested cdma apn context=" + mRequestedCdmaApnContext);
+        } else {
+            log("onEnableApn(false): requested cdma apn context=" + mRequestedCdmaApnContext);
+            if (mRequestedCdmaApnContext != null) {
+                applyNewState(mRequestedCdmaApnContext, false, mRequestedCdmaApnContext.
+                        getDependencyMet());
+                mRequestedCdmaApnContext = null;
+            }
+        }
     }
 
     @Override
@@ -1934,6 +1968,12 @@ public class DcTracker extends DcTrackerBase {
 
         if (SUPPORT_MPDN == false) {
             setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+        }
+
+        if ((mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) && isDisconnected()) {
+            ApnContext apncxt = (mRequestedCdmaApnContext != null) ?  mRequestedCdmaApnContext :
+                mApnContexts.get(PhoneConstants.APN_TYPE_DEFAULT);
+            applyNewState(apncxt, true, apncxt.getDependencyMet());
         }
     }
 
