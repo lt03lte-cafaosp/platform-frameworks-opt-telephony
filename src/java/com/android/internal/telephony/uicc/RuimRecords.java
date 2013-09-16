@@ -721,6 +721,8 @@ public final class RuimRecords extends IccRecords {
 
         if (DBG) log("fetchRuimRecords " + mRecordsToLoad);
 
+        mFh.getEFLinearRecordSize(EF_SMS, obtainMessage(EVENT_GET_SMS_RECORD_SIZE_DONE));
+
         mFh.loadEFTransparent(EF_ICCID,
                 obtainMessage(EVENT_GET_ICCID_DONE));
         mRecordsToLoad++;
