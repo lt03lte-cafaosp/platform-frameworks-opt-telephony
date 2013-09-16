@@ -265,7 +265,7 @@ public class SmsMessage extends SmsMessageBase {
 
             // Second byte is the MSG_LEN, length of the message
             // See 3GPP2 C.S0023 3.4.27
-            int size = data[1];
+            int size = (data[1] & 0xFF);
 
             // Note: Data may include trailing FF's.  That's OK; message
             // should still parse correctly.
@@ -816,7 +816,8 @@ public class SmsMessage extends SmsMessageBase {
                 status = mBearerData.errorClass << 8;
                 status |= mBearerData.messageStatus;
             }
-        } else if (mBearerData.messageType != BearerData.MESSAGE_TYPE_DELIVER) {
+        } else if ((mBearerData.messageType != BearerData.MESSAGE_TYPE_DELIVER)
+                && (mBearerData.messageType != BearerData.MESSAGE_TYPE_SUBMIT)) {
             throw new RuntimeException("Unsupported message type: " + mBearerData.messageType);
         }
 
