@@ -28,6 +28,7 @@ import android.os.Message;
 import android.os.RegistrantList;
 import android.os.SystemProperties;
 import android.telephony.MSimTelephonyManager;
+import android.telephony.TelephonyManager;
 import android.telephony.Rlog;
 import android.telephony.ServiceState;
 
@@ -334,6 +335,12 @@ public class ExtCallManager extends CallManager {
         return getAudioStateFromCallState(sub, state);
     }
 
+    private boolean isImsOnWifi(Phone offHookPhone) {
+        return (offHookPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS &&
+                offHookPhone.getServiceState().getDataNetworkType() !=
+                        TelephonyManager.NETWORK_TYPE_LTE);
+    }
+
     private long getVsid(Phone offHookPhone, int sub) {
         long vsid = 0;
 
@@ -344,8 +351,12 @@ public class ExtCallManager extends CallManager {
                 Rlog.d(LOG_TAG, "getVsid for SIP");
                 break;
             case PhoneConstants.PHONE_TYPE_IMS:
-                vsid = AudioManager.IMS_VSID;
-                Rlog.d(LOG_TAG, "getVsid for IMS");
+                if (isImsOnWifi(offHookPhone)) {
+                    Rlog.d(LOG_TAG, "no Vsid for wifi");
+                } else {
+                    vsid = AudioManager.IMS_VSID;
+                    Rlog.d(LOG_TAG, "getVsid for IMS");
+                }
                 break;
             default:
                 int voiceModemIndex = LOCAL_MODEM;
@@ -423,9 +434,10 @@ public class ExtCallManager extends CallManager {
                 int newAudioMode = AudioManager.MODE_IN_CALL;
 
                 //We dont support SIP Combination in context of DSDA as of now.
-                if (offHookPhone instanceof SipPhone) {
+                if (offHookPhone instanceof SipPhone || isImsOnWifi(offHookPhone)) {
                     // enable IN_COMMUNICATION audio mode instead for sipPhone
-                    Rlog.d(LOG_TAG, "setAudioMode Set audio mode for SIP call!");
+                    // or for IMS calls over wifi
+                    Rlog.d(LOG_TAG, "setAudioMode Set audio mode for SIP or wifi call!");
                     newAudioMode = AudioManager.MODE_IN_COMMUNICATION;
                 }
 
