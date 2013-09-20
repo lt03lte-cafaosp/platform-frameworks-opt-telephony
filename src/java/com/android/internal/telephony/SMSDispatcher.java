@@ -1630,6 +1630,19 @@ public abstract class SMSDispatcher extends Handler {
         return map;
     }
 
+    protected HashMap SmsTrackerMapFactory(String destAddr, String scAddr,
+            int destPort, int orgPort, byte[] data, SmsMessageBase.SubmitPduBase pdu) {
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put("destAddr", destAddr);
+        map.put("scAddr", scAddr);
+        map.put("destPort", Integer.valueOf(destPort));
+        map.put("orgPort", Integer.valueOf(orgPort));
+        map.put("data", data);
+        map.put("smsc", pdu.encodedScAddress);
+        map.put("pdu", pdu.encodedMessage);
+        return map;
+    }
+
     /**
      * Dialog listener for SMS confirmation dialog.
      */
