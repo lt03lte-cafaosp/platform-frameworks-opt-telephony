@@ -199,6 +199,17 @@ public class ImsSMSDispatcher extends SMSDispatcher {
         }
     }
 
+    protected void sendDataWithOrgPort(String destAddr, String scAddr, int destPort, int orgPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        if (isCdmaMo()) {
+            // We didn't implement this in cdma mode
+            Rlog.e(TAG,"Not support in CDMA mode");
+        } else {
+            ((GsmSMSDispatcher)mGsmDispatcher).sendData(destAddr, scAddr, destPort, orgPort,
+                    data, sentIntent, deliveryIntent);
+        }
+    }
+
     @Override
     protected void sendMultipartText(String destAddr, String scAddr,
             ArrayList<String> parts, ArrayList<PendingIntent> sentIntents,
