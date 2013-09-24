@@ -30,6 +30,7 @@ import android.os.RegistrantList;
 import android.os.Registrant;
 import android.os.SystemProperties;
 import android.telephony.MSimTelephonyManager;
+import android.telephony.PhoneNumberUtils;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.telephony.Rlog;
@@ -880,11 +881,16 @@ public class CallManager {
             throws CallStateException {
 
         Phone basePhone = getPhoneBase(phone);
-        Connection result;
+        Connection result = null;
 
         if (VDBG) {
             Rlog.d(LOG_TAG, " dial(" + basePhone + ", "+ dialString + ")");
             Rlog.d(LOG_TAG, toString());
+        }
+
+        // Handle in call MMI commands
+        if (handleInCallMmiCommands(phone, dialString)) {
+            return result;
         }
 
         if (!canDial(phone)) {
@@ -979,6 +985,39 @@ public class CallManager {
                             + " hasHoldingCall=" + hasHoldingCall
                             + " allLinesTaken=" + allLinesTaken
                             + " fgCallState=" + fgCallState);
+        }
+        return result;
+    }
+
+    /**
+     * This method handles in call MMI commands.
+     * Currently this method takes care of MMI commands
+     * '3'(Conference) and '4'(Call Transfer).
+     */
+    private boolean handleInCallMmiCommands(Phone phone, String dialString) {
+        boolean result = false;
+        boolean canHandle = false;
+        String newDialString = PhoneNumberUtils.stripSeparators(dialString);
+
+        char ch = newDialString.charAt(0);
+        switch (ch) {
+            case '3':
+                canHandle = canConference(getFirstActiveBgCall());
+                break;
+            case '4':
+                canHandle = canTransfer(getFirstActiveBgCall());
+                break;
+            default:
+                break;
+        }
+
+        if ((newDialString.length() == 1) && canHandle) {
+            Rlog.d(LOG_TAG, "handle in call MMI command " + newDialString);
+            try {
+                result = phone.handleInCallMmiCommands(newDialString);
+            } catch (CallStateException ex) {
+                Rlog.w(LOG_TAG, "Exception in handling MMI command ", ex);
+            }
         }
         return result;
     }
