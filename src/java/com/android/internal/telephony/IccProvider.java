@@ -139,12 +139,6 @@ public class IccProvider extends ContentProvider {
         String emails = initialValues.getAsString("emails");
         String anrs = initialValues.getAsString("anrs");
         if (DBG) log("insert values , [" + tag + ", " + number + "]");
-        /*As part of 3GPP 51.011, number field is mandatory while storing in the
-          SIM for both ADN and FDN */
-        if (TextUtils.isEmpty(number)) {
-            return null;
-        }
-
         // TODO(): Read email instead of sending null.
         ContentValues mValues = new ContentValues();
         mValues.put(STR_TAG,"");
@@ -270,10 +264,8 @@ public class IccProvider extends ContentProvider {
         }
 
         if (DBG) log("delete mvalues= " + mValues);
-
         boolean success = updateIccRecordInEf(efType, mValues, pin2);
-
-        if (efType == IccConstants.EF_FDN && TextUtils.isEmpty(pin2)) {
+        if (!success) {
             return 0;
         }
 
