@@ -582,60 +582,6 @@ public class ExtCallManager extends CallManager {
         }
     }
 
-    /**
-     * Initiate a new voice connection. This happens asynchronously, so you
-     * cannot assume the audio path is connected (or a call index has been
-     * assigned) until PhoneStateChanged notification has occurred.
-     *
-     * @exception CallStateException if a new outgoing call is not currently
-     * possible because no more call slots exist or a call exists that is
-     * dialing, alerting, ringing, or waiting.  Other errors are
-     * handled asynchronously.
-     */
-    @Override
-    public Connection dial(Phone phone, String dialString, int callType, String[] extras)
-            throws CallStateException {
-        Phone basePhone = getPhoneBase(phone);
-        Connection result;
-
-        if (VDBG) {
-            Rlog.d(LOG_TAG, " dial(" + basePhone + ", "+ dialString + ")");
-            Rlog.d(LOG_TAG, toString());
-        }
-
-        if ( hasActiveFgCall() ) {
-            Phone activePhone = getActiveFgCall().getPhone();
-            boolean hasBgCall = !(activePhone.getBackgroundCall().isIdle());
-
-            if (DBG) {
-                Rlog.d(LOG_TAG, "hasBgCall: "+ hasBgCall + " sameChannel:"
-                        + (activePhone == basePhone));
-            }
-
-            if (activePhone != basePhone) {
-                if (hasBgCall) {
-                    Rlog.d(LOG_TAG, "Hangup");
-                    getActiveFgCall().hangup();
-                } else {
-                    Rlog.d(LOG_TAG, "Switch");
-                    activePhone.switchHoldingAndActive();
-                }
-            }
-        }
-
-        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
-            result = basePhone.dial(dialString, callType, extras);
-        } else {
-            result = basePhone.dial(dialString);
-        }
-
-        if (VDBG) {
-            Rlog.d(LOG_TAG, "End dial(" + basePhone + ", "+ dialString + ")");
-            Rlog.d(LOG_TAG, toString());
-        }
-        return result;
-    }
-
     @Override
     public void clearDisconnected() {
         clearDisconnected(getActiveSubscription());
