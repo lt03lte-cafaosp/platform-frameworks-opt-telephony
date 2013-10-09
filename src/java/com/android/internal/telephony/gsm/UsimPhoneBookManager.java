@@ -506,7 +506,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                         rec.setEmails(emails);
                         mPhoneBookRecords.set(adnRecIndex, rec);
 
-                        mEmailFlags.get(pbrIndex).set(i, 1);
+                        mEmailFlags.get(pbrIndex).set(recNum - 1, 1);
                     }
                 }
             }
