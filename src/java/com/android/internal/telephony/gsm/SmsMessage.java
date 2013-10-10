@@ -543,10 +543,30 @@ public class SmsMessage extends SmsMessageBase {
     public static SubmitPdu getSubmitPdu(String scAddress,
             String destinationAddress, int destinationPort, byte[] data,
             boolean statusReportRequested) {
+        return getSubmitPdu(scAddress, destinationAddress, destinationPort, 0, data,
+                statusReportRequested);
+
+    }
+
+     /**
+     * Get an SMS-SUBMIT PDU for a data message to a destination address &amp; port
+     *
+     * @param scAddress Service Centre address. null == use default
+     * @param destinationAddress the address of the destination for the message
+     * @param destinationPort the port to deliver the message to at the destination
+     * @param originationPort the original port set by the sender
+     * @param data the data for the message
+     * @return a <code>SubmitPdu</code> containing the encoded SC
+     *         address, if applicable, and the encoded message.
+     *         Returns null on encode error.
+     */
+    public static SubmitPdu getSubmitPdu(String scAddress,
+            String destinationAddress, int destinationPort, int originationPort, byte[] data,
+            boolean statusReportRequested) {
 
         SmsHeader.PortAddrs portAddrs = new SmsHeader.PortAddrs();
         portAddrs.destPort = destinationPort;
-        portAddrs.origPort = 0;
+        portAddrs.origPort = originationPort;
         portAddrs.areEightBits = false;
 
         SmsHeader smsHeader = new SmsHeader();
@@ -585,7 +605,6 @@ public class SmsMessage extends SmsMessageBase {
         ret.encodedMessage = bo.toByteArray();
         return ret;
     }
-
     /**
      * Create the beginning of a SUBMIT PDU.  This is the part of the
      * SUBMIT PDU that is common to the two versions of {@link #getSubmitPdu},
