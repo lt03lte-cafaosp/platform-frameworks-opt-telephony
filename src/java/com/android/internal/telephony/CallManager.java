@@ -956,7 +956,7 @@ public class CallManager {
      * @param phone
      * @return true if the phone can make a new call
      */
-    private boolean canDial(Phone phone) {
+    protected boolean canDial(Phone phone) {
         int serviceState = phone.getServiceState().getState();
         boolean hasRingingCall = hasActiveRingingCall();
         Call.State fgCallState = getActiveFgCallState();
@@ -2183,5 +2183,10 @@ public class CallManager {
 
     public void switchToLocalHold(int subscription, boolean switchTo) {
         Rlog.e(LOG_TAG, " switchToLocalHold for subscription not supported");
+    }
+
+    public boolean getLocalCallHoldStatus(int subscription) {
+        Rlog.e(LOG_TAG, " getLocalCallHoldStatus for subscription not supported");
+        return false;
     }
 }
