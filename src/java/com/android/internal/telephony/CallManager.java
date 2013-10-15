@@ -957,7 +957,6 @@ public class CallManager {
      * Phone can make a call only if ALL of the following are true:
      *        - Phone is not powered off
      *        - There's no incoming or waiting call
-     *        - There's available call slot in either foreground or background
      *        - The foreground call is ACTIVE or IDLE or DISCONNECTED.
      *          (We mainly need to make sure it *isn't* DIALING or ALERTING.)
      * @param phone
@@ -966,14 +965,10 @@ public class CallManager {
     private boolean canDial(Phone phone) {
         int serviceState = phone.getServiceState().getState();
         boolean hasRingingCall = hasActiveRingingCall();
-        boolean hasActiveCall = hasActiveFgCall();
-        boolean hasHoldingCall = hasActiveBgCall();
-        boolean allLinesTaken = hasActiveCall && hasHoldingCall;
         Call.State fgCallState = getActiveFgCallState();
 
         boolean result = (serviceState != ServiceState.STATE_POWER_OFF
                 && !hasRingingCall
-                && !allLinesTaken
                 && ((fgCallState == Call.State.ACTIVE)
                     || (fgCallState == Call.State.IDLE)
                     || (fgCallState == Call.State.DISCONNECTED)));
@@ -981,9 +976,6 @@ public class CallManager {
         if (result == false) {
             Rlog.d(LOG_TAG, "canDial serviceState=" + serviceState
                             + " hasRingingCall=" + hasRingingCall
-                            + " hasActiveCall=" + hasActiveCall
-                            + " hasHoldingCall=" + hasHoldingCall
-                            + " allLinesTaken=" + allLinesTaken
                             + " fgCallState=" + fgCallState);
         }
         return result;
