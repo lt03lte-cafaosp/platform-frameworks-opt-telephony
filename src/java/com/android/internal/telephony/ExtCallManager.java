@@ -259,6 +259,17 @@ public class ExtCallManager extends CallManager {
         return mActiveSub;
     }
 
+    @Override
+    public boolean getLocalCallHoldStatus(int subscription) {
+        boolean status = false;
+
+        if ((subscription != MSimConstants.INVALID_SUBSCRIPTION) &&
+                (mLchStatus[subscription] != 0)) {
+            status = true;
+        }
+        return status;
+    }
+
     // Update the local call hold state and sets audio parameters for
     // LCH subscription
     // 1 -- if call on local hold, 0 -- if call is not on local hold
@@ -458,6 +469,87 @@ public class ExtCallManager extends CallManager {
                 break;
         }
         Rlog.d(LOG_TAG, "setAudioMode State = " + getState());
+    }
+
+    @Override
+    public Connection dial(Phone phone, String dialString, int callType, String[] extras)
+            throws CallStateException {
+
+        Phone basePhone = getPhoneBase(phone);
+        int subscription = phone.getSubscription();
+        Connection result;
+
+        if (VDBG) {
+            Rlog.d(LOG_TAG, " dial(" + basePhone + ", "+ dialString + ")" +
+                    "subscription" + subscription);
+            Rlog.d(LOG_TAG, toString());
+        }
+
+        if (!canDial(phone)) {
+            throw new CallStateException("cannot dial in current state");
+        }
+
+        if (hasActiveFgCall(subscription)) {
+            Phone activePhone = getActiveFgCall(subscription).getPhone();
+            boolean hasBgCall = !(activePhone.getBackgroundCall().isIdle());
+
+            if (DBG) {
+                Rlog.d(LOG_TAG, "hasBgCall: "+ hasBgCall + " sameChannel:" +
+                        (activePhone == basePhone));
+            }
+
+            if (activePhone != basePhone) {
+                if (hasBgCall) {
+                    Rlog.d(LOG_TAG, "Hangup");
+                    getActiveFgCall(subscription).hangup();
+                } else {
+                    Rlog.d(LOG_TAG, "Switch");
+                    activePhone.switchHoldingAndActive();
+                }
+            }
+        }
+
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
+            result = basePhone.dial(dialString, callType, extras);
+        } else {
+            result = basePhone.dial(dialString);
+        }
+
+        if (VDBG) {
+            Rlog.d(LOG_TAG, "End dial(" + basePhone + ", "+ dialString + ")");
+            Rlog.d(LOG_TAG, toString());
+        }
+
+        return result;
+    }
+
+    @Override
+    protected boolean canDial(Phone phone) {
+        int serviceState = phone.getServiceState().getState();
+        int subscription = phone.getSubscription();
+        boolean hasRingingCall = hasActiveRingingCallOnAnySub();
+        Call.State fgCallState = getActiveFgCallState(subscription);
+
+        boolean result = (serviceState != ServiceState.STATE_POWER_OFF
+                && !hasRingingCall
+                && ((fgCallState == Call.State.ACTIVE)
+                    || (fgCallState == Call.State.IDLE)
+                    || (fgCallState == Call.State.DISCONNECTED)));
+
+        if (result == false) {
+            Rlog.d(LOG_TAG, "canDial serviceState=" + serviceState
+                            + " hasRingingCall=" + hasRingingCall
+                            + " fgCallState=" + fgCallState);
+        }
+        return result;
+    }
+
+    /**
+     * Return true if there is ringing call on any subscription,
+     * else return false
+     */
+    public boolean hasActiveRingingCallOnAnySub() {
+        return super.hasActiveRingingCall();
     }
 
     /**
