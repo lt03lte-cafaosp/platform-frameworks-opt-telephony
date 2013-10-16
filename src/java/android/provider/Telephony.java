@@ -70,6 +70,7 @@ public final class Telephony {
         public static final int MESSAGE_TYPE_OUTBOX = 4;
         public static final int MESSAGE_TYPE_FAILED = 5; // for failed outgoing messages
         public static final int MESSAGE_TYPE_QUEUED = 6; // for messages to send later
+        public static final int MESSAGE_TYPE_SEARCH = 7;
 
 
         /**
