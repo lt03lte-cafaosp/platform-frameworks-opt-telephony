@@ -84,7 +84,11 @@ public class ExtCallManager extends CallManager {
     private long [] vsidVoice= {-1, -1, -1};
 
     // Holds the LCH status of subscription
-    private int [] mLchStatus = {0, 0, 0};
+    private enum LchState {
+        ACTIVE,
+        INACTIVE
+    }
+    private LchState [] mLchStatus = {LchState.INACTIVE, LchState.INACTIVE, LchState.INACTIVE};
 
     private AudioManager mAudioManager = null;
 
@@ -264,17 +268,22 @@ public class ExtCallManager extends CallManager {
         boolean status = false;
 
         if ((subscription != MSimConstants.INVALID_SUBSCRIPTION) &&
-                (mLchStatus[subscription] != 0)) {
+                (mLchStatus[subscription] != LchState.INACTIVE)) {
             status = true;
         }
         return status;
     }
 
-    // Update the local call hold state and sets audio parameters for
-    // LCH subscription
-    // 1 -- if call on local hold, 0 -- if call is not on local hold
-    private void updateLchStatus(int sub) {
-        int lchStatus = 0;
+    /**
+     * Update the local call hold state and sets audio parameters for
+     * LCH subscription
+     * 1 -- if call on local hold, 0 -- if call is not on local hold
+     *
+     * @param sub to be updated
+     * @param reserveLchState true to reserve the lch state; otherwise false
+     */
+    private void updateLchStatus(int sub, boolean reserveLchState) {
+        LchState lchStatus = LchState.INACTIVE;
         Phone offHookPhone = getFgPhone(sub);
         Call call = offHookPhone.getForegroundCall();
 
@@ -286,12 +295,18 @@ public class ExtCallManager extends CallManager {
         }
         Call.State state = call.getState();
 
-        if (((state == Call.State.ACTIVE) || (state == Call.State.DIALING)
-                || (state == Call.State.ALERTING)) && (sub != getActiveSubscription())) {
-            // if sub is not an active sub and if it has an active
-            // voice call then update lchStatus as 1
-            lchStatus = 1;
+        if ((state == Call.State.ACTIVE) || (state == Call.State.DIALING)
+                || (state == Call.State.ALERTING)) {
+            if (sub != getActiveSubscription()) {
+                // if sub is not an active sub and if it has an active
+                // voice call then update lchStatus as 1
+                lchStatus = LchState.ACTIVE;
+            } else if (reserveLchState == true){
+                // otherwise don't change the lch status unless we really want to
+                lchStatus = mLchStatus[sub];
+            }
         }
+
         // Update state only if the new state is different
         if (lchStatus != mLchStatus[sub]) {
             Rlog.d(LOG_TAG, " setLocal Call Hold to  = " + lchStatus);
@@ -300,9 +315,21 @@ public class ExtCallManager extends CallManager {
                 Rlog.d(LOG_TAG, "Set parameters for Lch sub = " + sub);
                 setAudioParameters(sub);
             }
-            offHookPhone.setLocalCallHold(lchStatus, mHandler.obtainMessage(EVENT_LOCAL_CALL_HOLD));
+            offHookPhone.setLocalCallHold((lchStatus == LchState.ACTIVE) ? 1 : 0,
+                    mHandler.obtainMessage(EVENT_LOCAL_CALL_HOLD));
             mLchStatus[sub] = lchStatus;
         }
+    }
+
+    private void updateLchStatus(int sub) {
+        // set reserveLchState to true to reserve the lch state
+        updateLchStatus(sub, true);
+    }
+
+    @Override
+    public void deactivateLchState(int sub) {
+        Rlog.d(LOG_TAG, "Deactivating Sub" + sub + "'s Lch state.");
+        updateLchStatus(sub, false);
     }
 
     private void setAudioStateParam(long vsid, int state) {
@@ -322,13 +349,13 @@ public class ExtCallManager extends CallManager {
         int callState = AudioManager.CALL_INACTIVE;
         if ((state == Call.State.ACTIVE) || (state == Call.State.DIALING)
                 || (state == Call.State.ALERTING)) {
-            if (sub == getActiveSubscription()) {
+            if (sub == getActiveSubscription() && mLchStatus[sub] == LchState.INACTIVE) {
                 callState = AudioManager.CALL_ACTIVE;
             } else {
                 callState = AudioManager.CALL_LOCAL_HOLD;
             }
         } else if (state == Call.State.HOLDING) {
-            if (sub == getActiveSubscription()) {
+            if (sub == getActiveSubscription() && mLchStatus[sub] == LchState.INACTIVE) {
                 callState = AudioManager.CALL_HOLD;
             } else {
                 callState = AudioManager.CALL_LOCAL_HOLD;
