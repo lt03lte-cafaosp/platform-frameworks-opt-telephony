@@ -1343,7 +1343,7 @@ public class GSMPhone extends PhoneBase {
                 updateCurrentCarrierInProvider();
 
                 // Check if this is a different SIM than the previous one. If so unset the
-                // voice mail number.
+                // voice mail number and the call forwarding flag.
                 String imsi = getVmSimImsi();
                 String imsiFromSIM = getSubscriberId();
                 if (imsi != null && imsiFromSIM != null && !imsiFromSIM.equals(imsi)) {
