@@ -25,6 +25,8 @@ import android.os.SystemClock;
 import android.telephony.CellInfo;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
+import android.text.TextUtils;
+import android.util.Log;
 import android.util.TimeUtils;
 
 import java.io.FileDescriptor;
@@ -35,6 +37,7 @@ import java.util.List;
 import com.android.internal.telephony.dataconnection.DcTrackerBase;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
 import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.uicc.SpnOverride;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
 
@@ -158,6 +161,20 @@ public abstract class ServiceStateTracker extends Handler {
     protected static final int EVENT_UNSOL_CELL_INFO_LIST              = 44;
 
     protected static final String TIMEZONE_PROPERTY = "persist.sys.timezone";
+
+    /**
+     * used to get the long alpha name from numeric
+     */
+    private static final SpnOverride SPN_MAPS = new SpnOverride();
+
+    protected String getAlphaName(String numeric) {
+        String alphaName = numeric;
+        if (!TextUtils.isEmpty(numeric) && SPN_MAPS.containsCarrier(numeric)) {
+            alphaName = SPN_MAPS.getSpn(numeric);
+            log("get numeric " + numeric + ", parse to alpha " + alphaName);
+        }
+        return alphaName;
+    }
 
     /**
      * List of ISO codes for countries that can have an offset of

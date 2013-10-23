@@ -749,7 +749,7 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                     String opNames[] = (String[])ar.result;
 
                     if (opNames != null && opNames.length >= 3) {
-                         mNewSS.setOperatorName (opNames[0], opNames[1], opNames[2]);
+                        mNewSS.setOperatorName(getAlphaName(opNames[0]), opNames[1], opNames[2]);
                     }
                     break;
                 }
