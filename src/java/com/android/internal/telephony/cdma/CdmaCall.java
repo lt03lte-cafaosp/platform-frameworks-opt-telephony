@@ -188,17 +188,20 @@ public final class CdmaCall extends Call {
     /**
      * Called when it's time to clean up disconnected Connection objects
      */
-   void clearDisconnected() {
+   boolean clearDisconnected() {
+        boolean changed = false;
         for (int i = mConnections.size() - 1 ; i >= 0 ; i--) {
         CdmaConnection cn = (CdmaConnection)mConnections.get(i);
 
             if (cn.getState() == State.DISCONNECTED) {
                 mConnections.remove(i);
+                changed = true;
             }
         }
 
         if (mConnections.size() == 0) {
             mState = State.IDLE;
         }
+        return changed;
     }
 }
