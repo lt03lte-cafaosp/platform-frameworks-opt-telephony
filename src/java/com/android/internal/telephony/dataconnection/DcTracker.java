@@ -2063,6 +2063,7 @@ public class DcTracker extends DcTrackerBase {
         int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
         if (ServiceState.isCdma(radioTech)
                 && radioTech != ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD
+                && mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA
                 && mCdmaSsm.getCdmaSubscriptionSource() ==
                         CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_NV) {
             result = SystemProperties.get(CDMAPhone.PROPERTY_CDMA_HOME_OPERATOR_NUMERIC);
@@ -2453,6 +2454,7 @@ public class DcTracker extends DcTrackerBase {
                 if (!OMH_ENABLED
                         && radioTech != ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD
                         && ServiceState.isCdma(radioTech)
+                        && mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA
                         && mCdmaSsm.getCdmaSubscriptionSource() ==
                                 CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_NV) {
                     onNvReady();
