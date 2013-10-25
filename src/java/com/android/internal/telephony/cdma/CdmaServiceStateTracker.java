@@ -713,6 +713,7 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
                 String opNames[] = (String[])ar.result;
     
                 if (opNames != null && opNames.length >= 3) {
+                    opNames[0] = getAlphaName(opNames[0]);
                     // If the NUMERIC field isn't valid use PROPERTY_CDMA_HOME_OPERATOR_NUMERIC
                     if ((opNames[2] == null) || (opNames[2].length() < 5)
                             || ("00000".equals(opNames[2]))) {

@@ -70,6 +70,7 @@ public final class Telephony {
         public static final int MESSAGE_TYPE_OUTBOX = 4;
         public static final int MESSAGE_TYPE_FAILED = 5; // for failed outgoing messages
         public static final int MESSAGE_TYPE_QUEUED = 6; // for messages to send later
+        public static final int MESSAGE_TYPE_SEARCH = 7;
 
 
         /**
@@ -2212,5 +2213,35 @@ public final class Telephony {
                 CMAS_URGENCY,
                 CMAS_CERTAINTY
         };
+    }
+
+    public static final class CdmaCallOptions implements BaseColumns {
+        /**
+         * The content:// style URL for this table
+         */
+        public static final Uri CONTENT_URI =
+            Uri.parse("content://cdma/calloption");
+
+        /**
+         * The default sort order for this table
+         */
+        public static final String DEFAULT_SORT_ORDER = "name ASC";
+
+        public static final String NAME = "name";
+
+        public static final String MCC = "mcc";
+
+        public static final String MNC = "mnc";
+
+        public static final String NUMERIC = "numeric";
+
+        public static final String NUMBER = "number";
+
+        public static final String TYPE = "type";
+
+        public static final String CATEGORY = "category";
+
+        public static final String STATE = "state";
+
     }
 }

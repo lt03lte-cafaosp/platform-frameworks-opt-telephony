@@ -66,6 +66,7 @@ import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.dataconnection.CdmaDataProfileTracker;
 import com.android.internal.util.AsyncChannel;
+import com.android.internal.util.Objects;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -115,8 +116,7 @@ public class DcTracker extends DcTrackerBase {
      * android will ensure that the higher priority service is active. Low
      * priority data calls may be pro-actively torn down to ensure this.
      */
-    private static final boolean SUPPORT_MPDN = SystemProperties.getBoolean(
-            "persist.telephony.mpdn", true);
+    private boolean mSupportMPDN;
 
     private static final boolean OMH_ENABLED = SystemProperties.getBoolean(
             CdmaDataProfileTracker.PROPERTY_OMH_ENABLED, false);
@@ -148,10 +148,12 @@ public class DcTracker extends DcTrackerBase {
         super(p);
         if (p.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM) {
             LOG_TAG = "GsmDCT";
+            mSupportMPDN = true;
         } else if (p.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
             LOG_TAG = "CdmaDCT";
         } else {
             LOG_TAG = "DCT";
+            mSupportMPDN = true;
             loge("unexpected phone type [" + p.getPhoneType() + "]");
         }
         if (DBG) log(LOG_TAG + ".constructor");
@@ -201,7 +203,7 @@ public class DcTracker extends DcTrackerBase {
         initApnContextsAndDataConnection();
 
 
-        log("SUPPORT_MPDN = " + SUPPORT_MPDN);
+        log("SUPPORT_MPDN = " + mSupportMPDN);
         log("OMH_ENABLED = " + OMH_ENABLED);
         for (ApnContext apnContext : mApnContexts.values()) {
             // Register the reconnect and restart actions.
@@ -565,8 +567,19 @@ public class DcTracker extends DcTrackerBase {
      */
     @Override
     public boolean getAnyDataEnabled() {
+        return getAnyDataEnabled(false);
+    }
+
+    private boolean getAnyDataEnabled(boolean enableMmsData) {
         synchronized (mDataEnabledLock) {
-            if (!(mInternalDataEnabled && mUserDataEnabled && sPolicyDataEnabled)) return false;
+            if (!(mInternalDataEnabled && (mUserDataEnabled || enableMmsData)
+                    && sPolicyDataEnabled)) {
+                log(String.format("getAnyDataEnabled data disabled: mInternalDataEnabled=%b "
+                        + "mUserDataEnabled=%b enableMmsData=%b sPolicyDataEnabled=%b",
+                        mInternalDataEnabled, mUserDataEnabled,
+                        enableMmsData, sPolicyDataEnabled));
+                return false;
+            }
             for (ApnContext apnContext : mApnContexts.values()) {
                 // Make sure we don't have a context that is going down
                 // and is explicitly disabled.
@@ -749,7 +762,7 @@ public class DcTracker extends DcTrackerBase {
         //    disconnect setup up the new requested connection.
         //  - Do not bring up the requested connection, if there is any high priority
         //    data connection is active.
-        if (SUPPORT_MPDN == false
+        if (mSupportMPDN == false
                 && !isAnyActiveApnContextHandlesType(apnContext.getDataProfileType())) {
             if (disconnectOneLowerPriorityCall(apnContext.getDataProfileType())) {
                 log("Lower/Equal priority call disconnected.");
@@ -762,8 +775,12 @@ public class DcTracker extends DcTrackerBase {
             }
         }
 
+        // If set the special property, enable mms data even if mobile data is turned off.
+        boolean enableMmsData = SystemProperties.getBoolean("persist.env.mms.setupmmsdata", false)
+                && apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_MMS);
+
         if (apnContext.isConnectable() &&
-                isDataAllowed(apnContext) && getAnyDataEnabled() && !isEmergency()) {
+                isDataAllowed(apnContext) && getAnyDataEnabled(enableMmsData) && !isEmergency()) {
             if (apnContext.getState() == DctConstants.State.FAILED) {
                 if (DBG) log("trySetupData: make a FAILED ApnContext IDLE so its reusable");
                 apnContext.setState(DctConstants.State.IDLE);
@@ -1182,6 +1199,11 @@ public class DcTracker extends DcTrackerBase {
      * Handles changes to the APN database.
      */
     private void onApnChanged() {
+        if (DBG) log("onApnChanged: tryRestartDataConnections");
+        tryRestartDataConnections(Phone.REASON_APN_CHANGED);
+    }
+
+    private void tryRestartDataConnections(String reason) {
         DctConstants.State overallState = getOverallState();
         boolean isDisconnected = (overallState == DctConstants.State.IDLE ||
                 overallState == DctConstants.State.FAILED);
@@ -1193,11 +1215,11 @@ public class DcTracker extends DcTrackerBase {
 
         // TODO: It'd be nice to only do this if the changed entrie(s)
         // match the current operator.
-        if (DBG) log("onApnChanged: createAllApnList and cleanUpAllConnections");
+        if (DBG) log("tryRestartDataConnections: createAllApnList and cleanUpAllConnections");
         createAllApnList();
-        cleanUpAllConnections(!isDisconnected, Phone.REASON_APN_CHANGED);
+        cleanUpAllConnections(!isDisconnected, reason);
         if (isDisconnected) {
-            setupDataOnConnectableApns(Phone.REASON_APN_CHANGED);
+            setupDataOnConnectableApns(reason);
         }
     }
 
@@ -1390,7 +1412,7 @@ public class DcTracker extends DcTrackerBase {
         boolean retry = true;
 
         if (( Phone.REASON_RADIO_TURNED_OFF.equals(reason) )
-                || (!SUPPORT_MPDN && Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)) ) {
+                || (!mSupportMPDN && Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)) ) {
             retry = false;
         }
         return retry;
@@ -1906,7 +1928,11 @@ public class DcTracker extends DcTrackerBase {
         }
 
         // If APN is still enabled, try to bring it back up automatically
-        if (apnContext.isReady() && retryAfterDisconnected(apnContext.getReason())) {
+        if (apnContext.isReady() &&
+                Objects.equal(apnContext.getReason(), Phone.REASON_NW_TYPE_CHANGED)) {
+            // Retry immediately if reason is nw_type_changed (like rat switch, for instance)
+            setupDataOnConnectableApns(Phone.REASON_NW_TYPE_CHANGED);
+        } else if (apnContext.isReady() && retryAfterDisconnected(apnContext.getReason())) {
             SystemProperties.set(PUPPET_MASTER_RADIO_STRESS_TEST, "false");
             // Wait a bit before trying the next APN, so that
             // we're not tying up the RIL command channel.
@@ -1917,7 +1943,7 @@ public class DcTracker extends DcTrackerBase {
             apnContext.setDataConnectionAc(null);
         }
 
-        if (SUPPORT_MPDN == false) {
+        if (mSupportMPDN == false) {
             setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
         }
     }
@@ -2037,6 +2063,7 @@ public class DcTracker extends DcTrackerBase {
         int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
         if (ServiceState.isCdma(radioTech)
                 && radioTech != ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD
+                && mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA
                 && mCdmaSsm.getCdmaSubscriptionSource() ==
                         CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_NV) {
             result = SystemProperties.get(CDMAPhone.PROPERTY_CDMA_HOME_OPERATOR_NUMERIC);
@@ -2418,9 +2445,16 @@ public class DcTracker extends DcTrackerBase {
                 // If cdma subscription source changed to NV or data rat changed to cdma
                 // (while subscription source was NV) - we need to trigger NV ready
                 int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
+                if ((ServiceState.isCdma(radioTech)) && (radioTech !=
+                        ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD)) {
+                    mSupportMPDN = false;
+                } else {
+                    mSupportMPDN = true;
+                }
                 if (!OMH_ENABLED
                         && radioTech != ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD
                         && ServiceState.isCdma(radioTech)
+                        && mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA
                         && mCdmaSsm.getCdmaSubscriptionSource() ==
                                 CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_NV) {
                     onNvReady();
@@ -2505,6 +2539,8 @@ public class DcTracker extends DcTrackerBase {
                 newIccRecords.registerForRecordsLoaded(
                         this, DctConstants.EVENT_RECORDS_LOADED, null);
             }
+            log("onUpdateIcc: tryRestartDataConnections " + Phone.REASON_NW_TYPE_CHANGED);
+            tryRestartDataConnections(Phone.REASON_NW_TYPE_CHANGED);
         }
     }
 
