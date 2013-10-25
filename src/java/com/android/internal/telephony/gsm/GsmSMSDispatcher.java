@@ -313,6 +313,21 @@ public class GsmSMSDispatcher extends SMSDispatcher {
     }
 
     /** {@inheritDoc} */
+    public void sendData(String destAddr, String scAddr, int destPort, int origPort,
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
+                scAddr, destAddr, destPort, origPort, data, (deliveryIntent != null));
+        if (pdu != null) {
+            HashMap map =  SmsTrackerMapFactory(destAddr, scAddr, destPort, origPort, data, pdu);
+            SmsTracker tracker = SmsTrackerFactory(map, sentIntent, deliveryIntent,
+                    getFormat());
+            sendRawPdu(tracker);
+        } else {
+            Rlog.e(TAG, "GsmSMSDispatcher.sendData(): getSubmitPdu() returned null");
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override
     protected void sendText(String destAddr, String scAddr, String text,
             PendingIntent sentIntent, PendingIntent deliveryIntent) {

@@ -259,6 +259,17 @@ public class ExtCallManager extends CallManager {
         return mActiveSub;
     }
 
+    @Override
+    public boolean getLocalCallHoldStatus(int subscription) {
+        boolean status = false;
+
+        if ((subscription != MSimConstants.INVALID_SUBSCRIPTION) &&
+                (mLchStatus[subscription] != 0)) {
+            status = true;
+        }
+        return status;
+    }
+
     // Update the local call hold state and sets audio parameters for
     // LCH subscription
     // 1 -- if call on local hold, 0 -- if call is not on local hold
@@ -460,6 +471,87 @@ public class ExtCallManager extends CallManager {
         Rlog.d(LOG_TAG, "setAudioMode State = " + getState());
     }
 
+    @Override
+    public Connection dial(Phone phone, String dialString, int callType, String[] extras)
+            throws CallStateException {
+
+        Phone basePhone = getPhoneBase(phone);
+        int subscription = phone.getSubscription();
+        Connection result;
+
+        if (VDBG) {
+            Rlog.d(LOG_TAG, " dial(" + basePhone + ", "+ dialString + ")" +
+                    "subscription" + subscription);
+            Rlog.d(LOG_TAG, toString());
+        }
+
+        if (!canDial(phone)) {
+            throw new CallStateException("cannot dial in current state");
+        }
+
+        if (hasActiveFgCall(subscription)) {
+            Phone activePhone = getActiveFgCall(subscription).getPhone();
+            boolean hasBgCall = !(activePhone.getBackgroundCall().isIdle());
+
+            if (DBG) {
+                Rlog.d(LOG_TAG, "hasBgCall: "+ hasBgCall + " sameChannel:" +
+                        (activePhone == basePhone));
+            }
+
+            if (activePhone != basePhone) {
+                if (hasBgCall) {
+                    Rlog.d(LOG_TAG, "Hangup");
+                    getActiveFgCall(subscription).hangup();
+                } else {
+                    Rlog.d(LOG_TAG, "Switch");
+                    activePhone.switchHoldingAndActive();
+                }
+            }
+        }
+
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
+            result = basePhone.dial(dialString, callType, extras);
+        } else {
+            result = basePhone.dial(dialString);
+        }
+
+        if (VDBG) {
+            Rlog.d(LOG_TAG, "End dial(" + basePhone + ", "+ dialString + ")");
+            Rlog.d(LOG_TAG, toString());
+        }
+
+        return result;
+    }
+
+    @Override
+    protected boolean canDial(Phone phone) {
+        int serviceState = phone.getServiceState().getState();
+        int subscription = phone.getSubscription();
+        boolean hasRingingCall = hasActiveRingingCallOnAnySub();
+        Call.State fgCallState = getActiveFgCallState(subscription);
+
+        boolean result = (serviceState != ServiceState.STATE_POWER_OFF
+                && !hasRingingCall
+                && ((fgCallState == Call.State.ACTIVE)
+                    || (fgCallState == Call.State.IDLE)
+                    || (fgCallState == Call.State.DISCONNECTED)));
+
+        if (result == false) {
+            Rlog.d(LOG_TAG, "canDial serviceState=" + serviceState
+                            + " hasRingingCall=" + hasRingingCall
+                            + " fgCallState=" + fgCallState);
+        }
+        return result;
+    }
+
+    /**
+     * Return true if there is ringing call on any subscription,
+     * else return false
+     */
+    public boolean hasActiveRingingCallOnAnySub() {
+        return super.hasActiveRingingCall();
+    }
+
     /**
      * Set Voice call Drivers based on phone type and call state
      */
@@ -580,60 +672,6 @@ public class ExtCallManager extends CallManager {
             Rlog.d(LOG_TAG, "End conference(" +heldCall + ")");
             Rlog.d(LOG_TAG, toString());
         }
-    }
-
-    /**
-     * Initiate a new voice connection. This happens asynchronously, so you
-     * cannot assume the audio path is connected (or a call index has been
-     * assigned) until PhoneStateChanged notification has occurred.
-     *
-     * @exception CallStateException if a new outgoing call is not currently
-     * possible because no more call slots exist or a call exists that is
-     * dialing, alerting, ringing, or waiting.  Other errors are
-     * handled asynchronously.
-     */
-    @Override
-    public Connection dial(Phone phone, String dialString, int callType, String[] extras)
-            throws CallStateException {
-        Phone basePhone = getPhoneBase(phone);
-        Connection result;
-
-        if (VDBG) {
-            Rlog.d(LOG_TAG, " dial(" + basePhone + ", "+ dialString + ")");
-            Rlog.d(LOG_TAG, toString());
-        }
-
-        if ( hasActiveFgCall() ) {
-            Phone activePhone = getActiveFgCall().getPhone();
-            boolean hasBgCall = !(activePhone.getBackgroundCall().isIdle());
-
-            if (DBG) {
-                Rlog.d(LOG_TAG, "hasBgCall: "+ hasBgCall + " sameChannel:"
-                        + (activePhone == basePhone));
-            }
-
-            if (activePhone != basePhone) {
-                if (hasBgCall) {
-                    Rlog.d(LOG_TAG, "Hangup");
-                    getActiveFgCall().hangup();
-                } else {
-                    Rlog.d(LOG_TAG, "Switch");
-                    activePhone.switchHoldingAndActive();
-                }
-            }
-        }
-
-        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
-            result = basePhone.dial(dialString, callType, extras);
-        } else {
-            result = basePhone.dial(dialString);
-        }
-
-        if (VDBG) {
-            Rlog.d(LOG_TAG, "End dial(" + basePhone + ", "+ dialString + ")");
-            Rlog.d(LOG_TAG, toString());
-        }
-        return result;
     }
 
     @Override
@@ -1023,6 +1061,11 @@ public class ExtCallManager extends CallManager {
         mActiveSubChangeRegistrants.remove(h);
     }
 
+    private boolean isRingingDuplicateCall() {
+        return ((mRingingCalls.size() > 1) && (mRingingCalls.get(0).getLatestConnection().
+                getAddress().equals(mRingingCalls.get(1).getLatestConnection().getAddress())));
+    }
+
     protected class ExtCmHandler extends CmHandler {
 
         @Override
@@ -1033,7 +1076,8 @@ public class ExtCallManager extends CallManager {
                     if (VDBG) Rlog.d(LOG_TAG, " handleMessage (EVENT_NEW_RINGING_CONNECTION)");
                     Connection c = (Connection) ((AsyncResult) msg.obj).result;
                     int sub = c.getCall().getPhone().getSubscription();
-                    if (getActiveFgCallState(sub).isDialing() || hasMoreThanOneRingingCall()) {
+                    if (getActiveFgCallState(sub).isDialing()
+                            || (hasMoreThanOneRingingCall() && !isRingingDuplicateCall())) {
                         try {
                             Rlog.d(LOG_TAG, "silently drop incoming call: " + c.getCall());
                             c.getCall().hangup();

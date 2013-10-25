@@ -315,10 +315,10 @@ public final class GsmCallTracker extends CallTracker {
 
     void
     clearDisconnected() {
-        internalClearDisconnected();
-
-        updatePhoneState();
-        mPhone.notifyPreciseCallStateChanged();
+        if (internalClearDisconnected()) {
+            updatePhoneState();
+            mPhone.notifyPreciseCallStateChanged();
+        }
     }
 
     boolean
@@ -348,17 +348,17 @@ public final class GsmCallTracker extends CallTracker {
 
     boolean
     canTransfer() {
-        return mForegroundCall.getState() == GsmCall.State.ACTIVE
-                && mBackgroundCall.getState() == GsmCall.State.HOLDING;
+        return (mForegroundCall.getState() == GsmCall.State.ACTIVE
+                || mForegroundCall.getState() == GsmCall.State.ALERTING
+                || mForegroundCall.getState() == GsmCall.State.DIALING)
+            && mBackgroundCall.getState() == GsmCall.State.HOLDING;
     }
 
     //***** Private Instance Methods
 
-    private void
-    internalClearDisconnected() {
-        mRingingCall.clearDisconnected();
-        mForegroundCall.clearDisconnected();
-        mBackgroundCall.clearDisconnected();
+    private boolean internalClearDisconnected() {
+        return mRingingCall.clearDisconnected() | mForegroundCall.clearDisconnected()
+                | mBackgroundCall.clearDisconnected();
     }
 
     /**

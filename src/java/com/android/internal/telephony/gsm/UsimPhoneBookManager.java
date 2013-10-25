@@ -130,7 +130,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     public void reset() {
-        if ((anrFlags != null) && (emailFlags != null)) {
+        if ((anrFlags != null) && (emailFlags != null) && mPbrFile != null) {
             for (int i = 0; i < mPbrFile.mFileIds.size(); i++) {
                 anrFlags[i].clear();
                 emailFlags[i].clear();
@@ -506,7 +506,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                         rec.setEmails(emails);
                         mPhoneBookRecords.set(adnRecIndex, rec);
 
-                        mEmailFlags.get(pbrIndex).set(i, 1);
+                        mEmailFlags.get(pbrIndex).set(recNum - 1, 1);
                     }
                 }
             }
