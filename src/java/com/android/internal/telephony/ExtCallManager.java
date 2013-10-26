@@ -370,7 +370,7 @@ public class ExtCallManager extends CallManager {
                     vsidVoice[sub] = vsidVoiceDef[voiceModemIndex];
                 }
                 Rlog.d(LOG_TAG, "getVsid modem index " + voiceModemIndex
-                        + " vsid = " + vsidVoice[sub] + "sub = " + sub);
+                        + " vsid = " + vsidVoice[sub] + " sub = " + sub);
                 vsid = vsidVoice[sub];
                 break;
         }
@@ -394,7 +394,7 @@ public class ExtCallManager extends CallManager {
                 newCallState = getAudioCallState(call);
                 vsid = getVsid(phone, sub);
 
-                Rlog.d(LOG_TAG, "setAudioParams callstate=" + newCallState + " vsid = " + vsid);
+                Rlog.d(LOG_TAG, "setAudioParams callstate = " + newCallState + " vsid = " + vsid);
                 setAudioStateParam(vsid, newCallState);
             }
         }
@@ -557,7 +557,7 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public void setCallAudioDrivers(int phoneType, Call.State state) {
-        Rlog.d(LOG_TAG, "setCallAudioDrivers for " + phoneType + "state = " + state);
+        Rlog.d(LOG_TAG, "setCallAudioDrivers for " + phoneType + " state = " + state);
         if (phoneType == PhoneConstants.PHONE_TYPE_NONE) {
             phoneType = PhoneFactory.getDefaultPhone().getPhoneType();
         }
@@ -719,8 +719,21 @@ public class ExtCallManager extends CallManager {
         ar = (AsyncResult)msg.obj;
         sub = (Integer)(ar.userObj);
         if (ar.result != null && sub != -1) {
+            long oldVsid = vsidVoice[sub];
+
             vsidVoice[sub] = ((Integer) (ar.result)).longValue();
-            Rlog.d(LOG_TAG, "Voice System ID:" + vsidVoice[sub] + " sub = " + sub);
+
+            Rlog.d(LOG_TAG, "Voice System ID:" + vsidVoice[sub] + " sub = " + sub +
+                    " oldvsid = " + oldVsid);
+
+            // While DIALING a voice call, if VSID change event received from below layers
+            // on a particular subscription, call setAudioMode to update the call state
+            // ACTIVE with newly received VSID and update CALL state as in-active on older VSID.
+            if ((oldVsid != -1) && (vsidVoice[sub] != oldVsid) &&
+                    (getState(sub) != PhoneConstants.State.IDLE)) {
+                setAudioMode();
+                setAudioStateParam(oldVsid, AudioManager.CALL_INACTIVE);
+            }
         }
     }
 
