@@ -21,6 +21,7 @@ import com.android.internal.telephony.MccTable;
 import com.android.internal.telephony.EventLogTags;
 import com.android.internal.telephony.uicc.RuimRecords;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppType;
 
 import android.telephony.CellInfo;
 import android.telephony.CellInfoLte;
@@ -387,8 +388,9 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
                 int iconIndex = mSS.getCdmaEriIconIndex();
 
                 if (showSpn && (iconIndex == EriInfo.ROAMING_INDICATOR_OFF) &&
-                    isInHomeSidNid(mSS.getSystemId(), mSS.getNetworkId()) &&
-                    mIccRecords != null) {
+                        (mUiccApplcation.getType() != AppType.APPTYPE_CSIM ||
+                        isInHomeSidNid(mSS.getSystemId(), mSS.getNetworkId())) &&
+                        mIccRecords != null) {
                     mSS.setOperatorAlphaLong(mIccRecords.getServiceProviderName());
                 }
             }
