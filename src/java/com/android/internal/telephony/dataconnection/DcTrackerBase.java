@@ -792,6 +792,9 @@ public abstract class DcTrackerBase extends Handler {
                 if (mEnableFailFastRefCounter < 0) {
                     final String s = "CMD_SET_ENABLE_FAIL_FAST_MOBILE_DATA: "
                             + "mEnableFailFastRefCounter < 0";
+                    if (Build.IS_DEBUGGABLE) {
+                        throw new RuntimeException(s);
+                    }
                     loge(s);
                     mEnableFailFastRefCounter = 0;
                 }
