@@ -382,7 +382,7 @@ public class ExtCallManager extends CallManager {
         int newCallState = AudioManager.CALL_INACTIVE;
 
         for (Phone phone : mPhones) {
-            if (phone.getSubscription() == sub) {
+            if ((phone.getSubscription() == sub) && !(getFgPhone() instanceof SipPhone)) {
                 Call call = phone.getForegroundCall();
 
                 if (call.isIdle()) {
