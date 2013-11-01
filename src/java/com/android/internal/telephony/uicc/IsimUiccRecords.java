@@ -62,10 +62,11 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
                 + " mIsimImpu=" + mIsimImpu;
     }
 
+
     public IsimUiccRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
 
-        mAdnCache = new AdnRecordCache(mFh);
+        mAdnCache = new AdnRecordCache(mFh,app);
 
         mRecordsRequested = false;  // No load request is made till SIM ready
 

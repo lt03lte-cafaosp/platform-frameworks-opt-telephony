@@ -53,6 +53,7 @@ import com.android.internal.R;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 /**
  * {@hide}
@@ -76,6 +77,8 @@ public class UiccCard {
     private RadioState mLastRadioState =  RadioState.RADIO_UNAVAILABLE;
 
     private RegistrantList mAbsentRegistrants = new RegistrantList();
+
+    ArrayList<AdnRecord> adnRecords;
 
     private static final int EVENT_CARD_REMOVED = 13;
     private static final int EVENT_CARD_ADDED = 14;
