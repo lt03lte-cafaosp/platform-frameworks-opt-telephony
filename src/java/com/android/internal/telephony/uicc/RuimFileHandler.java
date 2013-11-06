@@ -55,11 +55,23 @@ public final class RuimFileHandler extends IccFileHandler {
         case EF_SMS:
         case EF_CST:
         case EF_RUIM_SPN:
+        case EF_RUIM_ID:
         case EF_CSIM_LI:
         case EF_CSIM_MDN:
         case EF_CSIM_IMSIM:
         case EF_CSIM_CDMAHOME:
         case EF_CSIM_EPRL:
+        case EF_CSIM_MMSConfig:
+        case EF_CSIM_SMSCAP:
+        case EF_CSIM_MODEL:
+        case EF_MMS_ICP:
+        case EF_MMSConfig:
+        case EF_LBS_V2_PDE_ADDR:
+        case EF_LBS_V2_MPC_ADDR:
+        case EF_SSFC:
+        case EF_Model:
+        case EF_SMSCAP:
+        case EF_ECC:
             return MF_SIM + DF_CDMA;
         }
         return getCommonIccEFPath(efid);

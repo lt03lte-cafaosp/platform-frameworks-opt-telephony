@@ -62,9 +62,18 @@ public interface IccConstants {
     static final int EF_CSP_CPHS = 0x6f15;
 
     // CDMA RUIM file ids from 3GPP2 C.S0023-0
+    static final int EF_RUIM_ID = 0x6f31;
     static final int EF_CST = 0x6f32;
     static final int EF_RUIM_SPN =0x6F41;
+    static final int EF_ECC = 0x6F47;
+    static final int EF_SMSCAP = 0x6F76;
+    static final int EF_MMSConfig = 0x6F7E;
+    static final int EF_Model = 0x6F90;
 
+    static final int EF_SSFC = 0x6F3F;
+    static final int EF_MMS_ICP = 0x6F67;
+    static final int EF_LBS_V2_PDE_ADDR = 0x6F87;
+    static final int EF_LBS_V2_MPC_ADDR = 0x6F88;
     // ETSI TS.102.221
     static final int EF_PL = 0x2F05;
     // 3GPP2 C.S0065
@@ -74,6 +83,9 @@ public interface IccConstants {
     static final int EF_CSIM_IMSIM = 0x6F22;
     static final int EF_CSIM_CDMAHOME = 0x6F28;
     static final int EF_CSIM_EPRL = 0x6F5A;
+    static final int EF_CSIM_MODEL = 0x6F81;
+    static final int EF_CSIM_SMSCAP = 0x6F83;
+    static final int EF_CSIM_MMSConfig = 0x6F8C;
 
     //ISIM access
     static final int EF_IMPU = 0x6f04;
