@@ -246,7 +246,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
     private static final int BYTE_SIZE = 1;
     private static final int INT_SIZE = 4;
-    private static final String OEM_IDENTIFIER = "QUALCOMM";
+    private static final String OEM_IDENTIFIER = "QOEMHOOK";
     int mHeaderSize = OEM_IDENTIFIER.length() + 2 * INT_SIZE;
 
     //***** Instance Variables
