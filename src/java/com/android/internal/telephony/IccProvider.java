@@ -234,6 +234,11 @@ public class IccProvider extends ContentProvider {
 
             String[] pair = param.split("=", 2);
 
+            if (pair.length != 2) {
+                Rlog.e(TAG, "resolve: bad whereClause parameter: " + param);
+                continue;
+            }
+
             String key = pair[0].trim();
             String val = pair[1].trim();
 
