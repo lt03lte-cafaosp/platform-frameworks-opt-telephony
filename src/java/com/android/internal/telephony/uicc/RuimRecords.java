@@ -23,6 +23,7 @@ import static com.android.internal.telephony.TelephonyProperties.PROPERTY_ICC_OP
 import static com.android.internal.telephony.TelephonyProperties.PROPERTY_ICC_OPERATOR_ALPHA;
 import static com.android.internal.telephony.TelephonyProperties.PROPERTY_TEST_CSIM;
 
+import java.io.UnsupportedEncodingException;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -30,11 +31,16 @@ import java.util.Arrays;
 import java.util.Locale;
 import android.content.Context;
 import android.os.AsyncResult;
+import android.os.Build;
 import android.os.Message;
 import android.os.SystemProperties;
 import android.telephony.MSimTelephonyManager;
 import android.telephony.Rlog;
 import android.text.TextUtils;
+import android.util.Log;
+import android.database.Cursor;
+import android.provider.Telephony;
+import com.android.internal.telephony.TelephonyProperties;
 
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.GsmAlphabet;
@@ -68,6 +74,20 @@ public final class RuimRecords extends IccRecords {
     private String mMin;
     private String mHomeSystemId;
     private String mHomeNetworkId;
+    private String mRuimId;
+
+    /**
+     * CSIM flags
+     */
+    public static boolean omhEnabled = false;
+    private static boolean mMMSICPEnabled = false;
+
+    // ***** ruim constants
+    static final int EF_MODEL_FILE_SIZE = 126;
+    static final int MODEL_INFORMATION_SIZE = 32;
+    static final int MANUFACTURER_NAME_SIZE = 32;
+    static final int SOFTWARE_VERSION_INFORMATION_SIZE = 60;
+    static final int LANGUAGE_INDICATOR_ENGLISH = 0x01;
 
     @Override
     public String toString() {
@@ -88,8 +108,10 @@ public final class RuimRecords extends IccRecords {
     // ***** Event Constants
     private static final int EVENT_GET_DEVICE_IDENTITY_DONE = 4;
     private static final int EVENT_GET_ICCID_DONE = 5;
+    private static final int EVENT_GET_RUIM_CST_DONE = 8;
     private static final int EVENT_GET_CDMA_SUBSCRIPTION_DONE = 10;
     private static final int EVENT_UPDATE_DONE = 14;
+    private static final int EVENT_SET_MODEL_DONE = 15;
     private static final int EVENT_GET_SST_DONE = 17;
     private static final int EVENT_GET_ALL_SMS_DONE = 18;
     private static final int EVENT_MARK_SMS_READ_DONE = 19;
@@ -97,6 +119,22 @@ public final class RuimRecords extends IccRecords {
     private static final int EVENT_SMS_ON_RUIM = 21;
     private static final int EVENT_GET_SMS_DONE = 22;
 
+    /**
+     * OMH related EF elementary file events
+     */
+    private static final int EVENT_GET_SSFC_DONE = 32;
+    private static final int EVENT_GET_ECC_LIST_DONE = EVENT_GET_SSFC_DONE + 1;
+    private static final int EVENT_GET_MMS_ICP_DONE = EVENT_GET_ECC_LIST_DONE + 1;
+    private static final int EVENT_GET_LBS_XTRA_CONFIG_DONE = EVENT_GET_MMS_ICP_DONE + 1;
+    private static final int EVENT_GET_LBS_XTRA_SERVURL_DONE = EVENT_GET_LBS_XTRA_CONFIG_DONE + 1;
+    private static final int EVENT_GET_LBS_V2_CONFIG_DONE = EVENT_GET_LBS_XTRA_SERVURL_DONE + 1;
+    private static final int EVENT_GET_LBS_V2_PDE_ADDR_DONE = EVENT_GET_LBS_V2_CONFIG_DONE + 1;
+    private static final int EVENT_GET_LBS_V2_MPC_ADDR_DONE = EVENT_GET_LBS_V2_PDE_ADDR_DONE + 1;
+    private static final int EVENT_GET_SMSCAP_DONE = EVENT_GET_LBS_V2_MPC_ADDR_DONE + 1;
+    private static final int EVENT_GET_CSIM_MMS_CONFIG = EVENT_GET_SMSCAP_DONE + 1;
+
+    //RUIM ID is 8 bytes data
+    private static final int NUM_BYTES_RUIM_ID = 8;
     public RuimRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
 
@@ -500,6 +538,28 @@ public final class RuimRecords extends IccRecords {
         if (DBG) log("CSIM PRL version=" + mPrlVersion);
     }
 
+    private class EfRuimIdLoaded implements IccRecordLoaded {
+        public String getEfName() {
+            return "EF_RUIM_ID";
+        }
+        public void onRecordLoaded(AsyncResult ar) {
+            //for RUIM ID data, the first byte represent the num bytes of valid data. From
+            //the second byte to num+1 byte, it is valid RUIM ID data. And the  second
+            //byte is the lowest-order byte, the num+1 byte is highest-order
+            byte[] data = (byte[])ar.result;
+            if (DBG) log("RuimId Data="+IccUtils.bytesToHexString(data));
+            int numOfBytes = data[0];
+            if (numOfBytes < NUM_BYTES_RUIM_ID) {
+                byte[] decodeData = new byte[numOfBytes];
+                for (int i = 0; i < numOfBytes; i++) {
+                    decodeData[i] = data[numOfBytes - i];
+                }
+                mRuimId = IccUtils.bytesToHexString(decodeData);
+                if (DBG) log("RUIM_ID=" + mRuimId);
+            }
+        }
+    }
+
     @Override
     public void handleMessage(Message msg) {
         AsyncResult ar;
@@ -572,7 +632,55 @@ public final class RuimRecords extends IccRecords {
             case EVENT_GET_SST_DONE:
                 log("Event EVENT_GET_SST_DONE Received");
             break;
+            case EVENT_SET_MODEL_DONE:
+                ar = (AsyncResult) msg.obj;
+                if (ar.exception != null) {
+                    Log.i(LOG_TAG, "Set EF Model failed", ar.exception);
+                }
+                Log.d(LOG_TAG, "EVENT_SET_MODEL_DONE");
+                break;
+            case EVENT_GET_RUIM_CST_DONE: {
+                isRecordLoadResponse = true;
+                ar = (AsyncResult) msg.obj;
+                if (ar != null && ar.exception == null) {
+                    data = (byte[]) ar.result;
+                    Log.d(LOG_TAG, "EF CST data: " + IccUtils.bytesToHexString(data));
 
+                    // for CSIM card
+                    if (null != mParentApp && AppType.APPTYPE_CSIM == mParentApp.getType()) {
+                        Log.d(LOG_TAG, "CSIM card type");
+                        Log.d(LOG_TAG, "CSIM EF CST data data[4]: " + data[4]);
+
+                        // service n35 Messaging and 3GPD Extensions
+                        omhEnabled = (0x04 == (0x04 & data[4])) ? true : false;
+                        if (omhEnabled) {
+                            //service n19,Multimedia Messaging Service (MMS)
+                            mMMSICPEnabled = (0x04 == (0x04 & data[2])) ? true : false;
+                        }
+
+                    } else {
+                        Log.d(LOG_TAG, "OMH EF CST data data[3]: " + data[3]);
+                        omhEnabled = (0x30 == (0x30 & data[3])) ? true : false;
+                        /**
+                         * judge if read MMSICP flag is enabled on CST
+                         */
+                        if (omhEnabled) {
+                            mMMSICPEnabled = (0x0C == (0x0C & data[10])) ? true : false;
+                        }
+                    }
+
+                    Log.d(LOG_TAG, "mms icp enabled =" + mMMSICPEnabled + " omhEnabled " + omhEnabled);
+                    SystemProperties.set(TelephonyProperties.PROPERTY_RUIM_OMH_CARD,
+                            omhEnabled ? "true" : "false");
+
+                }
+
+                /**
+                 * we already know if it is an OMH card in this point
+                 */
+                fetchOMHCardRecords(omhEnabled);
+            }
+                break;
             default:
                 super.handleMessage(msg);   // IccRecords handles generic record load responses
 
@@ -584,6 +692,86 @@ public final class RuimRecords extends IccRecords {
             if (isRecordLoadResponse) {
                 onRecordLoaded();
             }
+        }
+    }
+
+    private void handleMMSApn() {
+        // - Whenever device powers up and card is initialized,
+        // delete all APNs (there should be only one) with name='omhmms' or name='csimmms'
+        // and apn_type='mms'
+        Cursor cursor = null;
+        cursor = mContext.getContentResolver().query(Telephony.Carriers.CONTENT_URI, null, "name='csimmms'", null, null);
+        if (cursor!=null && cursor.getCount()>0) {
+            mContext.getContentResolver().delete(Telephony.Carriers.CONTENT_URI, "name = ?",
+                    new String[] { "csimmms"});
+        }
+
+        if (cursor!=null) {
+            cursor.close();
+        }
+
+    }
+
+    /**
+     * if an OMH card is inserted,we continue to read OMH  EF elements
+     */
+    private void fetchOMHCardRecords(boolean isOMHCard){
+        handleMMSApn();
+
+        //OMH related events
+        if (isOMHCard) {
+            mFh.loadEFTransparent(IccConstants.EF_SSFC,
+                obtainMessage(EVENT_GET_SSFC_DONE));
+            mRecordsToLoad++;
+
+            // get ecc list
+            mFh.loadEFTransparent(IccConstants.EF_ECC, obtainMessage(EVENT_GET_ECC_LIST_DONE));
+            mRecordsToLoad++;
+
+            // get EFmmsicp
+            mFh.loadEFTransparent(IccConstants.EF_MMS_ICP,
+                obtainMessage(EVENT_GET_MMS_ICP_DONE));
+            mRecordsToLoad++;
+
+            // get EF_Mms_Config
+            if (null != mParentApp && AppType.APPTYPE_CSIM == mParentApp.getType()) {
+                mFh.loadEFTransparent(IccConstants.EF_CSIM_MMSConfig,
+                        obtainMessage(EVENT_GET_CSIM_MMS_CONFIG));
+                Log.d(LOG_TAG,"load CSIM EVENT_GET_CSIM_MMS_CONFIG");
+            } else {
+                mFh.loadEFTransparent(IccConstants.EF_MMSConfig,
+                        obtainMessage(EVENT_GET_CSIM_MMS_CONFIG));
+                Log.d(LOG_TAG,"load OMH EVENT_GET_CSIM_MMS_CONFIG");
+            }
+            mRecordsToLoad++;
+
+            // get lbs related configurations
+            mFh.loadEFTransparent(IccConstants.EF_LBS_V2_PDE_ADDR,
+                obtainMessage(EVENT_GET_LBS_V2_PDE_ADDR_DONE));
+            mRecordsToLoad++;
+
+            mFh.loadEFTransparent(IccConstants.EF_LBS_V2_MPC_ADDR,
+                obtainMessage(EVENT_GET_LBS_V2_MPC_ADDR_DONE));
+            mRecordsToLoad++;
+
+            /**
+             * smscap parameters
+             */
+            if (null != mParentApp && AppType.APPTYPE_CSIM == mParentApp.getType()) {
+                mFh.loadEFTransparent(IccConstants.EF_CSIM_SMSCAP,
+                        obtainMessage(EVENT_GET_SMSCAP_DONE));
+                Log.d(LOG_TAG,"load CSIM EVENT_GET_SMSCAP_DONE");
+            } else {
+                mFh.loadEFTransparent(IccConstants.EF_SMSCAP,
+                        obtainMessage(EVENT_GET_SMSCAP_DONE));
+                Log.d(LOG_TAG,"load OMH EVENT_GET_SMSCAP_DONE");
+            }
+            mRecordsToLoad++;
+
+            /**
+             * write device's software version on EF6F90 on startup.
+             */
+            setModel();
         }
     }
 
@@ -708,7 +896,7 @@ public final class RuimRecords extends IccRecords {
          * the app is not ready
          * then bail
          */
-        if (mRecordsRequested || !mRecordsRequired
+        if (mRecordsRequested /*|| !mRecordsRequired*/
             || AppState.APPSTATE_READY != mParentApp.getState()) {
             if (DBG) log("fetchRuimRecords: Abort fetching records rRecordsRequested = "
                             + mRecordsRequested
@@ -749,14 +937,122 @@ public final class RuimRecords extends IccRecords {
                 obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfCsimCdmaHomeLoaded()));
         mRecordsToLoad++;
 
+        mFh.loadEFTransparent(EF_CSIM_MODEL,
+                obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfCsimModelLoaded()));
+        mRecordsToLoad++;
+
+        mFh.loadEFTransparent(EF_Model,
+                obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfRuimModelLoaded()));
+        mRecordsToLoad++;
+
+        /**
+         * we need to read CST table first to see if it is a CT/OMH/Legacy card
+         */
+        mFh.loadEFTransparent( IccConstants.EF_CST,
+                obtainMessage(EVENT_GET_RUIM_CST_DONE));
+        mRecordsToLoad++;
+
         // Entire PRL could be huge. We are only interested in
         // the first 4 bytes of the record.
         mFh.loadEFTransparent(EF_CSIM_EPRL, 4,
                 obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfCsimEprlLoaded()));
         mRecordsToLoad++;
 
+        mFh.loadEFTransparent(EF_RUIM_ID,
+                obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfRuimIdLoaded()));
+        mRecordsToLoad++;
+
         if (DBG) log("fetchRuimRecords " + mRecordsToLoad + " requested: " + mRecordsRequested);
         // Further records that can be inserted are Operator/OEM dependent
+    }
+
+    private class EfCsimModelLoaded implements IccRecordLoaded {
+        public String getEfName() {
+            return "EF_CSIM_MODEL";
+        }
+
+        public void onRecordLoaded(AsyncResult ar) {
+            byte[] data = (byte[]) ar.result;
+            if (DBG) log("EF_CSIM_MODEL=" +
+                         IccUtils.bytesToHexString(data));
+        }
+    }
+
+    private class EfRuimModelLoaded implements IccRecordLoaded {
+        public String getEfName() {
+            return "EF_RUIM_MODEL";
+        }
+
+        public void onRecordLoaded(AsyncResult ar) {
+            byte[] data = (byte[]) ar.result;
+            if (DBG) log("EF_RUIM_MODEL=" +
+                         IccUtils.bytesToHexString(data));
+        }
+    }
+
+    //set software version/manufacturer information into EFmodel elementary
+    private void setModel() {
+        byte[] data = new byte[EF_MODEL_FILE_SIZE];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) 0xff;
+        }
+
+        /**
+         * EFmodel will be written into UTF-8 characters
+         */
+        try{
+            data[0] = UserData.ENCODING_OCTET;
+            data[1] = LANGUAGE_INDICATOR_ENGLISH;
+
+            String str = Build.MODEL;
+            byte[] model = str.getBytes("UTF-8");
+            /**
+             * restrict model length to prevent ArrayIndexOutOfBoundsException
+             */
+            int modelLen = (model.length > MODEL_INFORMATION_SIZE) ? MODEL_INFORMATION_SIZE
+                    : model.length;
+            System.arraycopy(model, 0, data, 2, modelLen);
+
+            str = Build.MANUFACTURER;
+            byte[] manufacturer = str.getBytes("UTF-8");
+            /**
+             * restrict manufacture length to prevent ArrayIndexOutOfBoundsException
+             */
+            int manufactureLen = (manufacturer.length > MANUFACTURER_NAME_SIZE) ? MANUFACTURER_NAME_SIZE
+                    : manufacturer.length;
+            System.arraycopy(manufacturer, 0, data, 2 + MODEL_INFORMATION_SIZE, manufactureLen);
+
+            /**
+             * A build ID string meant for displaying to the user
+             */
+            str = Build.DISPLAY;
+            byte[] softwareVersion = str.getBytes("UTF-8");
+            /**
+             * in case software version is too long ,we need to restrict its length or
+             * it will leads to arrayoutofindex exception
+             */
+            int versionLength = (softwareVersion.length > SOFTWARE_VERSION_INFORMATION_SIZE) ? SOFTWARE_VERSION_INFORMATION_SIZE
+                    : softwareVersion.length;
+            System.arraycopy(softwareVersion, 0, data, 2 + MODEL_INFORMATION_SIZE
+                    + MANUFACTURER_NAME_SIZE, versionLength);
+            log("model: " + IccUtils.bytesToHexString(model) + "manufacturer: "
+                    + IccUtils.bytesToHexString(manufacturer) + "softwareVersion: "
+                    + IccUtils.bytesToHexString(softwareVersion));
+            log("EF model write data : " + IccUtils.bytesToHexString(data) + " version length=" + versionLength);
+
+        }catch(UnsupportedEncodingException e){
+            Log.e(LOG_TAG, "BearerData encode failed: " + e);
+        }
+
+        if (null != mParentApp && AppType.APPTYPE_CSIM == mParentApp.getType()) {
+            Log.d(LOG_TAG, "CSIM card type,start set csim model");
+            mFh.updateEFTransparent(IccConstants.EF_CSIM_MODEL, data,
+                    obtainMessage(EVENT_SET_MODEL_DONE, IccConstants.EF_CSIM_MODEL));
+
+        }else{
+            mFh.updateEFTransparent(IccConstants.EF_Model, data,
+                    obtainMessage(EVENT_SET_MODEL_DONE, IccConstants.EF_Model));
+        }
     }
 
     /**
