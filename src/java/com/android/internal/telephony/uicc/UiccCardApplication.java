@@ -388,6 +388,8 @@ public class UiccCardApplication {
                         } else {
                             parsePinPukErrorResult(ar, false);
                         }
+                    } else if (null == ar.exception) {
+                        mPin1RetryCount = -1;
                     }
                     AsyncResult.forMessage(((Message)ar.userObj)).exception
                             = ar.exception;
