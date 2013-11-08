@@ -336,10 +336,10 @@ public final class CdmaCallTracker extends CallTracker {
 
     void
     clearDisconnected() {
-        internalClearDisconnected();
-
-        updatePhoneState();
-        mPhone.notifyPreciseCallStateChanged();
+        if (internalClearDisconnected()) {
+            updatePhoneState();
+            mPhone.notifyPreciseCallStateChanged();
+        }
     }
 
     boolean
@@ -394,11 +394,9 @@ public final class CdmaCallTracker extends CallTracker {
 
     //***** Private Instance Methods
 
-    private void
-    internalClearDisconnected() {
-        mRingingCall.clearDisconnected();
-        mForegroundCall.clearDisconnected();
-        mBackgroundCall.clearDisconnected();
+    private boolean internalClearDisconnected() {
+        return mRingingCall.clearDisconnected() | mForegroundCall.clearDisconnected()
+                | mBackgroundCall.clearDisconnected();
     }
 
     /**
