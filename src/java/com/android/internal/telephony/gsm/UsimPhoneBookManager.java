@@ -439,7 +439,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         return efid;
     }
 
-    private int getPbrIndexBy(int adnIndex) {
+    public int getPbrIndexBy(int adnIndex) {
         int len = mAdnLengthList.size();
         int size = 0;
         for (int i = 0; i < len; i++) {
