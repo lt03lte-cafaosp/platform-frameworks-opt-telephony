@@ -1025,7 +1025,7 @@ public final class RuimRecords extends IccRecords {
             /**
              * A build ID string meant for displaying to the user
              */
-            str = Build.DISPLAY;
+            str = SystemProperties.get("persist.product.sw.version", Build.DISPLAY);
             byte[] softwareVersion = str.getBytes("UTF-8");
             /**
              * in case software version is too long ,we need to restrict its length or
