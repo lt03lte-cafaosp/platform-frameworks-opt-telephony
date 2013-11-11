@@ -208,12 +208,6 @@ public class CDMALTEPhone extends CDMAPhone {
         return false;
     }
 
-    // return IMSI from USIM as subscriber ID.
-    @Override
-    public String getSubscriberId() {
-        return (mSimRecords != null) ? mSimRecords.getIMSI() : "";
-    }
-
     // return GID1 from USIM
     @Override
     public String getGroupIdLevel1() {
