@@ -213,8 +213,26 @@ public final class AdnRecordCache extends Handler implements IccConstants {
 
         int index = -1;
         int count = 1;
-        for (Iterator<AdnRecord> it = oldAdnList.iterator(); it.hasNext(); ) {
-            if (oldAdn.isEqual(it.next())) {
+        for (Iterator<AdnRecord> it = oldAdnList.iterator(); it.hasNext();) {
+            AdnRecord nextAdnRecord = it.next();
+            boolean isEmailOrAnrIsFull = false;
+            if (efid == EF_PBR) {
+                // There may more than one PBR files in the USIM card, if the current PBR file can
+                // not save the new AdnRecord which contain anr or email, try save it into next PBR
+                // file.
+                final int pbrIndex = mUsimPhoneBookManager.getPbrIndexBy(count - 1);
+                final int anrNum = mUsimPhoneBookManager.getEmptyAnrNum_Pbrindex(pbrIndex);
+                final int emailNum = mUsimPhoneBookManager.getEmptyEmailNum_Pbrindex(pbrIndex);
+                if (null == oldAdn.getAdditionalNumbers() && newAdn.getAdditionalNumbers() != null
+                        && 0 == anrNum) {
+                    isEmailOrAnrIsFull = true;
+                }
+                if (null == oldAdn.getEmails() && newAdn.getEmails() != null && 0 == emailNum) {
+                    isEmailOrAnrIsFull = true;
+                }
+            }
+
+            if (!isEmailOrAnrIsFull && oldAdn.isEqual(nextAdnRecord)) {
                 index = count;
                 break;
             }
