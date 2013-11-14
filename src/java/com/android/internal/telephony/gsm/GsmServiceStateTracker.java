@@ -972,10 +972,10 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         if (hasChanged) {
             String operatorNumeric;
 
-            updateSpnDisplay();
-
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_ALPHA,
                 mSS.getOperatorAlphaLong());
+
+            updateSpnDisplay();
 
             String prevOperatorNumeric =
                     SystemProperties.get(TelephonyProperties.PROPERTY_OPERATOR_NUMERIC, "");
