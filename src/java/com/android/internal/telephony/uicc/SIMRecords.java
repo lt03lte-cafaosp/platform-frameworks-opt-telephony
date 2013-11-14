@@ -1227,7 +1227,7 @@ public class SIMRecords extends IccRecords {
             case EF_MSISDN:
                 mRecordsToLoad++;
                 Log.i(LOG_TAG,"SIM Refresh called for EF_MSISDN");
-                new AdnRecordLoader(mFh).loadFromEF(EF_MSISDN, EF_EXT1, 1,
+                new AdnRecordLoader(mFh).loadFromEF(EF_MSISDN, getExtFromEf(EF_MSISDN), 1,
                         obtainMessage(EVENT_GET_MSISDN_DONE));
                 break;
             case EF_CFIS:
