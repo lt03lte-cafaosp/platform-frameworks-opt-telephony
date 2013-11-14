@@ -105,8 +105,16 @@ public class PhoneFactory {
                 if (TelephonyManager.getLteOnCdmaModeStatic() == PhoneConstants.LTE_ON_CDMA_TRUE) {
                     preferredNetworkMode = Phone.NT_MODE_GLOBAL;
                 }
-                int networkMode = Settings.Global.getInt(context.getContentResolver(),
-                        Settings.Global.PREFERRED_NETWORK_MODE, preferredNetworkMode);
+                int networkMode;
+                try {
+                    networkMode = android.telephony.MSimTelephonyManager.
+                            getIntAtIndex(context.getContentResolver(),
+                            android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                            MSimConstants.DEFAULT_CARD_INDEX);
+                } catch (Exception snfe) {
+                    Rlog.w(LOG_TAG, "Could not find PREFERRED_NETWORK_MODE!!! in database");
+                    networkMode = preferredNetworkMode;
+                }
                 Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkMode));
 
                 // As per certain operator requirement, the device is expected to be in global
