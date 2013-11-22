@@ -972,10 +972,10 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         if (hasChanged) {
             String operatorNumeric;
 
-            updateSpnDisplay();
-
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_ALPHA,
                 mSS.getOperatorAlphaLong());
+
+            updateSpnDisplay();
 
             String prevOperatorNumeric =
                     SystemProperties.get(TelephonyProperties.PROPERTY_OPERATOR_NUMERIC, "");
@@ -1311,12 +1311,11 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
             case 2: // 2 is "searching"
             case 3: // 3 is "registration denied"
             case 4: // 4 is "unknown" no vaild in current baseband
-                return ServiceState.STATE_OUT_OF_SERVICE;
             case 10:// same as 0, but indicates that emergency call is possible.
             case 12:// same as 2, but indicates that emergency call is possible.
             case 13:// same as 3, but indicates that emergency call is possible.
             case 14:// same as 4, but indicates that emergency call is possible.
-                return ServiceState.STATE_EMERGENCY_ONLY;
+                return ServiceState.STATE_OUT_OF_SERVICE;
 
             case 1:
                 return ServiceState.STATE_IN_SERVICE;
