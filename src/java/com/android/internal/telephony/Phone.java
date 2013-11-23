@@ -710,6 +710,16 @@ public interface Phone {
     void acceptCall() throws CallStateException;
 
     /**
+     * Answers a ringing or waiting call. Active calls, if any, go on hold.
+     * Answering occurs asynchronously, and final notification occurs via
+     * {@link #registerForPreciseCallStateChanged(android.os.Handler, int,
+     * java.lang.Object) registerForPreciseCallStateChanged()}.
+     *
+     * @exception CallStateException when no call is ringing or waiting
+     */
+    void acceptCall(int callType) throws CallStateException;
+
+    /**
      * Gets call type for IMS calls.
      *
      * @return one of the call types in {@link Phone}
@@ -1950,6 +1960,11 @@ public interface Phone {
      * @throws CallStateException
      */
     public void rejectConnectionTypeChange(Connection conn) throws CallStateException;
+
+    /*
+     * To check VT call capability
+     */
+    public boolean isVTModifyAllowed() throws CallStateException;
 
     /**
      * When a remote user requests to change the type of the connection (e.g. to
