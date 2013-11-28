@@ -186,11 +186,6 @@ public final class RuimRecords extends IccRecords {
         mRecordsRequested = false;
     }
 
-    @Override
-    public String getIMSI() {
-        return mImsi;
-    }
-
     public String getMdnNumber() {
         return mMyMobileNumber;
     }
