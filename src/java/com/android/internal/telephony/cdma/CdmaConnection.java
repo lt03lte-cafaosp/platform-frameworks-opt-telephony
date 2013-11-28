@@ -427,7 +427,7 @@ public class CdmaConnection extends Connection {
                 if (serviceState == ServiceState.STATE_POWER_OFF) {
                     return DisconnectCause.POWER_OFF;
                 } else if (serviceState == ServiceState.STATE_OUT_OF_SERVICE
-                        || (serviceState == ServiceState.STATE_EMERGENCY_ONLY &&
+                        || (phone.getServiceState().isEmergencyOnly() &&
                         causeCode != CallFailCause.NORMAL_CLEARING)) {
                     return DisconnectCause.OUT_OF_SERVICE;
                 } else if (phone.mCdmaSubscriptionSource ==

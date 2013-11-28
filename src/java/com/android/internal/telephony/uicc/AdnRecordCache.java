@@ -120,7 +120,6 @@ public final class AdnRecordCache extends Handler implements IccConstants {
             case EF_ADN: return EF_EXT1;
             case EF_SDN: return EF_EXT3;
             case EF_FDN: return EF_EXT2;
-            case EF_MSISDN: return EF_EXT1;
             case EF_PBR: return 0; // The EF PBR doesn't have an extension record
             default: return -1;
         }
@@ -213,8 +212,26 @@ public final class AdnRecordCache extends Handler implements IccConstants {
 
         int index = -1;
         int count = 1;
-        for (Iterator<AdnRecord> it = oldAdnList.iterator(); it.hasNext(); ) {
-            if (oldAdn.isEqual(it.next())) {
+        for (Iterator<AdnRecord> it = oldAdnList.iterator(); it.hasNext();) {
+            AdnRecord nextAdnRecord = it.next();
+            boolean isEmailOrAnrIsFull = false;
+            if (efid == EF_PBR) {
+                // There may more than one PBR files in the USIM card, if the current PBR file can
+                // not save the new AdnRecord which contain anr or email, try save it into next PBR
+                // file.
+                final int pbrIndex = mUsimPhoneBookManager.getPbrIndexBy(count - 1);
+                final int anrNum = mUsimPhoneBookManager.getEmptyAnrNum_Pbrindex(pbrIndex);
+                final int emailNum = mUsimPhoneBookManager.getEmptyEmailNum_Pbrindex(pbrIndex);
+                if (null == oldAdn.getAdditionalNumbers() && newAdn.getAdditionalNumbers() != null
+                        && 0 == anrNum) {
+                    isEmailOrAnrIsFull = true;
+                }
+                if (null == oldAdn.getEmails() && newAdn.getEmails() != null && 0 == emailNum) {
+                    isEmailOrAnrIsFull = true;
+                }
+            }
+
+            if (!isEmailOrAnrIsFull && oldAdn.isEqual(nextAdnRecord)) {
                 index = count;
                 break;
             }

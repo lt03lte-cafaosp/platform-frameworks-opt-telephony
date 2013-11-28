@@ -85,8 +85,6 @@ public class SIMRecords extends IccRecords {
     byte[] mEfCff = null;
     byte[] mEfCfis = null;
 
-    private int mSmsCountOnIcc = -1;
-
     int mSpnDisplayCondition;
     // Numeric network codes listed in TS 51.011 EF[SPDI]
     ArrayList<String> mSpdiNetworks = null;
@@ -166,7 +164,6 @@ public class SIMRecords extends IccRecords {
     private static final int EVENT_GET_CFIS_DONE = 32;
     private static final int EVENT_GET_CSP_CPHS_DONE = 33;
     private static final int EVENT_GET_GID1_DONE = 34;
-    private static final int EVENT_GET_SMS_RECORD_SIZE_DONE = 35;
 
     // Lookup table for carriers known to produce SIMs which incorrectly indicate MNC length.
 
@@ -1193,25 +1190,6 @@ public class SIMRecords extends IccRecords {
 
                 break;
 
-            case EVENT_GET_SMS_RECORD_SIZE_DONE:
-                isRecordLoadResponse = false;
-
-                ar = (AsyncResult) msg.obj;
-
-                if (ar.exception != null) {
-                    loge("Exception in EVENT_GET_SMS_RECORD_SIZE_DONE " + ar.exception);
-                    break;
-                }
-
-                int[] recordSize = (int[])ar.result;
-                // recordSize[0]  is the record length
-                // recordSize[1]  is the total length of the EF file
-                // recordSize[2]  is the number of records in the EF file
-                mSmsCountOnIcc = recordSize[2];
-                log("EVENT_GET_SMS_RECORD_SIZE_DONE Size " + recordSize[0]
-                        + " total " + recordSize[1]
-                                + " record " + recordSize[2]);
-                break;
             default:
                 super.handleMessage(msg);   // IccRecords handles generic record load responses
 
@@ -1248,7 +1226,7 @@ public class SIMRecords extends IccRecords {
             case EF_MSISDN:
                 mRecordsToLoad++;
                 Log.i(LOG_TAG,"SIM Refresh called for EF_MSISDN");
-                new AdnRecordLoader(mFh).loadFromEF(EF_MSISDN, EF_EXT1, 1,
+                new AdnRecordLoader(mFh).loadFromEF(EF_MSISDN, getExtFromEf(EF_MSISDN), 1,
                         obtainMessage(EVENT_GET_MSISDN_DONE));
                 break;
             case EF_CFIS:
@@ -1514,14 +1492,6 @@ public class SIMRecords extends IccRecords {
                             obtainMessage(EVENT_MARK_SMS_READ_DONE, 1));
         }
         if (DBG) log("fetchSimRecords " + mRecordsToLoad + " requested: " + mRecordsRequested);
-    }
-
-    /**
-     * To get SMS capacity count on ICC card.
-     */
-    public int getSmsCapacityOnIcc() {
-        log("getSmsCapacityOnIcc: " + mSmsCountOnIcc);
-        return mSmsCountOnIcc;
     }
 
     /**
