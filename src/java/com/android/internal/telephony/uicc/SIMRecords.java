@@ -255,14 +255,6 @@ public class SIMRecords extends IccRecords {
 
     //***** Public Methods
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getIMSI() {
-        return mImsi;
-    }
-
     @Override
     public String getMsisdnNumber() {
         return mMsisdn;
