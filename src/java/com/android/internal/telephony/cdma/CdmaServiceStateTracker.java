@@ -1024,12 +1024,6 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
 
         mNewSS.setStateOutOfService(); // clean slate for next time
 
-        if (hasRilDataRadioTechnologyChanged) {
-            mPhone.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
-                    ServiceState.rilRadioTechnologyToString(mSS.getRilDataRadioTechnology()));
-            mDataRatChangedRegistrants.notifyRegistrants();
-        }
-
         if (hasRegistered) {
             mNetworkAttachedRegistrants.notifyRegistrants();
         }
@@ -1101,6 +1095,7 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
         }
 
         if (hasCdmaDataConnectionChanged || hasRilDataRadioTechnologyChanged) {
+            notifyDataRegStateRilRadioTechnologyChanged();
             mPhone.notifyDataConnection(null);
         }
 
