@@ -953,12 +953,6 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
 
         mNewSS.setStateOutOfService(); // clean slate for next time
 
-        if (hasRilDataRadioTechnologyChanged) {
-            mPhone.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
-                    ServiceState.rilRadioTechnologyToString(mSS.getRilVoiceRadioTechnology()));
-            mDataRatChangedRegistrants.notifyRegistrants();
-        }
-
         if (hasRegistered) {
             mNetworkAttachedRegistrants.notifyRegistrants();
 
@@ -1113,6 +1107,7 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         }
 
         if (hasDataRegStateChanged || hasRilDataRadioTechnologyChanged) {
+            notifyDataRegStateRilRadioTechnologyChanged();
             mPhone.notifyDataConnection(null);
         }
 
