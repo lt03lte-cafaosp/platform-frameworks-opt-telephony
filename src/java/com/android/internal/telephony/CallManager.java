@@ -2189,8 +2189,4 @@ public class CallManager {
         Rlog.e(LOG_TAG, " getLocalCallHoldStatus for subscription not supported");
         return false;
     }
-
-    public void deactivateLchState(int sub) {
-        Rlog.e(LOG_TAG, " deactivateLchState not supported");
-    }
 }
