@@ -80,6 +80,7 @@ public class UiccController extends Handler {
 
     protected static final int EVENT_ICC_STATUS_CHANGED = 1;
     protected static final int EVENT_GET_ICC_STATUS_DONE = 2;
+    protected static final int EVENT_RADIO_UNAVAILABLE = 3;
     private static final int EVENT_REFRESH = 4;
 
     protected static final Object mLock = new Object();
@@ -183,6 +184,12 @@ public class UiccController extends Handler {
                     AsyncResult ar = (AsyncResult)msg.obj;
                     onGetIccCardStatusDone(ar);
                     break;
+                case EVENT_RADIO_UNAVAILABLE:
+                    if (DBG) log("EVENT_RADIO_UNAVAILABLE ");
+                    disposeCard(mUiccCard);
+                    mUiccCard = null;
+                    mIccChangedRegistrants.notifyRegistrants();
+                    break;
                 case EVENT_REFRESH:
                     ar = (AsyncResult)msg.obj;
                     if (DBG) log("Sim REFRESH received");
@@ -195,6 +202,14 @@ public class UiccController extends Handler {
                 default:
                     Rlog.e(LOG_TAG, " Unknown Event " + msg.what);
             }
+        }
+    }
+
+    // Destroys the card object
+    protected synchronized void disposeCard(UiccCard uiccCard) {
+        if (DBG) log("Disposing card");
+        if (uiccCard != null) {
+            uiccCard.dispose();
         }
     }
 
@@ -219,6 +234,7 @@ public class UiccController extends Handler {
         mCi.registerForIccStatusChanged(this, EVENT_ICC_STATUS_CHANGED, null);
         // This is needed so that we query for sim status in the case when we boot in APM
         mCi.registerForAvailable(this, EVENT_ICC_STATUS_CHANGED, null);
+        mCi.registerForNotAvailable(this, EVENT_RADIO_UNAVAILABLE, null);
         mCi.registerForIccRefresh(this, EVENT_REFRESH, null);
     }
 
@@ -233,10 +249,10 @@ public class UiccController extends Handler {
         IccCardStatus status = (IccCardStatus)ar.result;
 
         if (mUiccCard == null) {
-            //Create new card
+            if (DBG) log("Creating a new card");
             mUiccCard = new UiccCard(mContext, mCi, status);
         } else {
-            //Update already existing card
+            if (DBG) log("Update already existing card");
             mUiccCard.update(mContext, mCi , status);
         }
 
