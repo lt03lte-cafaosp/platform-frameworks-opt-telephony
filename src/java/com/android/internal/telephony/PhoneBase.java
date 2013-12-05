@@ -1500,6 +1500,11 @@ public abstract class PhoneBase extends Handler implements Phone {
         return mCi.getRadioState().isOn();
     }
 
+    // IMS APIs - Implemented only in ImsPhone
+    public void acceptCall(int callType) throws CallStateException {
+        throw new CallStateException("Accept with CallType is not supported in this phone " + this);
+    }
+
     public int getCallType(Call call) throws CallStateException {
         throw new CallStateException("getCallType is not supported in this phone " + this);
     }
@@ -1529,6 +1534,13 @@ public abstract class PhoneBase extends Handler implements Phone {
             throws CallStateException {
         throw new CallStateException("registerForModifyCallRequest is not supported in this phone "
                 + this);
+    }
+
+    /*
+     * To check VT call capability
+     */
+    public boolean isVTModifyAllowed() throws CallStateException {
+        throw new CallStateException("isVTModifyAllowed is not supported in this phone " + this);
     }
 
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
