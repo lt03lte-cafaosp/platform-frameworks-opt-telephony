@@ -45,7 +45,9 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.text.TextUtils;
+import android.util.Pair;
 import android.telephony.Rlog;
+import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Patterns;
 import android.util.TimeUtils;
@@ -110,13 +112,15 @@ public final class DataConnection extends StateMachine {
         ApnContext mApnContext;
         int mInitialMaxRetry;
         int mProfileId;
+        int mRilRat;
         Message mOnCompletedMsg;
 
         ConnectionParams(ApnContext apnContext, int initialMaxRetry, int profileId,
-                Message onCompletedMsg) {
+                int rilRadioTechnology, Message onCompletedMsg) {
             mApnContext = apnContext;
             mInitialMaxRetry = initialMaxRetry;
             mProfileId = profileId;
+            mRilRat = rilRadioTechnology;
             mOnCompletedMsg = onCompletedMsg;
         }
 
@@ -124,6 +128,7 @@ public final class DataConnection extends StateMachine {
         public String toString() {
             return "{mTag=" + mTag + " mApnContext=" + mApnContext
                     + " mInitialMaxRetry=" + mInitialMaxRetry + " mProfileId=" + mProfileId
+                    + " mRat=" + mRilRat
                     + " mOnCompletedMsg=" + msgToString(mOnCompletedMsg) + "}";
         }
     }
@@ -164,6 +169,8 @@ public final class DataConnection extends StateMachine {
     private DcFailCause mLastFailCause;
     private static final String NULL_IP = "0.0.0.0";
     private Object mUserData;
+    private int mRilRat = Integer.MAX_VALUE;
+    private int mDataRegState = Integer.MAX_VALUE;
 
     //***** Package visible variables
     int mTag;
@@ -324,6 +331,8 @@ public final class DataConnection extends StateMachine {
         mId = id;
         mCid = -1;
         mDcRetryAlarmController = new DcRetryAlarmController(mPhone, this);
+        mRilRat = mPhone.getServiceState().getRilDataRadioTechnology();
+        mDataRegState = mPhone.getServiceState().getDataRegState();
 
         addState(mDefaultState);
             addState(mInactiveState, mDefaultState);
@@ -459,7 +468,7 @@ public final class DataConnection extends StateMachine {
         }
 
         mPhone.mCi.setupDataCall(
-                Integer.toString(getRilRadioTechnology()),
+                Integer.toString(cp.mRilRat + 2),
                 Integer.toString(dataProfileId),
                 mApnSetting.apn, mApnSetting.user, mApnSetting.password,
                 Integer.toString(authType),
@@ -596,16 +605,6 @@ public final class DataConnection extends StateMachine {
             notifyAllWithEvent(alreadySent, DctConstants.EVENT_DISCONNECT_DONE, reason);
         }
         if (DBG) log("NotifyDisconnectCompleted DisconnectParams=" + dp);
-    }
-
-    private int getRilRadioTechnology() {
-        int rilRadioTechnology;
-        if (mApnSetting.bearer > 0) {
-            rilRadioTechnology = mApnSetting.bearer + 2;
-        } else {
-            rilRadioTechnology = mPhone.getServiceState().getRilDataRadioTechnology() + 2;
-        }
-        return rilRadioTechnology;
     }
 
     /*
@@ -787,6 +786,10 @@ public final class DataConnection extends StateMachine {
         public void enter() {
             if (DBG) log("DcDefaultState: enter");
 
+            // Register for RAT change
+            mPhone.getServiceStateTracker().registerForDataRatChanged(getHandler(),
+                    DctConstants.EVENT_DATA_RAT_CHANGED, null);
+
             // Add ourselves to the list of data connections
             mDcController.addDc(DataConnection.this);
         }
@@ -794,6 +797,8 @@ public final class DataConnection extends StateMachine {
         public void exit() {
             if (DBG) log("DcDefaultState: exit");
 
+            // Unregister for RAT change.
+            mPhone.getServiceStateTracker().unregisterForDataRatChanged(getHandler());
 
             if (mAc != null) {
                 mAc.disconnected();
@@ -821,7 +826,6 @@ public final class DataConnection extends StateMachine {
         @Override
         public boolean processMessage(Message msg) {
             boolean retVal = HANDLED;
-            AsyncResult ar;
 
             if (VDBG) {
                 log("DcDefault msg=" + getWhatToString(msg.what)
@@ -928,6 +932,18 @@ public final class DataConnection extends StateMachine {
                         String s = "DcDefaultState ignore EVENT_RETRY_CONNECTION"
                                 + " tag=" + msg.arg1 + ":mTag=" + mTag;
                         logAndAddLogRec(s);
+                    }
+                    break;
+
+                case DctConstants.EVENT_DATA_RAT_CHANGED:
+                    AsyncResult ar = (AsyncResult)msg.obj;
+                    Pair<Integer, Integer> drsRatPair = (Pair<Integer, Integer>)ar.result;
+                    mDataRegState = drsRatPair.first;
+                    mRilRat = drsRatPair.second;
+                    if (DBG) {
+                        log("DcDefaultState: EVENT_DATA_RAT_CHANGED"
+                                + " drs=" + mDataRegState
+                                + " mRilRat=" + mRilRat);
                     }
                     break;
 
@@ -1066,16 +1082,30 @@ public final class DataConnection extends StateMachine {
     private class DcRetryingState extends State {
         @Override
         public void enter() {
-            if (DBG) {
-                log("DcRetryingState: enter() mTag=" + mTag
-                    + ", call notifyAllOfDisconnectDcRetrying lostConnection");
+            if ((mConnectionParams.mRilRat != mRilRat)
+                    || (mDataRegState != ServiceState.STATE_IN_SERVICE)){
+                // RAT has changed or we're not in service so don't even begin retrying.
+                if (DBG) {
+                    String s = "DcRetryingState: enter() not retrying rat changed"
+                        + ", mConnectionParams.mRilRat=" + mConnectionParams.mRilRat
+                        + " != mRilRat:" + mRilRat
+                        + " transitionTo(mInactiveState)";
+                    logAndAddLogRec(s);
+                }
+                mInactiveState.setEnterNotificationParams(DcFailCause.LOST_CONNECTION);
+                transitionTo(mInactiveState);
+            } else {
+                if (DBG) {
+                   log("DcRetryingState: enter() mTag=" + mTag
+                            + ", call notifyAllOfDisconnectDcRetrying lostConnection");
+                }
+
+                notifyAllOfDisconnectDcRetrying(Phone.REASON_LOST_DATA_CONNECTION);
+
+                // Remove ourselves from cid mapping
+                mDcController.removeActiveDcByCid(DataConnection.this);
+                mCid = -1;
             }
-
-            notifyAllOfDisconnectDcRetrying(Phone.REASON_LOST_DATA_CONNECTION);
-
-            // Remove ourselves from cid mapping
-            mDcController.removeActiveDcByCid(DataConnection.this);
-            mCid = -1;
         }
 
         @Override
@@ -1083,6 +1113,37 @@ public final class DataConnection extends StateMachine {
             boolean retVal;
 
             switch (msg.what) {
+                case DctConstants.EVENT_DATA_RAT_CHANGED:
+                    AsyncResult ar = (AsyncResult)msg.obj;
+                    Pair<Integer, Integer> drsRatPair = (Pair<Integer, Integer>)ar.result;
+                    int drs = drsRatPair.first;
+                    int rat = drsRatPair.second;
+                    if ((rat == mRilRat) && (drs == mDataRegState)) {
+                        if (DBG) {
+                            log("DcRetryingState: EVENT_DATA_RAT_CHANGED"
+                                    + " strange no change in drs=" + drs
+                                    + " rat=" + rat + " ignoring");
+                        }
+                    } else {
+                        // We've lost the connection and we're retrying but RAT changed
+                        // so we may never succeed, might as well give up.
+                        mInactiveState.setEnterNotificationParams(DcFailCause.LOST_CONNECTION);
+                        deferMessage(msg);
+                        transitionTo(mInactiveState);
+
+                        if (DBG) {
+                            String s = "DcRetryingState: EVENT_DATA_RAT_CHANGED"
+                                    + " giving up changed from " + mRilRat
+                                    + " to rat=" + rat
+                                    + " or drs changed from " + mDataRegState + " to drs=" + drs;
+                            logAndAddLogRec(s);
+                        }
+                        mDataRegState = drs;
+                        mRilRat = rat;
+                    }
+                    retVal = HANDLED;
+                    break;
+
                 case EVENT_RETRY_CONNECTION: {
                     if (msg.arg1 == mTag) {
                         mRetryManager.increaseRetryCount();
@@ -1185,6 +1246,7 @@ public final class DataConnection extends StateMachine {
 
             if (DBG) log("DcActivatingState: msg=" + msgToString(msg));
             switch (msg.what) {
+                case DctConstants.EVENT_DATA_RAT_CHANGED:
                 case EVENT_CONNECT:
                     deferMessage(msg);
                     retVal = HANDLED;
@@ -1737,6 +1799,8 @@ public final class DataConnection extends StateMachine {
         pw.flush();
         pw.println(" mLinkProperties=" + mLinkProperties);
         pw.flush();
+        pw.println(" mDataRegState=" + mDataRegState);
+        pw.println(" mRilRat=" + mRilRat);
         pw.println(" mLinkCapabilities=" + mLinkCapabilities);
         pw.println(" mCreateTime=" + TimeUtils.logTimeOfDay(mCreateTime));
         pw.println(" mLastFailTime=" + TimeUtils.logTimeOfDay(mLastFailTime));
