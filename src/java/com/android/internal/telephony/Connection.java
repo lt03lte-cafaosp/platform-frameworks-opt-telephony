@@ -30,7 +30,7 @@ public abstract class Connection {
     protected int mCnapNamePresentation  = PhoneConstants.PRESENTATION_ALLOWED;
 
     public CallDetails callDetails = new CallDetails();
-    public CallModify callModifyRequest = new CallModify();
+    public CallModify callModifyRequest = null;
     public String errorInfo;
 
 
@@ -76,6 +76,8 @@ public abstract class Connection {
         CDMA_PREEMPTED,
         CDMA_NOT_EMERGENCY,              /* not an emergency call */
         CDMA_ACCESS_BLOCKED,            /* Access Blocked by CDMA network */
+        EMERGENCY_TEMP_FAILURE,         /* EMERGENCY call failed with temporary fail cause */
+        EMERGENCY_PERM_FAILURE,         /* EMERGENCY call failed with permanent fail cause */
         ERROR_UNSPECIFIED,
         /* Ims Disconnect cause grouped from here */
         CALL_FAIL_MISC

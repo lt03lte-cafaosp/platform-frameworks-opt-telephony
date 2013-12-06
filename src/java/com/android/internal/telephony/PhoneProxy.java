@@ -594,6 +594,11 @@ public class PhoneProxy extends Handler implements Phone {
     }
 
     @Override
+    public void acceptCall(int callType) throws CallStateException {
+        mActivePhone.acceptCall(callType);
+    }
+
+    @Override
     public int getCallType(Call call) throws CallStateException {
         return mActivePhone.getCallType(call);
     }
@@ -1271,6 +1276,13 @@ public class PhoneProxy extends Handler implements Phone {
     public void registerForModifyCallRequest(Handler h, int what, Object obj)
             throws CallStateException {
         mActivePhone.registerForModifyCallRequest(h, what, obj);
+    }
+
+    /*
+     * To check VT call capability
+     */
+    public boolean isVTModifyAllowed() throws CallStateException {
+        throw new CallStateException("isVTModifyAllowed is not supported in this phone " + this);
     }
 
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
