@@ -785,6 +785,7 @@ public class DcTracker extends DcTrackerBase {
                 if (DBG) log("trySetupData: make a FAILED ApnContext IDLE so its reusable");
                 apnContext.setState(DctConstants.State.IDLE);
             }
+            int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
             if (apnContext.getState() == DctConstants.State.IDLE) {
                 ArrayList<DataProfile> waitingDps =
                         buildWaitingApns(apnContext.getDataProfileType());
@@ -806,7 +807,7 @@ public class DcTracker extends DcTrackerBase {
                 log("trySetupData: call setupData, waitingApns : "
                         + apnListToString(apnContext.getWaitingApns()));
             }
-            boolean retValue = setupData(apnContext);
+            boolean retValue = setupData(apnContext, radioTech);
             notifyOffApnsOfAvailability(apnContext.getReason());
 
             if (DBG) log("trySetupData: X retValue=" + retValue);
@@ -1146,7 +1147,7 @@ public class DcTracker extends DcTrackerBase {
         return null;
     }
 
-    private boolean setupData(ApnContext apnContext) {
+    private boolean setupData(ApnContext apnContext, int radioTech) {
         if (DBG) log("setupData: apnContext=" + apnContext);
         DataProfile apnSetting;
         DcAsyncChannel dcac;
@@ -1189,7 +1190,7 @@ public class DcTracker extends DcTrackerBase {
         Message msg = obtainMessage();
         msg.what = DctConstants.EVENT_DATA_SETUP_COMPLETE;
         msg.obj = apnContext;
-        dcac.bringUp(apnContext, getInitialMaxRetry(), profileId, msg);
+        dcac.bringUp(apnContext, getInitialMaxRetry(), profileId, radioTech, msg);
 
         if (DBG) log("setupData: initing!");
         return true;
