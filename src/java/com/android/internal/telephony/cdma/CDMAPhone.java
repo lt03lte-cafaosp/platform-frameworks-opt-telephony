@@ -1160,6 +1160,11 @@ public class CDMAPhone extends PhoneBase {
         return  mUiccController.getUiccCardApplication(UiccController.APP_FAM_3GPP2);
     }
 
+    @Override
+    protected void updateCardInPhoneBook() {
+        setCardInPhoneBook();
+    }
+
     // Set the Card into the Phone Book.
     @Override
     protected void setCardInPhoneBook() {

@@ -43,6 +43,7 @@ public class IccPhoneBookInterfaceManagerProxy extends IIccPhoneBook.Stub {
     public void setmIccPhoneBookInterfaceManager(
             IccPhoneBookInterfaceManager iccPhoneBookInterfaceManager) {
         mIccPhoneBookInterfaceManager = iccPhoneBookInterfaceManager;
+        mIccPhoneBookInterfaceManager.updateIccCard();
     }
 
     @Override

@@ -128,6 +128,13 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
         cleanUp();
     }
 
+    public void updateIccCard() {
+        if (mPhone != null && mAdnCache == null) {
+            logd("updateIccCard  mPhone: " + mPhone);
+            mPhone.updateCardInPhoneBook();
+        }
+    }
+
     public void setIccCard(UiccCard card) {
         logd("Card update received: " + card);
 
