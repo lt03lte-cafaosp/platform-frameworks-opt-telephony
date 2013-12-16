@@ -616,7 +616,8 @@ public abstract class SMSDispatcher extends Handler {
             if (smsHeader != null && smsHeader.portAddrs != null) {
                 if (smsHeader.portAddrs.destPort == SmsHeader.PORT_WAP_PUSH) {
                     // GSM-style WAP indication
-                    return mWapPush.dispatchWapPdu(sms.getUserData());
+                    return mWapPush.dispatchWapPdu(sms.getUserData(),
+                            sms.getOriginatingAddress());
                 } else {
                     // The message was sent to a port, so concoct a URI for it.
                     dispatchPortAddressedPdus(pdus, smsHeader.portAddrs.destPort);
@@ -779,7 +780,7 @@ public abstract class SMSDispatcher extends Handler {
             // Dispatch the PDU to applications
             if (destPort == SmsHeader.PORT_WAP_PUSH) {
                 // Handle the PUSH
-                return mWapPush.dispatchWapPdu(datagram);
+                return mWapPush.dispatchWapPdu(datagram, address);
             } else {
                 pdus = new byte[1][];
                 pdus[0] = datagram;
@@ -800,7 +801,7 @@ public abstract class SMSDispatcher extends Handler {
                     output.write(data, 0, data.length);
                 }
                 // Handle the PUSH
-                return mWapPush.dispatchWapPdu(output.toByteArray());
+                return mWapPush.dispatchWapPdu(output.toByteArray(), address);
             } else {
                 // The messages were sent to a port, so concoct a URI for it
                 dispatchPortAddressedPdus(pdus, destPort);
