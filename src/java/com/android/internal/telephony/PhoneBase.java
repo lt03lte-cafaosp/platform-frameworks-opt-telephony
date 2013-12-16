@@ -419,6 +419,11 @@ public abstract class PhoneBase extends Handler implements Phone {
         return mContext;
     }
 
+    // Update the Card into the Phone Book.
+    protected void updateCardInPhoneBook() {
+        Rlog.e(LOG_TAG, "updateCardInPhoneBook should not be called in PhoneBase");
+    }
+
     // Set the Card into the Phone Book.
     protected void setCardInPhoneBook() {
     }
