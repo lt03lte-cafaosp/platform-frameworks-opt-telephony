@@ -52,7 +52,7 @@ public class UiccCardApplication {
     private int mPin2RetryCount = -1;
 
     private final Object  mLock = new Object();
-    UiccCard      mUiccCard; //parent
+    private UiccCard      mUiccCard; //parent
     private AppState      mAppState;
     private AppType       mAppType;
     private PersoSubState mPersoSubState;
