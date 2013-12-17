@@ -25,6 +25,7 @@ import android.os.SystemClock;
 import android.telephony.CellInfo;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
+import android.util.Pair;
 import android.util.TimeUtils;
 
 import java.io.FileDescriptor;
@@ -234,6 +235,20 @@ public abstract class ServiceStateTracker extends Handler {
             }
         }
         return notified;
+    }
+
+    /**
+     * Notify all mDataRatChangedRegistrants using an
+     * AsyncResult in msg.obj where AsyncResult#result contains the
+     * new RAT as an Integer Object.
+    */
+    protected void notifyDataRegStateRilRadioTechnologyChanged() {
+        int rat = mSS.getRilDataRadioTechnology();
+        int drs = mSS.getDataRegState();
+        if (DBG) log("notifyDataRegStateRilRadioTechnologyChanged: drs=" + drs + " rat=" + rat);
+        mPhoneBase.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
+                ServiceState.rilRadioTechnologyToString(rat));
+        mDataRatChangedRegistrants.notifyResult(new Pair<Integer, Integer>(drs, rat));
     }
 
     /**
@@ -533,6 +548,7 @@ public abstract class ServiceStateTracker extends Handler {
     public void registerForDataRatChanged(Handler h, int what, Object obj) {
         Registrant r = new Registrant(h, what, obj);
         mDataRatChangedRegistrants.add(r);
+        notifyDataRegStateRilRadioTechnologyChanged();
     }
 
     public void unregisterForDataRatChanged(Handler h) {
