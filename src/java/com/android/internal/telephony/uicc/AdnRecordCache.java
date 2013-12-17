@@ -19,7 +19,6 @@ package com.android.internal.telephony.uicc;
 import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.Message;
-import android.telephony.Rlog;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
@@ -61,12 +60,11 @@ public final class AdnRecordCache extends Handler implements IccConstants {
     private static final int USIM_EFEMAIL_TAG = 0xCA;
     //***** Constructor
 
-    private UiccCardApplication mUiccCardApplication;
 
-    AdnRecordCache(IccFileHandler fh,UiccCardApplication uiccCardApplication) {
+
+    AdnRecordCache(IccFileHandler fh) {
         mFh = fh;
         mUsimPhoneBookManager = new UsimPhoneBookManager(mFh, this);
-        mUiccCardApplication = uiccCardApplication;
     }
 
     //***** Called from SIMRecords
@@ -75,7 +73,6 @@ public final class AdnRecordCache extends Handler implements IccConstants {
      * Called from SIMRecords.onRadioNotAvailable and SIMRecords.handleSimRefresh.
      */
     public void reset() {
-        mUiccCardApplication.mUiccCard.adnRecords = null;
         mAdnLikeFiles.clear();
         mUsimPhoneBookManager.reset();
 
@@ -107,12 +104,8 @@ public final class AdnRecordCache extends Handler implements IccConstants {
      * radio session, or null if we haven't
      */
     public ArrayList<AdnRecord>
-            getRecordsIfLoaded(int efid) {
-        if (efid == IccConstants.EF_ADN) {
-            return mUiccCardApplication.mUiccCard.adnRecords;
-        } else {
-            return mAdnLikeFiles.get(efid);
-        }
+    getRecordsIfLoaded(int efid) {
+        return mAdnLikeFiles.get(efid);
     }
 
     /**
@@ -353,18 +346,6 @@ public final class AdnRecordCache extends Handler implements IccConstants {
         }
     }
 
-    private boolean isADNListAvailable(ArrayList<AdnRecord> list) {
-        if (list == null || list.isEmpty()) {
-            return false;
-        }
-        for (AdnRecord adn : list) {
-            if (adn != null && !adn.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     //***** Overridden from Handler
 
     @Override
@@ -382,22 +363,9 @@ public final class AdnRecordCache extends Handler implements IccConstants {
 
                 waiters = mAdnLikeWaiters.get(efid);
                 mAdnLikeWaiters.delete(efid);
-                Log.d("AdnRecordCache","EVENT_LOAD_ALL_ADN_LIKE_DONE");
+
                 if (ar.exception == null) {
-                    if (efid == IccConstants.EF_ADN) {
-                        if (mUiccCardApplication.mUiccCard.adnRecords == null) {
-                            mUiccCardApplication.mUiccCard.adnRecords = new ArrayList<AdnRecord>();
-                            mUiccCardApplication.mUiccCard.adnRecords
-                                    .addAll((ArrayList<AdnRecord>) ar.result);
-                        }
-                        if (isADNListAvailable((ArrayList<AdnRecord>) ar.result)) {
-                            mUiccCardApplication.mUiccCard.adnRecords.clear();
-                            mUiccCardApplication.mUiccCard.adnRecords
-                                    .addAll((ArrayList<AdnRecord>) ar.result);
-                        }
-                    } else {
-                        mAdnLikeFiles.put(efid, (ArrayList<AdnRecord>) ar.result);
-                    }
+                    mAdnLikeFiles.put(efid, (ArrayList<AdnRecord>) ar.result);
                 }
                 notifyWaiters(waiters, ar);
                 if (mAdnLikeFiles.get(EF_ADN) != null) {
@@ -411,15 +379,7 @@ public final class AdnRecordCache extends Handler implements IccConstants {
                 AdnRecord adn = (AdnRecord) (ar.userObj);
 
                 if (ar.exception == null) {
-                    if (efid == IccConstants.EF_ADN) {
-                        if (mUiccCardApplication.mUiccCard.adnRecords != null) {
-                            mUiccCardApplication.mUiccCard.adnRecords.set(index - 1, adn);
-                        } else {
-                            Log.d("AdnRecordCache", "can not update adn",
-                                    new NullPointerException());
-                        }
-                    }
-                    else if (mAdnLikeFiles.get(efid) != null) {
+                    if (mAdnLikeFiles.get(efid) != null) {
                         mAdnLikeFiles.get(efid).set(index - 1, adn);
                     }
                     if (efid == EF_PBR) {

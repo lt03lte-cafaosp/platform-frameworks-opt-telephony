@@ -100,7 +100,7 @@ public final class RuimRecords extends IccRecords {
     public RuimRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
 
-        mAdnCache = new AdnRecordCache(mFh,app);
+        mAdnCache = new AdnRecordCache(mFh);
 
         mRecordsRequested = false;  // No load request is made till SIM ready
 

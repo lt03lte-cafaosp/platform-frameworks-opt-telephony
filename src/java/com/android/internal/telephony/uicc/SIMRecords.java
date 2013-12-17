@@ -193,7 +193,7 @@ public class SIMRecords extends IccRecords {
     public SIMRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
 
-        mAdnCache = new AdnRecordCache(mFh,app);
+        mAdnCache = new AdnRecordCache(mFh);
 
         mVmConfig = new VoiceMailConstants();
         mSpnOverride = new SpnOverride();
