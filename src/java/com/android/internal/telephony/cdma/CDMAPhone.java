@@ -531,6 +531,22 @@ public class CDMAPhone extends PhoneBase {
         return null;
     }
 
+    public String getRuimId() {
+        IccRecords r = mIccRecords.get();
+        if( r==null ) {
+            UiccCardApplication newUiccApplication = getUiccCardApplication();
+            if ( newUiccApplication!=null )
+                r = newUiccApplication.getIccRecords();
+        }
+        if (r != null && r instanceof RuimRecords) {
+            RuimRecords ruimRec = (RuimRecords)r;
+            if (ruimRec != null) {
+                return ruimRec.getRuimId();
+            }
+        }
+        return null;
+    }
+
     @Override
     public boolean canConference() {
         Rlog.e(LOG_TAG, "canConference: not possible in CDMA");

@@ -1020,6 +1020,11 @@ public class PhoneProxy extends Handler implements Phone {
     }
 
     @Override
+    public String getRuimId() {
+        return mActivePhone.getRuimId();
+    }
+
+    @Override
     public PhoneSubInfo getPhoneSubInfo(){
         return mActivePhone.getPhoneSubInfo();
     }

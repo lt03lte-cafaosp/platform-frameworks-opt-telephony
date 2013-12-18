@@ -68,6 +68,7 @@ public final class RuimRecords extends IccRecords {
     private String mMin;
     private String mHomeSystemId;
     private String mHomeNetworkId;
+    private String mRuimId;
 
     @Override
     public String toString() {
@@ -96,6 +97,9 @@ public final class RuimRecords extends IccRecords {
 
     private static final int EVENT_SMS_ON_RUIM = 21;
     private static final int EVENT_GET_SMS_DONE = 22;
+
+    //RUIM ID is 8 bytes data
+    private static final int NUM_BYTES_RUIM_ID = 8;
 
     public RuimRecords(UiccCardApplication app, Context c, CommandsInterface ci) {
         super(app, c, ci);
@@ -495,6 +499,26 @@ public final class RuimRecords extends IccRecords {
         if (DBG) log("CSIM PRL version=" + mPrlVersion);
     }
 
+    private class EfRuimIdLoaded implements IccRecordLoaded {
+        public String getEfName() {
+            return "EF_RUIM_ID";
+        }
+        public void onRecordLoaded(AsyncResult ar) {
+            //for RUIM ID data, the first byte represent the num bytes of valid data. From
+            //the second byte to num+1 byte, it is valid RUIM ID data. And the  second
+            //byte is the lowest-order byte, the num+1 byte is highest-order
+            byte[] data = (byte[])ar.result;
+            int numOfBytes = data[0];
+            if (numOfBytes < NUM_BYTES_RUIM_ID) {
+                byte[] decodeData = new byte[numOfBytes];
+                for (int i = 0; i < numOfBytes; i++) {
+                    decodeData[i] = data[numOfBytes - i];
+                }
+                mRuimId = IccUtils.bytesToHexString(decodeData);
+            }
+        }
+    }
+
     @Override
     public void handleMessage(Message msg) {
         AsyncResult ar;
@@ -703,7 +727,7 @@ public final class RuimRecords extends IccRecords {
          * the app is not ready
          * then bail
          */
-        if (mRecordsRequested || !mRecordsRequired
+        if (mRecordsRequested /*|| !mRecordsRequired*/
             || AppState.APPSTATE_READY != mParentApp.getState()) {
             if (DBG) log("fetchRuimRecords: Abort fetching records rRecordsRequested = "
                             + mRecordsRequested
@@ -753,6 +777,10 @@ public final class RuimRecords extends IccRecords {
         mRecordsToLoad++;
 
         mFh.getEFLinearRecordSize(EF_SMS, obtainMessage(EVENT_GET_SMS_RECORD_SIZE_DONE));
+
+        mFh.loadEFTransparent(EF_RUIM_ID,
+                obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfRuimIdLoaded()));
+        mRecordsToLoad++;
 
         if (DBG) log("fetchRuimRecords " + mRecordsToLoad + " requested: " + mRecordsRequested);
         // Further records that can be inserted are Operator/OEM dependent
@@ -832,6 +860,11 @@ public final class RuimRecords extends IccRecords {
     public boolean getCsimSpnDisplayCondition() {
         return mCsimSpnDisplayCondition;
     }
+
+    public String getRuimId() {
+        return mRuimId;
+    }
+
     @Override
     protected void log(String s) {
         Rlog.d(LOG_TAG, "[RuimRecords] " + s);
