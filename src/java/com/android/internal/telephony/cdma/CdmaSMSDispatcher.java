@@ -70,6 +70,7 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
     protected static final String TAG = "CdmaSMSDispatcher";
     private static final boolean VDBG = false;
     private ImsSMSDispatcher mImsSMSDispatcher;
+    private int mTeleserviceId = 0;
 
     private byte[] mLastDispatchedSmsFingerprint;
     private byte[] mLastAcknowledgedSmsFingerprint;
@@ -210,6 +211,8 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
             return Intents.RESULT_SMS_OUT_OF_MEMORY;
         }
 
+
+        mTeleserviceId = teleService;
         if (SmsEnvelope.TELESERVICE_WAP == teleService) {
             return processCdmaWapPdu(sms.getUserData(), sms.mMessageRef,
                     sms.getOriginatingAddress());
@@ -302,11 +305,15 @@ public class CdmaSMSDispatcher extends SMSDispatcher {
         Rlog.i(TAG, "Received WAP PDU. Type = " + msgType + ", originator = " + address
                 + ", src-port = " + sourcePort + ", dst-port = " + destinationPort
                 + ", ID = " + referenceNumber + ", segment# = " + segment + '/' + totalSegments);
-
         // pass the user data portion of the PDU to the shared handler in SMSDispatcher
-        byte[] userData = new byte[pdu.length - index];
-        System.arraycopy(pdu, index, userData, 0, pdu.length - index);
-
+        byte[] userData = null;
+        if (SmsEnvelope.TELESERVICE_CT_WAP == mTeleserviceId) {
+            userData = new byte[pdu.length - index - 1];
+            System.arraycopy(pdu, index, userData, 0, pdu.length - index - 1);
+        } else {
+            userData = new byte[pdu.length - index];
+            System.arraycopy(pdu, index, userData, 0, pdu.length - index);
+        }
         return processMessagePart(userData, address, referenceNumber, segment, totalSegments,
                 0L, destinationPort, true);
     }
