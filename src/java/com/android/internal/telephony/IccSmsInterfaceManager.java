@@ -41,7 +41,9 @@ import com.android.internal.telephony.uicc.IccFileHandler;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.RuimRecords;
 import com.android.internal.telephony.uicc.SIMRecords;
+import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.util.HexDump;
+import com.android.internal.telephony.uicc.UiccController;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,6 +84,8 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     final protected AppOpsManager mAppOps;
     protected SMSDispatcher mDispatcher;
 
+    private int mAppIndex = 0;
+
     protected Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -116,8 +120,14 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                     ar = (AsyncResult)msg.obj;
                     synchronized (mLock) {
                         if (ar.exception == null) {
-                            mSms  = (List<SmsRawData>)
-                                    buildValidRawData((ArrayList<byte[]>) ar.result);
+                            if (mSms == null) {
+                                mSms  = (List<SmsRawData>)
+                                        buildValidRawData((ArrayList<byte[]>) ar.result);
+                                log("EVENT_LOAD_DONE get sms first time size=" + mSms.size());
+                            } else {
+                                mSms.addAll(buildValidRawData((ArrayList<byte[]>) ar.result));
+                                log("EVENT_LOAD_DONE get second app sms size=" + mSms.size());
+                            }
                             //Mark SMS as read after importing it from card.
                             markMessagesAsRead((ArrayList<byte[]>) ar.result);
                         } else {
@@ -366,24 +376,76 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                 callingPackage) != AppOpsManager.MODE_ALLOWED)) {
             return new ArrayList<SmsRawData>();
         }
-        synchronized(mLock) {
 
-            IccFileHandler fh = mPhone.getIccFileHandler();
-            if (fh == null) {
-                Rlog.e(LOG_TAG, "Cannot load Sms records. No icc card?");
-                if (mSms != null) {
-                    mSms.clear();
-                    return mSms;
+        if (isMultiModeCard()) {
+            mAppIndex = 0;
+            // Read messages on both 3GPP and 3GPP2 ICC card even if it's not active.
+            int appCount = getAppCount();
+            log("getAllMessagesFromEF appCount=" + appCount);
+            while(mAppIndex < appCount) {
+                synchronized(mLock) {
+                    int family = 0;
+                    // Just want to get 3GPP and 3GPP2 application, break for others
+                    if(mAppIndex == 0) {
+                        family = UiccController.APP_FAM_3GPP;
+                    } else if (mAppIndex == 1) {
+                        family = UiccController.APP_FAM_3GPP2;
+                    } else {
+                        break;
+                    }
+                    UiccController uc = mPhone.getUiccOntroller();
+                    UiccCardApplication ap = null;
+                    if (uc != null) {
+                        ap = uc.getUiccCardApplication(family);
+                        if (ap == null) {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                    IccFileHandler fh = ap.getIccFileHandler();
+                    if (fh == null) {
+                        Log.e(LOG_TAG, "Cannot load Sms records. No icc card?");
+                        if (mAppIndex == 0 && mSms != null) {
+                            mSms.clear();
+                            return mSms;
+                        }
+                    }
+                    Message response = mHandler.obtainMessage(EVENT_LOAD_DONE);
+                    response.arg1 = 1;
+
+                    log("getAllMessagesFromEF for multi mode card: index=" + mAppIndex);
+                    fh.loadEFLinearFixedAll(IccConstants.EF_SMS, response);
+
+                    try {
+                        mLock.wait();
+                    } catch (InterruptedException e) {
+                        log("interrupted while trying to load from the Icc");
+                    }
                 }
+                log("getAllMessagesFromEF for dual mode card: sms size=" + mSms.size());
+                mAppIndex++;
             }
+        } else {
+            synchronized(mLock) {
 
-            Message response = mHandler.obtainMessage(EVENT_LOAD_DONE);
-            fh.loadEFLinearFixedAll(IccConstants.EF_SMS, response);
+                IccFileHandler fh = mPhone.getIccFileHandler();
+                if (fh == null) {
+                    Rlog.e(LOG_TAG, "Cannot load Sms records. No icc card?");
+                    if (mSms != null) {
+                        mSms.clear();
+                        return mSms;
+                    }
+                }
 
-            try {
-                mLock.wait();
-            } catch (InterruptedException e) {
-                log("interrupted while trying to load from the Icc");
+                Message response = mHandler.obtainMessage(EVENT_LOAD_DONE);
+                fh.loadEFLinearFixedAll(IccConstants.EF_SMS, response);
+
+                try {
+                    mLock.wait();
+                } catch (InterruptedException e) {
+                    log("interrupted while trying to load from the Icc");
+                }
             }
         }
         return mSms;
@@ -421,6 +483,22 @@ public class IccSmsInterfaceManager extends ISms.Stub {
             }
         }
         return mSms;
+    }
+
+    private boolean isMultiModeCard() {
+        if (getAppCount() > 1) {
+            return true;
+        }
+        return false;
+    }
+
+    private int getAppCount() {
+        int appCount = 0;
+        UiccController uc = mPhone.getUiccOntroller();
+        if (uc != null) {
+            appCount = mPhone.getUiccOntroller().getUiccCard().getNumApplications();
+        }
+        return appCount;
     }
 
     /**

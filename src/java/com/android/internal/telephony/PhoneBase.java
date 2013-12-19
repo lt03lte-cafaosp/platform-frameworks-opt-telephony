@@ -1582,4 +1582,8 @@ public abstract class PhoneBase extends Handler implements Phone {
     public boolean isRadioOn() {
         return mCi.getRadioState().isOn();
     }
+
+    public UiccController getUiccOntroller() {
+        return mUiccController;
+    }
 }
