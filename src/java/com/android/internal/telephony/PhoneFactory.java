@@ -203,6 +203,10 @@ public class PhoneFactory {
         }
     }
 
+    public static Context getContext() {
+        return sContext;
+    }
+
     /**
      * Makes a {@link SipPhone} object.
      * @param sipUri the local SIP URI the phone runs on
