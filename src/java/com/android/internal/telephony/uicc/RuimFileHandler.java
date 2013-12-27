@@ -55,6 +55,7 @@ public final class RuimFileHandler extends IccFileHandler {
         case EF_SMS:
         case EF_CST:
         case EF_RUIM_SPN:
+        case EF_RUIM_ID:
         case EF_CSIM_LI:
         case EF_CSIM_MDN:
         case EF_CSIM_IMSIM:

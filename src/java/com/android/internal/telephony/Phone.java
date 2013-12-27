@@ -1532,6 +1532,11 @@ public interface Phone {
     String getImei();
 
     /**
+     * Retrieves RUIM-ID for phones. Returns null if RUIM-ID is not set.
+     */
+    String getRuimId();
+
+    /**
      * Retrieves the PhoneSubInfo of the Phone
      */
     public PhoneSubInfo getPhoneSubInfo();

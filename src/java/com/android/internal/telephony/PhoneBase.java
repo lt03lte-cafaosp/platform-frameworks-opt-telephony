@@ -1078,6 +1078,11 @@ public abstract class PhoneBase extends Handler implements Phone {
         return -1;
     }
 
+    @Override
+    public String getRuimId() {
+        return null;
+    }
+
     /**
      * Returns the CDMA ERI text,
      */
