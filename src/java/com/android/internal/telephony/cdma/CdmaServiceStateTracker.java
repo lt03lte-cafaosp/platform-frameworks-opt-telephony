@@ -407,6 +407,13 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
 
                     mMin = cdmaSubscription[3];
                     mPrlVersion = cdmaSubscription[4];
+
+                    if(!("1".equals(mPrlVersion))) {
+                    SystemProperties.set("persist.radio.device.prl", mPrlVersion);
+                    } else {
+                    loge("EVENT_POLL_STATE_CDMA_SUBSCRIPTION  prl =   NOT change the previously property" + mPrlVersion);
+                    }
+
                     if (DBG) log("GET_CDMA_SUBSCRIPTION: MDN=" + mMdn);
 
                     mIsMinInfoReady = true;
@@ -484,6 +491,12 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
             if (ar.exception == null) {
                 ints = (int[]) ar.result;
                 mPrlVersion = Integer.toString(ints[0]);
+
+                if(!("1".equals(mPrlVersion))) {
+                SystemProperties.set("persist.radio.device.prl", mPrlVersion);
+                } else {
+                loge("EVENT_CDMA_PRL_VERSION_CHANGED  prl =   NOT change the previously property" + mPrlVersion);
+                }
             }
             break;
 
