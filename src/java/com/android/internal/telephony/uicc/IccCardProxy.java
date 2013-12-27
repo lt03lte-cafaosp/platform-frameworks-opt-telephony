@@ -107,6 +107,8 @@ public class IccCardProxy extends Handler implements IccCard {
     protected State mExternalState = State.UNKNOWN;
     private PersoSubState mPersoSubState = PersoSubState.PERSOSUBSTATE_UNKNOWN;
 
+    private static boolean mCheckNoUIM = true;
+
     public IccCardProxy(Context context, CommandsInterface ci) {
         log("Creating");
         mContext = context;
@@ -315,8 +317,28 @@ public class IccCardProxy extends Handler implements IccCard {
                 updateActiveRecord();
             }
 
+            if (SystemProperties.getBoolean("persist.env.phone.checknouim", false)) {
+                checkNoUIM();
+            }
             updateExternalState();
         }
+    }
+
+    //send no UIM intent when there is no UIM card
+    private void checkNoUIM() {
+        if (mCheckNoUIM && !isCardPresent()) {
+            Intent intent = new Intent("android.intent.action.NO_UIM");
+            mContext.sendBroadcast(intent);
+
+            mCheckNoUIM = false;
+        }
+    }
+
+    private boolean isCardPresent() {
+        if (mUiccCard != null && mUiccCard.getCardState() == CardState.CARDSTATE_PRESENT) {
+            return true;
+        }
+        return false;
     }
 
     protected void HandleDetectedState() {
