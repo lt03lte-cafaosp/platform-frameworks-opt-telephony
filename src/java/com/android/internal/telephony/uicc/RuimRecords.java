@@ -690,79 +690,12 @@ public final class RuimRecords extends IccRecords {
         }
     }
 
-    private void handleMMSApn() {
-        // - Whenever device powers up and card is initialized,
-        // delete all APNs (there should be only one) with name='omhmms' or name='csimmms'
-        // and apn_type='mms'
-        Cursor cursor = null;
-        cursor = mContext.getContentResolver().query(Telephony.Carriers.CONTENT_URI, null, "name='csimmms'", null, null);
-        if (cursor!=null && cursor.getCount()>0) {
-            mContext.getContentResolver().delete(Telephony.Carriers.CONTENT_URI, "name = ?",
-                    new String[] { "csimmms"});
-        }
-
-        if (cursor!=null) {
-            cursor.close();
-        }
-
-    }
-
     /**
      * if an OMH card is inserted,we continue to read OMH  EF elements
      */
     private void fetchOMHCardRecords(boolean isOMHCard){
-        handleMMSApn();
-
         //OMH related events
         if (isOMHCard) {
-            mFh.loadEFTransparent(IccConstants.EF_SSFC,
-                obtainMessage(EVENT_GET_SSFC_DONE));
-            mRecordsToLoad++;
-
-            // get ecc list
-            mFh.loadEFTransparent(IccConstants.EF_ECC, obtainMessage(EVENT_GET_ECC_LIST_DONE));
-            mRecordsToLoad++;
-
-            // get EFmmsicp
-            mFh.loadEFTransparent(IccConstants.EF_MMS_ICP,
-                obtainMessage(EVENT_GET_MMS_ICP_DONE));
-            mRecordsToLoad++;
-
-            // get EF_Mms_Config
-            if (null != mParentApp && AppType.APPTYPE_CSIM == mParentApp.getType()) {
-                mFh.loadEFTransparent(IccConstants.EF_CSIM_MMSConfig,
-                        obtainMessage(EVENT_GET_CSIM_MMS_CONFIG));
-                Log.d(LOG_TAG,"load CSIM EVENT_GET_CSIM_MMS_CONFIG");
-            } else {
-                mFh.loadEFTransparent(IccConstants.EF_MMSConfig,
-                        obtainMessage(EVENT_GET_CSIM_MMS_CONFIG));
-                Log.d(LOG_TAG,"load OMH EVENT_GET_CSIM_MMS_CONFIG");
-            }
-            mRecordsToLoad++;
-
-            // get lbs related configurations
-            mFh.loadEFTransparent(IccConstants.EF_LBS_V2_PDE_ADDR,
-                obtainMessage(EVENT_GET_LBS_V2_PDE_ADDR_DONE));
-            mRecordsToLoad++;
-
-            mFh.loadEFTransparent(IccConstants.EF_LBS_V2_MPC_ADDR,
-                obtainMessage(EVENT_GET_LBS_V2_MPC_ADDR_DONE));
-            mRecordsToLoad++;
-
-            /**
-             * smscap parameters
-             */
-            if (null != mParentApp && AppType.APPTYPE_CSIM == mParentApp.getType()) {
-                mFh.loadEFTransparent(IccConstants.EF_CSIM_SMSCAP,
-                        obtainMessage(EVENT_GET_SMSCAP_DONE));
-                Log.d(LOG_TAG,"load CSIM EVENT_GET_SMSCAP_DONE");
-            } else {
-                mFh.loadEFTransparent(IccConstants.EF_SMSCAP,
-                        obtainMessage(EVENT_GET_SMSCAP_DONE));
-                Log.d(LOG_TAG,"load OMH EVENT_GET_SMSCAP_DONE");
-            }
-            mRecordsToLoad++;
-
             /**
              * write device's software version on EF6F90 on startup.
              */
