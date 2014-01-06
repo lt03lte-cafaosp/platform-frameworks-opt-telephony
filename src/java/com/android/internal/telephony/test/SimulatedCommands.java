@@ -24,17 +24,27 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.telephony.Rlog;
+import android.telephony.SignalStrength;
+import android.text.TextUtils;
 
 import com.android.internal.telephony.BaseCommands;
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
 import com.android.internal.telephony.dataconnection.DataCallResponse;
+import com.android.internal.telephony.dataconnection.DcFailCause;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.UUSInfo;
 import com.android.internal.telephony.gsm.CallFailCause;
 import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
 import com.android.internal.telephony.gsm.SuppServiceNotification;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.PersoSubState;
+import com.android.internal.telephony.uicc.IccCardStatus;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppType;
+import com.android.internal.telephony.uicc.IccCardStatus.CardState;
+import com.android.internal.telephony.uicc.IccCardStatus.PinState;
 
 import java.util.ArrayList;
 
@@ -62,6 +72,12 @@ public final class SimulatedCommands extends BaseCommands
     private final static SimFdnState INITIAL_FDN_STATE = SimFdnState.NONE;
     private final static String DEFAULT_SIM_PIN2_CODE = "5678";
     private final static String SIM_PUK2_CODE = "87654321";
+    public final static String OPERATOR_MCC = "012";
+    public final static String OPERATOR_MNC = "34";
+    public final static String SIM_MIN = "5678901234";
+    public final static String OPERATOR_NUMERIC = OPERATOR_MCC + OPERATOR_MNC;
+    public final static String IMSI = OPERATOR_NUMERIC + SIM_MIN;
+    public final static String IMEI = IMSI;
 
     //***** Instance Variables
 
@@ -79,6 +95,8 @@ public final class SimulatedCommands extends BaseCommands
     int mNetworkType;
     String mPin2Code;
     boolean mSsnNotifyOn = false;
+    String mVoiceRegState[];
+    String mDataRegState[];
 
     int mPausedResponseCount;
     ArrayList<Message> mPausedResponses = new ArrayList<Message>();
@@ -103,13 +121,45 @@ public final class SimulatedCommands extends BaseCommands
         mSimFdnEnabledState = INITIAL_FDN_STATE;
         mSimFdnEnabled = (mSimFdnEnabledState != SimFdnState.NONE);
         mPin2Code = DEFAULT_SIM_PIN2_CODE;
+        initRegistrationStates();
     }
 
     //***** CommandsInterface implementation
+    // TODO: Add tests for Icc cards.
+    // TODO: Simulate app_ready latencies
 
     @Override
     public void getIccCardStatus(Message result) {
-        unimplemented(result);
+        Rlog.e(LOG_TAG, "getIccCardStatus");
+        IccCardApplicationStatus appStatus;
+
+        IccCardStatus cardStatus = new IccCardStatus();
+        cardStatus.setCardState(1); // present
+        cardStatus.setUniversalPinState(0); // unknown
+        cardStatus.mGsmUmtsSubscriptionAppIndex = 0;
+        cardStatus.mCdmaSubscriptionAppIndex = 1;
+        cardStatus.mImsSubscriptionAppIndex = -1;
+        int numApplications = 2;
+
+        // limit to maximum allowed applications
+        if (numApplications > IccCardStatus.CARD_MAX_APPS) {
+            numApplications = IccCardStatus.CARD_MAX_APPS;
+        }
+        cardStatus.mApplications = new IccCardApplicationStatus[numApplications];
+        for (int i = 0 ; i < numApplications ; i++) {
+            appStatus = new IccCardApplicationStatus();
+            appStatus.app_type       = (i == 0) ? AppType.APPTYPE_USIM : AppType.APPTYPE_CSIM;
+            appStatus.app_state      = AppState.APPSTATE_READY;
+            appStatus.perso_substate = PersoSubState.PERSOSUBSTATE_READY;
+            appStatus.aid            = "aid";
+            appStatus.app_label      = "app_label";
+            appStatus.pin1_replaced  = 0;
+            appStatus.pin1           = PinState.PINSTATE_DISABLED;
+            appStatus.pin2           = PinState.PINSTATE_DISABLED;
+            cardStatus.mApplications[i] = appStatus;
+        }
+        AsyncResult.forMessage(result, cardStatus, null);
+        result.sendToTarget();
     }
 
     @Override
@@ -537,7 +587,7 @@ public final class SimulatedCommands extends BaseCommands
      */
     @Override
     public void getIMSIForApp(String aid, Message result) {
-        resultSuccess(result, "012345678901234");
+        resultSuccess(result, IMSI);
     }
 
     /**
@@ -549,7 +599,7 @@ public final class SimulatedCommands extends BaseCommands
      */
     @Override
     public void getIMEI(Message result) {
-        resultSuccess(result, "012345678901234");
+        resultSuccess(result, IMEI);
     }
 
     /**
@@ -871,6 +921,41 @@ public final class SimulatedCommands extends BaseCommands
         resultSuccess(response, null);
     }
 
+    private void initRegistrationStates() {
+        String voice[] = new String[14];
+
+        voice[0] = "5"; // registered roam
+        voice[1] = null;
+        voice[2] = null;
+        voice[3] = null;
+        voice[4] = null;
+        voice[5] = null;
+        voice[6] = null;
+        voice[7] = null;
+        voice[8] = null;
+        voice[9] = null;
+        voice[10] = null;
+        voice[11] = null;
+        voice[12] = null;
+        voice[13] = null;
+        mVoiceRegState = voice;
+
+        String data[] = new String[4];
+
+        data[0] = "5"; // registered roam
+        data[1] = null;
+        data[2] = null;
+        data[3] = "2";
+        mDataRegState = data;
+    }
+
+    @Override
+    public void setRegistrationState(String[] voice, String[] data) {
+        mVoiceRegState = voice;
+        mDataRegState = data;
+        mVoiceNetworkStateRegistrants.notifyRegistrants(new AsyncResult(null, null, null));
+    }
+
     /**
      * response.obj.result is an String[14]
      * See ril.h for details
@@ -880,24 +965,7 @@ public final class SimulatedCommands extends BaseCommands
      */
     @Override
     public void getVoiceRegistrationState (Message result) {
-        String ret[] = new String[14];
-
-        ret[0] = "5"; // registered roam
-        ret[1] = null;
-        ret[2] = null;
-        ret[3] = null;
-        ret[4] = null;
-        ret[5] = null;
-        ret[6] = null;
-        ret[7] = null;
-        ret[8] = null;
-        ret[9] = null;
-        ret[10] = null;
-        ret[11] = null;
-        ret[12] = null;
-        ret[13] = null;
-
-        resultSuccess(result, ret);
+        resultSuccess(result, mVoiceRegState);
     }
 
     /**
@@ -919,14 +987,7 @@ public final class SimulatedCommands extends BaseCommands
      */
     @Override
     public void getDataRegistrationState (Message result) {
-        String ret[] = new String[4];
-
-        ret[0] = "5"; // registered roam
-        ret[1] = null;
-        ret[2] = null;
-        ret[3] = "2";
-
-        resultSuccess(result, ret);
+        resultSuccess(result, mDataRegState);
     }
 
     /**
@@ -1023,11 +1084,40 @@ public final class SimulatedCommands extends BaseCommands
     public void setupDataCall(String radioTechnology, String profile,
             String apn, String user, String password, String authType,
             String protocol, Message result) {
-        unimplemented(result);
+        Rlog.d(LOG_TAG, "[SimCmd] setupDataCall " + radioTechnology + " "
+                + profile + " " + apn + " " + user + " "
+                + password + " " + authType + " " + protocol);
+
+        DataCallResponse dataCall = new DataCallResponse();
+
+        dataCall.version = 6;
+        dataCall.status = 0;
+        dataCall.suggestedRetryTime = 0;
+        dataCall.cid = 0;
+        dataCall.active = 2;
+        dataCall.type = "";
+        dataCall.ifname = "test0";
+        String addresses = "10.0.0.2";
+        if (!TextUtils.isEmpty(addresses)) {
+            dataCall.addresses = addresses.split(" ");
+        }
+        String dnses = "10.0.0.3";
+        if (!TextUtils.isEmpty(dnses)) {
+            dataCall.dnses = dnses.split(" ");
+        }
+        String gateways = "10.0.0.1";
+        if (!TextUtils.isEmpty(gateways)) {
+            dataCall.gateways = gateways.split(" ");
+        }
+        AsyncResult.forMessage(result, dataCall, null);
+        result.sendToTarget();
     }
 
     @Override
-    public void deactivateDataCall(int cid, int reason, Message result) {unimplemented(result);}
+    public void deactivateDataCall(int cid, int reason, Message result) {
+        Rlog.d(LOG_TAG, "[SimCmd] deactivateDataCall " + cid + " " + reason);
+        resultSuccess(result, null);
+    }
 
     @Override
     public void setPreferredNetworkType(int networkType , Message result) {
