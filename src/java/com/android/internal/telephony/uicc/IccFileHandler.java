@@ -665,28 +665,25 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                                     obtainMessage(EVENT_READ_RECORD_DONE, lc));
                     }
                 } else if (lc.mLoadPart) {
-                        lc.results.set(lc.mRecordNum - 1, result.payload);
-                        lc.mCount++;
-                        if (lc.mCount < lc.mCountLoadrecords) {
-                            lc.mRecordNum = lc.mRecordNums.get(lc.mCount);
-                            if (lc.mRecordNum <= lc.mCountRecords) {
-                                if (path == null) {
-                                    path = getEFPath(lc.mEfid);
-                                }
-                                mCi.iccIOForApp(COMMAND_READ_RECORD, lc.mEfid, path, lc.mRecordNum,
-                                        READ_RECORD_MODE_ABSOLUTE, lc.mRecordSize, null, null,
-                                        mAid,
-                                        obtainMessage(EVENT_READ_RECORD_DONE, lc));
-                            } else {
-                                sendResult(response, lc.results, null);
+                    lc.results.set(lc.mRecordNum - 1, result.payload);
+                    lc.mCount++;
+                    if (lc.mCount < lc.mCountLoadrecords) {
+                        lc.mRecordNum = lc.mRecordNums.get(lc.mCount);
+                        if (lc.mRecordNum <= lc.mCountRecords) {
+                            if (path == null) {
+                                path = getEFPath(lc.mEfid);
                             }
-                        } else {
-                            sendResult(response, lc.results, null);
+                            mCi.iccIOForApp(COMMAND_READ_RECORD, lc.mEfid, path, lc.mRecordNum,
+                                   READ_RECORD_MODE_ABSOLUTE, lc.mRecordSize, null, null, mAid,
+                                   obtainMessage(EVENT_READ_RECORD_DONE, lc));
                         }
+                    } else {
+                        sendResult(response, lc.results, null);
                     }
-                    else {
-                        sendResult(response, result.payload, null);
-                    }
+                }
+                else {
+                   sendResult(response, result.payload, null);
+                }
 
             break;
 
