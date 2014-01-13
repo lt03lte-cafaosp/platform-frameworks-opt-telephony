@@ -674,8 +674,10 @@ public abstract class IccFileHandler extends Handler implements IccConstants {
                                 path = getEFPath(lc.mEfid);
                             }
                             mCi.iccIOForApp(COMMAND_READ_RECORD, lc.mEfid, path, lc.mRecordNum,
-                                   READ_RECORD_MODE_ABSOLUTE, lc.mRecordSize, null, null, mAid,
-                                   obtainMessage(EVENT_READ_RECORD_DONE, lc));
+                                    READ_RECORD_MODE_ABSOLUTE, lc.mRecordSize, null, null, mAid,
+                                    obtainMessage(EVENT_READ_RECORD_DONE, lc));
+                        } else {
+                            sendResult(response, lc.results, null);
                         }
                     } else {
                         sendResult(response, lc.results, null);
