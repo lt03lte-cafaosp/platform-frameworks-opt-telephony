@@ -53,6 +53,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     private int mEmailTagNumberInIap = 0;
     private boolean mAnrPresentInIap = false;
     private int mAnrTagNumberInIap = 0;
+    private boolean mIapPresent = false;
     private Map<Integer, ArrayList<byte[]>> mIapFileRecord;
     private Map<Integer, ArrayList<byte[]>> mEmailFileRecord;
     private Map<Integer, ArrayList<byte[]>> mAnrFileRecord;
@@ -225,7 +226,6 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         if (fileIds == null) return;
 
         if (fileIds.containsKey(USIM_EFEMAIL_TAG)) {
-            int efid = fileIds.get(USIM_EFEMAIL_TAG);
             // Check if the EFEmail is a Type 1 file or a type 2 file.
             // If mEmailPresentInIap is true, its a type 2 file.
             // So we read the IAP file and then read the email records.
@@ -272,7 +272,6 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         if (fileIds == null || fileIds.isEmpty())
             return;
         if (fileIds.containsKey(USIM_EFANR_TAG)) {
-            int efid = fileIds.get(USIM_EFANR_TAG);
             if (mAnrPresentInIap) {
                 readIapFileAndWait(fileIds.get(USIM_EFIAP_TAG), recNum);
                 if (!hasRecordIn(mIapFileRecord, recNum)) {
@@ -1233,6 +1232,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         }
 
         void parseTag(SimTlv tlv, int recNum) {
+            Rlog.d(LOG_TAG, "parseTag: recNum=" + recNum);
             SimTlv tlvEf;
             int tag;
             byte[] data;
@@ -1258,11 +1258,14 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             int tagNumberWithinParentTag = 0;
             do {
                 tag = tlv.getTag();
-                if (parentTag == USIM_TYPE2_TAG && tag == USIM_EFEMAIL_TAG) {
+                if (parentTag == USIM_TYPE2_TAG && tag == USIM_EFIAP_TAG) {
+                    mIapPresent = true;
+                }
+                if (parentTag == USIM_TYPE2_TAG && tag == USIM_EFEMAIL_TAG && mIapPresent) {
                     mEmailPresentInIap = true;
                     mEmailTagNumberInIap = tagNumberWithinParentTag;
                 }
-                if (parentTag == USIM_TYPE2_TAG && tag == USIM_EFANR_TAG) {
+                if (parentTag == USIM_TYPE2_TAG && tag == USIM_EFANR_TAG && mIapPresent) {
                     mAnrPresentInIap = true;
                     mAnrTagNumberInIap = tagNumberWithinParentTag;
                 }
@@ -1282,6 +1285,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                         data = tlv.getData();
                         int efid = ((data[0] & 0xFF) << 8) | (data[1] & 0xFF);
                         val.put(tag, efid);
+                        Rlog.d(LOG_TAG, "parseEf.put(" + tag + "," + efid + ")");
                         break;
                 }
                 tagNumberWithinParentTag ++;
