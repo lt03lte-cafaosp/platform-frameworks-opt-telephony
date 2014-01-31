@@ -33,7 +33,6 @@ public abstract class Connection {
     public CallModify callModifyRequest = null;
     public String errorInfo;
 
-
     private static String LOG_TAG = "Connection";
 
     public enum DisconnectCause {
@@ -80,6 +79,7 @@ public abstract class Connection {
         EMERGENCY_PERM_FAILURE,         /* EMERGENCY call failed with permanent fail cause */
         ERROR_UNSPECIFIED,
         /* Ims Disconnect cause grouped from here */
+        SRVCC_CALL_DROP,                /* Call dropped because of SRVCC*/
         CALL_FAIL_MISC
     }
 
@@ -172,6 +172,16 @@ public abstract class Connection {
      * Returns 0 before then.
      */
     public abstract long getConnectTime();
+
+    /**
+     * Set connection connect time in currentTimeMillis() format.
+     * This API may be used to change connect time of the
+     * Connection for scenarios like IMS Volte SRVCC where
+     * connect time is transferred from PS Connection to CS.
+     */
+    public void setConnectTime(long timeInMillis) {
+        Rlog.e(LOG_TAG, "setConnectTime() not implemented");
+    }
 
     /**
      * Disconnect time in currentTimeMillis() format.
