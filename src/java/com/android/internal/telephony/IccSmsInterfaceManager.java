@@ -443,7 +443,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                 callingPackage) != AppOpsManager.MODE_ALLOWED) {
             return;
         }
-        mDispatcher.sendText(destAddr, scAddr, text, sentIntent, deliveryIntent, -1);
+        mDispatcher.sendText(destAddr, scAddr, text, sentIntent, deliveryIntent, -1, false);
     }
 
     /**
@@ -474,7 +474,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     @Override
     public void sendTextWithOptions(String callingPackage, String destAddr, String scAddr,
             String text, PendingIntent sentIntent, PendingIntent deliveryIntent,
-            int priority) {
+            int priority, boolean isExpectMore) {
         mPhone.getContext().enforceCallingPermission(
                 Manifest.permission.SEND_SMS,
                 "Sending SMS message");
@@ -487,7 +487,8 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                 callingPackage) != AppOpsManager.MODE_ALLOWED) {
             return;
         }
-        mDispatcher.sendText(destAddr, scAddr, text, sentIntent, deliveryIntent, priority);
+        mDispatcher.sendText(destAddr, scAddr, text, sentIntent, deliveryIntent, priority,
+                isExpectMore);
     }
 
     /**
@@ -535,7 +536,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         }
         mDispatcher.sendMultipartText(destAddr, scAddr, (ArrayList<String>) parts,
                 (ArrayList<PendingIntent>) sentIntents, (ArrayList<PendingIntent>) deliveryIntents,
-                -1);
+                -1, false);
     }
 
     /**
@@ -567,7 +568,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     @Override
     public void sendMultipartTextWithOptions(String callingPackage, String destAddr,
             String scAddr, List<String> parts, List<PendingIntent> sentIntents,
-            List<PendingIntent> deliveryIntents, int priority) {
+            List<PendingIntent> deliveryIntents, int priority, boolean isExpectMore) {
         mPhone.getContext().enforceCallingPermission(
                 Manifest.permission.SEND_SMS,
                 "Sending SMS message");
@@ -584,7 +585,7 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         }
         mDispatcher.sendMultipartText(destAddr, scAddr, (ArrayList<String>) parts,
                 (ArrayList<PendingIntent>) sentIntents, (ArrayList<PendingIntent>) deliveryIntents,
-                priority);
+                priority, isExpectMore);
     }
 
     @Override
