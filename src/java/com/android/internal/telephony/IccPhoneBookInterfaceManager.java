@@ -120,6 +120,10 @@ public abstract class IccPhoneBookInterfaceManager extends IIccPhoneBook.Stub {
     }
 
     private void cleanUp() {
+        if (mAdnCache != null) {
+            mAdnCache.reset();
+            mAdnCache = null;
+        }
         mIs3gCard = false;
         mCurrentApp = null;
     }
