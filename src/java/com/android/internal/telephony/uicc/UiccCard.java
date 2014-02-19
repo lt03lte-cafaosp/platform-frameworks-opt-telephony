@@ -374,7 +374,7 @@ public class UiccCard {
         return count;
     }
 
-    void onRefresh(IccRefreshResponse refreshResponse){
+    public void onRefresh(IccRefreshResponse refreshResponse){
         for ( int i = 0; i < mUiccApplications.length; i++) {
             if (mUiccApplications[i] != null) {
                 // Let the app know that the refresh occurred
