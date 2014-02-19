@@ -1548,6 +1548,11 @@ public abstract class PhoneBase extends Handler implements Phone {
                 + this);
     }
 
+    public void deflectCall(int connId, String number, Message response) throws CallStateException {
+        throw new CallStateException("deflectCall is not supported in this phone "
+                + this);
+    }
+
     public void registerForModifyCallRequest(Handler h, int what, Object obj)
             throws CallStateException {
         throw new CallStateException("registerForModifyCallRequest is not supported in this phone "
