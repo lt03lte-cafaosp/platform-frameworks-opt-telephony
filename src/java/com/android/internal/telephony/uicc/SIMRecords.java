@@ -1200,6 +1200,10 @@ public class SIMRecords extends IccRecords {
                 mFh.loadEFTransparent(EF_CFF_CPHS,
                         obtainMessage(EVENT_GET_CFF_DONE));
                 break;
+            case EF_ADN:
+                log("SIM Refresh for EF_ADN");
+                mAdnCache.reset();
+                break;
             default:
                 // For now, fetch all records if this is not a
                 // voicemail number.
@@ -1317,6 +1321,23 @@ public class SIMRecords extends IccRecords {
         // Some fields require more than one SIM record to set
 
         String operator = getOperatorNumeric();
+        if (!TextUtils.isEmpty(operator)) {
+            log("onAllRecordsLoaded set 'gsm.sim.operator.numeric' to operator='" +
+                    operator + "'");
+            setSystemProperty(PROPERTY_ICC_OPERATOR_NUMERIC, operator);
+            setSystemProperty(PROPERTY_APN_SIM_OPERATOR_NUMERIC, operator);
+        } else {
+            log("onAllRecordsLoaded empty 'gsm.sim.operator.numeric' skipping");
+        }
+
+        if (!TextUtils.isEmpty(mImsi)) {
+            log("onAllRecordsLoaded set mcc imsi=" + mImsi);
+            setSystemProperty(PROPERTY_ICC_OPERATOR_ISO_COUNTRY,
+                    MccTable.countryCodeForMcc(Integer.parseInt(mImsi.substring(0,3))));
+        } else {
+            log("onAllRecordsLoaded empty imsi skipping setting mcc");
+        }
+
         setVoiceMailByCountry(operator);
         setSpnFromConfig(operator);
 
