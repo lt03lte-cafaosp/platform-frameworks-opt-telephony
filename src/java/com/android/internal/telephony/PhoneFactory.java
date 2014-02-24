@@ -106,6 +106,15 @@ public class PhoneFactory {
                 }
                 int networkMode = Settings.Global.getInt(context.getContentResolver(),
                         Settings.Global.PREFERRED_NETWORK_MODE, preferredNetworkMode);
+                // As per certain operator requirement, the device is expected to be in global
+                // mode from boot up, by enabling the property persist.env.phone.global the
+                // network mode is set to global during boot up.
+                if (sContext.getResources().getBoolean(
+                        com.android.internal.R.bool.config_global_phone_enabled)) {
+                    networkMode = Phone.NT_MODE_LTE_CMDA_EVDO_GSM_WCDMA;
+                    Settings.Global.putInt(context.getContentResolver(),
+                            Settings.Global.PREFERRED_NETWORK_MODE, networkMode);
+                }
                 Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkMode));
 
                 int cdmaSubscription = CdmaSubscriptionSourceManager.getDefault(context);
