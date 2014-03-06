@@ -414,17 +414,6 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
                     mIsMinInfoReady = true;
 
                     updateOtaspState();
-                    if (!mIsSubscriptionFromRuim && mIccRecords != null) {
-                        if (DBG) {
-                            log("GET_CDMA_SUBSCRIPTION set imsi in mIccRecords");
-                        }
-                        mIccRecords.setImsi(getImsi());
-                    } else {
-                        if (DBG) {
-                            log("GET_CDMA_SUBSCRIPTION either mIccRecords is null  or NV type device" +
-                                    " - not setting Imsi in mIccRecords");
-                        }
-                    }
                 } else {
                     if (DBG) {
                         log("GET_CDMA_SUBSCRIPTION: error parsing cdmaSubscription params num="
@@ -778,11 +767,6 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
                 return;
             }
 
-            if (!mCi.getRadioState().isOn()) {
-                // Radio has crashed or turned off.
-                cancelPollState();
-                return;
-            }
 
             if (err != CommandException.Error.OP_NOT_ALLOWED_BEFORE_REG_NW) {
                 loge("handlePollStateResult: RIL returned an error where it must succeed"
@@ -903,7 +887,19 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
             mGotCountryCode = false;
 
             pollStateDone();
-            break;
+
+            /**
+             * If iwlan feature is enabled then we do get
+             * voice_network_change indication from RIL. At this moment we
+             * dont know the current RAT since we are in Airplane mode.
+             * We have to request for current registration state and hence
+             * fallthrough to default case only if iwlan feature is
+             * applicable.
+             */
+            if (!isIwlanFeatureAvailable()) {
+                /* fall-through */
+                break;
+            }
 
         default:
             // Issue all poll-related commands at once, then count
@@ -1056,6 +1052,12 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
         if (hasRilDataRadioTechnologyChanged) {
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
                     ServiceState.rilRadioTechnologyToString(mSS.getRilDataRadioTechnology()));
+
+            if (isIwlanFeatureAvailable()
+                    && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
+                        == mSS.getRilDataRadioTechnology())) {
+                handleIwlan();
+            }
         }
 
         if (hasRegistered) {
@@ -1131,7 +1133,16 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
 
         if (hasCdmaDataConnectionChanged || hasRilDataRadioTechnologyChanged) {
             notifyDataRegStateRilRadioTechnologyChanged();
-            mPhone.notifyDataConnection(null);
+            if (isIwlanFeatureAvailable()
+                    && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
+                        == mSS.getRilDataRadioTechnology())) {
+                mPhone.notifyDataConnection(Phone.REASON_IWLAN_AVAILABLE);
+                //DCT shall inform the availability of APN for all non-default
+                //contexts.
+                mIwlanRegistrants.notifyRegistrants();
+            } else {
+                mPhone.notifyDataConnection(null);
+            }
         }
 
         if (hasCdmaDataConnectionAttached) {
@@ -1642,12 +1653,11 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
     }
 
     /**
-     * Returns IMSI as MCC + MNC + MIN
+     * Returns IMSI from NV in the format MCC + MNC + MIN
      */
-    public String getImsi() {
-        // TODO: When RUIM is enabled, IMSI will come from RUIM not build-time props.
+    public String getNvImsi() {
         String operatorNumeric = getSystemProperty(
-                TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, "");
+                CDMAPhone.PROPERTY_CDMA_HOME_OPERATOR_NUMERIC, "");
 
         if (!TextUtils.isEmpty(operatorNumeric) && getCdmaMin() != null) {
             return (operatorNumeric + getCdmaMin());
