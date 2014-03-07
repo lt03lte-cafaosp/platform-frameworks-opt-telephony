@@ -232,6 +232,7 @@ public class ImsSMSDispatcher extends SMSDispatcher {
         if (oldFormat.equals(newFormat)) {
             if (isCdmaFormat(newFormat)) {
                 Rlog.d(TAG, "old format matched new format (cdma)");
+                shouldSendSmsOverIms();
                 mCdmaDispatcher.sendSms(tracker);
                 return;
             } else {
@@ -274,6 +275,7 @@ public class ImsSMSDispatcher extends SMSDispatcher {
                 Rlog.d(TAG, "old format (gsm) ==> new format (cdma)");
                 pdu = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(
                         scAddr, destAddr, text, (tracker.mDeliveryIntent != null), null);
+                shouldSendSmsOverIms();
             } else {
                 Rlog.d(TAG, "old format (cdma) ==> new format (gsm)");
                 pdu = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(
@@ -289,6 +291,7 @@ public class ImsSMSDispatcher extends SMSDispatcher {
                 pdu = com.android.internal.telephony.cdma.SmsMessage.getSubmitPdu(
                             scAddr, destAddr, destPort.intValue(), data,
                             (tracker.mDeliveryIntent != null));
+                shouldSendSmsOverIms();
             } else {
                 Rlog.d(TAG, "old format (cdma) ==> new format (gsm)");
                 pdu = com.android.internal.telephony.gsm.SmsMessage.getSubmitPdu(
