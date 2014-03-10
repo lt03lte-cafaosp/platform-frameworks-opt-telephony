@@ -1816,4 +1816,15 @@ public interface CommandsInterface {
      * @param response is callback message
      */
     void setLocalCallHold(int lchStatus, Message response);
+
+    /**
+     * Sets the handler for SIM Refresh from OEM hook notifications.
+     *
+     * @param h Handler for notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    void registerForSimRefreshEvent(Handler h, int what, Object obj);
+    void unregisterForSimRefreshEvent(Handler h);
+
 }
