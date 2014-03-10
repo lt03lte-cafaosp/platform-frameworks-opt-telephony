@@ -34,6 +34,8 @@ import com.android.internal.telephony.CommandsInterface;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * This class is responsible for keeping all knowledge about
@@ -88,6 +90,7 @@ public class UiccController extends Handler {
     protected static final int EVENT_GET_ICC_STATUS_DONE = 2;
     protected static final int EVENT_RADIO_UNAVAILABLE = 3;
     protected static final int EVENT_REFRESH = 4;
+    protected static final int EVENT_REFRESH_OEM = 5;
 
     protected static final Object mLock = new Object();
     protected static UiccController mInstance;
@@ -98,8 +101,6 @@ public class UiccController extends Handler {
 
     protected RegistrantList mIccChangedRegistrants = new RegistrantList();
 
-    public static final String ACTION_SIM_REFRESH =
-            "org.codeaurora.intent.action.ACTION_SIM_REFRESH_RECEIVED";
     protected boolean mOEMHookSimRefresh = false;
 
     public static UiccController make(Context c, CommandsInterface ci) {
@@ -239,6 +240,18 @@ public class UiccController extends Handler {
                         }
                     }
                     break;
+                case EVENT_REFRESH_OEM:
+                    if (DBG) log("Sim REFRESH OEM received");
+                    if (mOEMHookSimRefresh) {
+                        ar = (AsyncResult)msg.obj;
+                        if (ar.exception == null) {
+                            ByteBuffer payload = ByteBuffer.wrap((byte[])ar.result);
+                            handleRefresh(parseOemSimRefresh(payload));
+                        } else {
+                            log ("Exception on refresh " + ar.exception);
+                        }
+                    }
+                    break;
                 default:
                     Rlog.e(LOG_TAG, " Unknown Event " + msg.what);
             }
@@ -267,24 +280,28 @@ public class UiccController extends Handler {
         mCi.getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE));
     }
 
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(ACTION_SIM_REFRESH)) {
-                IccRefreshResponse response = new IccRefreshResponse();
+    public static IccRefreshResponse
+    parseOemSimRefresh(ByteBuffer payload) {
+        IccRefreshResponse response = new IccRefreshResponse();
+        /* AID maximum size */
+        final int QHOOK_MAX_AID_SIZE = 20*2+1+3;
 
-                response.refreshResult = intent.getIntExtra("refreshResult", 0);
-                response.efId   = intent.getIntExtra("efId", 0);
-                response.aid = intent.getStringExtra("aid");
+        /* parse from payload */
+        payload.order(ByteOrder.nativeOrder());
 
-                log("refresh SIM card " + ", refresh result:" + response.refreshResult);
+        response.refreshResult = payload.getInt();
+        response.efId  = payload.getInt();
+        int aidLen = payload.getInt();
+        byte[] aid = new byte[QHOOK_MAX_AID_SIZE];
+        payload.get(aid, 0, QHOOK_MAX_AID_SIZE);
+        response.aid = (aidLen == 0) ? null : new String(aid);
 
-                handleRefresh(response);
-            } else {
-                Rlog.e(LOG_TAG, "Received Intent: " + intent.toString());
-            }
+        if (DBG){
+            Rlog.d(LOG_TAG, "refresh SIM card " + ", refresh result:" + response.refreshResult
+                    + ", ef Id:" + response.efId + ", aid:" + response.aid);
         }
-    };
+        return response;
+    }
 
     private UiccController(Context c, CommandsInterface ci) {
         if (DBG) log("Creating UiccController");
@@ -296,9 +313,7 @@ public class UiccController extends Handler {
         mOEMHookSimRefresh = mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_sim_refresh_for_dual_mode_card);
         if (mOEMHookSimRefresh) {
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(ACTION_SIM_REFRESH);
-            mContext.registerReceiver(mReceiver, intentFilter);
+            mCi.registerForSimRefreshEvent(this, EVENT_REFRESH_OEM, null);
         } else {
             mCi.registerForIccRefresh(this, EVENT_REFRESH, null);
         }
