@@ -16,7 +16,12 @@
 
 package com.android.internal.telephony.uicc;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.telephony.MSimTelephonyManager;
+
 import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.Message;
@@ -25,9 +30,13 @@ import android.os.RegistrantList;
 
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
+import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppType;
+import com.android.internal.telephony.MSimConstants;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -92,7 +101,10 @@ public abstract class IccRecords extends Handler implements IccConstants {
 
     public static final int EVENT_GET_ICC_RECORD_DONE = 100;
     public static final int EVENT_REFRESH = 31; // ICC refresh occurred
+    public static final int EVENT_REFRESH_OEM = 32;
     protected static final int EVENT_APP_READY = 1;
+
+    private boolean mOEMHookSimRefresh = false;
 
     @Override
     public String toString() {
@@ -147,8 +159,13 @@ public abstract class IccRecords extends Handler implements IccConstants {
         mCi = ci;
         mFh = app.getIccFileHandler();
         mParentApp = app;
-
-        mCi.registerForIccRefresh(this, EVENT_REFRESH, null);
+        mOEMHookSimRefresh = mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_sim_refresh_for_dual_mode_card);
+        if (mOEMHookSimRefresh) {
+            mCi.registerForSimRefreshEvent(this, EVENT_REFRESH_OEM, null);
+        } else {
+            mCi.registerForIccRefresh(this, EVENT_REFRESH, null);
+        }
     }
 
     /**
@@ -156,7 +173,11 @@ public abstract class IccRecords extends Handler implements IccConstants {
      */
     public void dispose() {
         mDestroyed.set(true);
-        mCi.unregisterForIccRefresh(this);
+        if (mOEMHookSimRefresh) {
+            mCi.unregisterForSimRefreshEvent(this);
+        } else {
+            mCi.unregisterForIccRefresh(this);
+        }
         mParentApp = null;
         mFh = null;
         mCi = null;
@@ -411,12 +432,25 @@ public abstract class IccRecords extends Handler implements IccConstants {
                 }
                 break;
             case EVENT_REFRESH:
-                ar = (AsyncResult)msg.obj;
                 if (DBG) log("Card REFRESH occurred: ");
-                if (ar.exception == null) {
-                    handleRefresh((IccRefreshResponse)ar.result);
-                } else {
-                    loge("Icc refresh Exception: " + ar.exception);
+                if (!mOEMHookSimRefresh) {
+                    ar = (AsyncResult)msg.obj;
+                    if (ar.exception == null) {
+                        handleRefresh((IccRefreshResponse)ar.result);
+                    } else {
+                        loge("Icc refresh Exception: " + ar.exception);
+                    }
+                }
+                break;
+            case EVENT_REFRESH_OEM:
+                if (DBG) log("Card REFRESH OEM occurred: ");
+                if (mOEMHookSimRefresh) {
+                    ar = (AsyncResult)msg.obj;
+                    if (ar.exception == null) {
+                        handleRefreshOem((byte[])ar.result,(Integer)ar.userObj);
+                    } else {
+                        loge("Icc refresh Exception: " + ar.exception);
+                    }
                 }
                 break;
 
@@ -462,8 +496,11 @@ public abstract class IccRecords extends Handler implements IccConstants {
                     * desired power state has changed in the interim, we don't want to
                     * override it with an unconditional power on.
                     */
+                } else {
+                    mAdnCache.reset();
+                    mRecordsRequested = false;
+                    mImsi = null;
                 }
-                mAdnCache.reset();
                 //We will re-fetch the records when the app
                 // goes back to the ready state. Nothing to do here.
                 break;
@@ -471,6 +508,32 @@ public abstract class IccRecords extends Handler implements IccConstants {
                 // unknown refresh operation
                 if (DBG) log("handleRefresh with unknown operation");
                 break;
+        }
+    }
+
+    private void handleRefreshOem(byte[] data, int index){
+        ByteBuffer payload = ByteBuffer.wrap(data);
+        IccRefreshResponse response = UiccController.parseOemSimRefresh(payload);
+
+        IccCardApplicationStatus appStatus = new IccCardApplicationStatus();
+        AppType appType = appStatus.AppTypeFromRILInt(payload.getInt());
+        if ((appType != AppType.APPTYPE_UNKNOWN)
+            && (appType != mParentApp.getType())) {
+            // This is for different app. Ignore.
+            return;
+        }
+
+        handleRefresh(response);
+
+        if (response.refreshResult == IccRefreshResponse.REFRESH_RESULT_FILE_UPDATE ||
+            response.refreshResult == IccRefreshResponse.REFRESH_RESULT_INIT) {
+            log("send broadcast org.codeaurora.intent.action.ACTION_SIM_REFRESH_UPDATE");
+            Intent sendIntent = new Intent(
+                    "org.codeaurora.intent.action.ACTION_SIM_REFRESH_UPDATE");
+            if (MSimTelephonyManager.getDefault().isMultiSimEnabled()){
+                sendIntent.putExtra(MSimConstants.SUBSCRIPTION_KEY, index);
+            }
+            mContext.sendBroadcast(sendIntent, null);
         }
     }
 

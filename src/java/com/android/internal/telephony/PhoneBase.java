@@ -195,7 +195,7 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     // Flag that indicates that Out Of Service is considered as data call disconnect
     protected boolean mOosIsDisconnect = SystemProperties.getBoolean(
-            PROPERTY_OOS_IS_DISCONNECT, false);
+            PROPERTY_OOS_IS_DISCONNECT, true);
 
     /**
      * Set a system property, unless we're in unit test mode
@@ -1545,6 +1545,11 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void hangupWithReason(int callId, String userUri,
             boolean mpty, int failCause, String errorInfo) throws CallStateException {
         throw new CallStateException("hangupWithReason is not supported in this phone "
+                + this);
+    }
+
+    public void deflectCall(int connId, String number, Message response) throws CallStateException {
+        throw new CallStateException("deflectCall is not supported in this phone "
                 + this);
     }
 

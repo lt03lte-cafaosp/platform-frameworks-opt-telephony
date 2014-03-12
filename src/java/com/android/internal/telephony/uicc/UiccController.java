@@ -16,7 +16,11 @@
 
 package com.android.internal.telephony.uicc;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+
 import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.Message;
@@ -27,10 +31,11 @@ import android.telephony.Rlog;
 import android.telephony.ServiceState;
 
 import com.android.internal.telephony.CommandsInterface;
-import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * This class is responsible for keeping all knowledge about
@@ -84,7 +89,8 @@ public class UiccController extends Handler {
     protected static final int EVENT_ICC_STATUS_CHANGED = 1;
     protected static final int EVENT_GET_ICC_STATUS_DONE = 2;
     protected static final int EVENT_RADIO_UNAVAILABLE = 3;
-    private static final int EVENT_REFRESH = 4;
+    protected static final int EVENT_REFRESH = 4;
+    protected static final int EVENT_REFRESH_OEM = 5;
 
     protected static final Object mLock = new Object();
     protected static UiccController mInstance;
@@ -94,6 +100,8 @@ public class UiccController extends Handler {
     protected UiccCard mUiccCard;
 
     protected RegistrantList mIccChangedRegistrants = new RegistrantList();
+
+    protected boolean mOEMHookSimRefresh = false;
 
     public static UiccController make(Context c, CommandsInterface ci) {
         synchronized (mLock) {
@@ -222,12 +230,26 @@ public class UiccController extends Handler {
                     mIccChangedRegistrants.notifyRegistrants();
                     break;
                 case EVENT_REFRESH:
-                    ar = (AsyncResult)msg.obj;
                     if (DBG) log("Sim REFRESH received");
-                    if (ar.exception == null) {
-                        handleRefresh((IccRefreshResponse)ar.result);
-                    } else {
-                        log ("Exception on refresh " + ar.exception);
+                    if (!mOEMHookSimRefresh) {
+                        ar = (AsyncResult)msg.obj;
+                        if (ar.exception == null) {
+                            handleRefresh((IccRefreshResponse)ar.result);
+                        } else {
+                            log ("Exception on refresh " + ar.exception);
+                        }
+                    }
+                    break;
+                case EVENT_REFRESH_OEM:
+                    if (DBG) log("Sim REFRESH OEM received");
+                    if (mOEMHookSimRefresh) {
+                        ar = (AsyncResult)msg.obj;
+                        if (ar.exception == null) {
+                            ByteBuffer payload = ByteBuffer.wrap((byte[])ar.result);
+                            handleRefresh(parseOemSimRefresh(payload));
+                        } else {
+                            log ("Exception on refresh " + ar.exception);
+                        }
                     }
                     break;
                 default:
@@ -258,6 +280,29 @@ public class UiccController extends Handler {
         mCi.getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE));
     }
 
+    public static IccRefreshResponse
+    parseOemSimRefresh(ByteBuffer payload) {
+        IccRefreshResponse response = new IccRefreshResponse();
+        /* AID maximum size */
+        final int QHOOK_MAX_AID_SIZE = 20*2+1+3;
+
+        /* parse from payload */
+        payload.order(ByteOrder.nativeOrder());
+
+        response.refreshResult = payload.getInt();
+        response.efId  = payload.getInt();
+        int aidLen = payload.getInt();
+        byte[] aid = new byte[QHOOK_MAX_AID_SIZE];
+        payload.get(aid, 0, QHOOK_MAX_AID_SIZE);
+        response.aid = (aidLen == 0) ? null : new String(aid);
+
+        if (DBG){
+            Rlog.d(LOG_TAG, "refresh SIM card " + ", refresh result:" + response.refreshResult
+                    + ", ef Id:" + response.efId + ", aid:" + response.aid);
+        }
+        return response;
+    }
+
     private UiccController(Context c, CommandsInterface ci) {
         if (DBG) log("Creating UiccController");
         mContext = c;
@@ -265,7 +310,13 @@ public class UiccController extends Handler {
         mCi.registerForIccStatusChanged(this, EVENT_ICC_STATUS_CHANGED, null);
         mCi.registerForAvailable(this, EVENT_ICC_STATUS_CHANGED, null);
         mCi.registerForNotAvailable(this, EVENT_RADIO_UNAVAILABLE, null);
-        mCi.registerForIccRefresh(this, EVENT_REFRESH, null);
+        mOEMHookSimRefresh = mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_sim_refresh_for_dual_mode_card);
+        if (mOEMHookSimRefresh) {
+            mCi.registerForSimRefreshEvent(this, EVENT_REFRESH_OEM, null);
+        } else {
+            mCi.registerForIccRefresh(this, EVENT_REFRESH, null);
+        }
     }
 
     private synchronized void onGetIccCardStatusDone(AsyncResult ar) {

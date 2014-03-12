@@ -31,9 +31,8 @@ import android.os.SystemProperties;
 import android.telephony.MSimTelephonyManager;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.PhoneStateListener;
-import android.telephony.Rlog;
 import android.telephony.ServiceState;
-import android.telephony.TelephonyManager;
+import android.telephony.Rlog;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -458,12 +457,6 @@ public class CallManager {
         return phone;
     }
 
-    private boolean isImsOnWifi(Phone offHookPhone) {
-        return (offHookPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS &&
-                offHookPhone.getServiceState().getDataNetworkType() !=
-                        TelephonyManager.NETWORK_TYPE_LTE);
-    }
-
     public void setAudioMode() {
         Context context = getContext();
         if (context == null) return;
@@ -500,11 +493,9 @@ public class CallManager {
                 }
 
                 int newAudioMode = AudioManager.MODE_IN_CALL;
-                if (offhookPhone instanceof SipPhone || isImsOnWifi(offhookPhone)) {
+                if (offhookPhone instanceof SipPhone) {
                     Rlog.d(LOG_TAG, "setAudioMode Set audio mode for SIP call!");
                     // enable IN_COMMUNICATION audio mode instead for sipPhone
-                    // or for IMS calls over wifi
-                    Rlog.d(LOG_TAG, "setAudioMode Set audio mode for SIP or wifi call!");
                     newAudioMode = AudioManager.MODE_IN_COMMUNICATION;
                 }
                 int currMode = audioManager.getMode();
@@ -2255,5 +2246,13 @@ public class CallManager {
 
     public void deactivateLchState(int sub) {
         Rlog.e(LOG_TAG, " deactivateLchState not supported");
+    }
+
+    public void startDtmf(char c, int subscription) {
+        Rlog.e(LOG_TAG, " startDtmf not supported for subscription");
+    }
+
+    public void stopDtmf(int subscription) {
+        Rlog.e(LOG_TAG, " stopDtmf not supported for subscription");
     }
 }
