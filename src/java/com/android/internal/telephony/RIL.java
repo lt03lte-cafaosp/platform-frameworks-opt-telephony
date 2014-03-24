@@ -253,6 +253,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     final int OEMHOOK_UNSOL_CDMA_CONT_DTMF_START = OEMHOOK_BASE + 1002;
     final int OEMHOOK_UNSOL_CDMA_CONT_DTMF_STOP = OEMHOOK_BASE + 1003;
     final int OEMHOOK_UNSOL_WMS_READY = OEMHOOK_BASE + 1009;
+    final int OEMHOOK_UNSOL_SIM_REFRESH = OEMHOOK_BASE + 1016;
 
     //***** Instance Variables
 
@@ -3270,6 +3271,10 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 notifyWmsReady(responseData);
                 break;
 
+            case OEMHOOK_UNSOL_SIM_REFRESH:
+                notifySimRefresh(responseData);
+                break;
+
             default:
                 Rlog.d(RILJ_LOG_TAG, "Response ID " + responseId
                         + " is not served in this process.");
@@ -3300,6 +3305,13 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         AsyncResult ar = new AsyncResult(null, data, null);
         mWmsReadyRegistrants.notifyRegistrants(ar);
         Rlog.d(RILJ_LOG_TAG, "WMS_READY notified to registrants");
+    }
+
+    /** Notify registrants of SIM_REFRESH event. */
+    protected void notifySimRefresh(byte[] data) {
+        AsyncResult ar = new AsyncResult(null, data, null);
+        mSimRefreshRegistrants.notifyRegistrants(ar);
+        Rlog.d(RILJ_LOG_TAG, "SIM_REFRESH notified to registrants");
     }
 
     private Object
