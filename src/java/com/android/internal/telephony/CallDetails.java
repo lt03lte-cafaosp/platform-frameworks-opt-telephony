@@ -161,6 +161,17 @@ public class CallDetails {
                                                             * video is resumed;
                                                             */
 
+    public static final int CALL_SUBSTATE_UNDEFINED = 0; /*
+                                                          * Default case, substate
+                                                          * information not received
+                                                          * from lower layers
+                                                          */
+
+    public static final int CALL_SUBSTATE_CONNECTED_SUSPENDED = 1; /*
+                                                                    * Indicates that call is
+                                                                    * connected but suspended
+                                                                    */
+
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
     public static final String EXTRAS_PARENT_CALL_ID = "parentCallId";
     public static final String EXTRAS_HANDOVER_INFORMATION = "handoverInfo";
@@ -168,6 +179,7 @@ public class CallDetails {
 
     public int call_type;
     public int call_domain;
+    public int callsubstate = CALL_SUBSTATE_UNDEFINED;
     public String[] extras;
     private int mVideoPauseState = VIDEO_PAUSE_STATE_RESUMED;
 
@@ -190,6 +202,7 @@ public class CallDetails {
         if (srcCall != null) {
             call_type = srcCall.call_type;
             call_domain = srcCall.call_domain;
+            callsubstate = srcCall.callsubstate;
             extras = srcCall.extras;
             localAbility = srcCall.localAbility;
             peerAbility = srcCall.peerAbility;
@@ -293,6 +306,7 @@ public class CallDetails {
                 + " " + call_domain
                 + " " + extrasResult
                 + " videoPauseState" + mVideoPauseState
+                + " callSubState " + callsubstate
                 + " Local Ability " + localSrvAbility
                 + " Peer Ability " + peerSrvAbility);
     }
