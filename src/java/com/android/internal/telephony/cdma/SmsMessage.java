@@ -1166,7 +1166,9 @@ public class SmsMessage extends SmsMessageBase {
             }
             sms.mBearerData.userData.numFields = inStream.read(8);
             consumedBits += 8;
-            int dataBits = subParamLen - consumedBits;
+            int remainigBits = subParamLen - consumedBits;
+            int dataBits = sms.mBearerData.userData.numFields * 8;
+            dataBits = dataBits < remainigBits ? dataBits : remainigBits;
             sms.mBearerData.userData.payload = inStream.readByteArray(dataBits);
             sms.mUserData = sms.mBearerData.userData.payload;
             decodeSuccess = true;
