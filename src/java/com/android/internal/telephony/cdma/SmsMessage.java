@@ -703,6 +703,10 @@ public class SmsMessage extends SmsMessageBase {
                         }
                         addr.origBytes = data;
                         Rlog.i(LOG_TAG, "Originating Addr=" + addr.toString());
+                        if (parameterId == DESTINATION_ADDRESS) {
+                            env.destAddress = addr;
+                            mRecipientAddress = addr;
+                        }
                         break;
                     case ORIGINATING_SUB_ADDRESS:
                     case DESTINATION_SUB_ADDRESS:
@@ -820,7 +824,8 @@ public class SmsMessage extends SmsMessageBase {
                 status = mBearerData.errorClass << 8;
                 status |= mBearerData.messageStatus;
             }
-        } else if (mBearerData.messageType != BearerData.MESSAGE_TYPE_DELIVER) {
+        } else if ((mBearerData.messageType != BearerData.MESSAGE_TYPE_DELIVER)
+                && (mBearerData.messageType != BearerData.MESSAGE_TYPE_SUBMIT)) {
             throw new RuntimeException("Unsupported message type: " + mBearerData.messageType);
         }
 
@@ -1161,7 +1166,9 @@ public class SmsMessage extends SmsMessageBase {
             }
             sms.mBearerData.userData.numFields = inStream.read(8);
             consumedBits += 8;
-            int dataBits = subParamLen - consumedBits;
+            int remainigBits = subParamLen - consumedBits;
+            int dataBits = sms.mBearerData.userData.numFields * 8;
+            dataBits = dataBits < remainigBits ? dataBits : remainigBits;
             sms.mBearerData.userData.payload = inStream.readByteArray(dataBits);
             sms.mUserData = sms.mBearerData.userData.payload;
             decodeSuccess = true;
