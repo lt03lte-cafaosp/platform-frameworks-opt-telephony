@@ -460,10 +460,10 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     private boolean hasRecordIn(Map<Integer, ArrayList<byte[]>> record, int pbrIndex) {
-        if (record == null)
+        if (record == null || record.isEmpty())
             return false;
         try {
-            record.get(pbrIndex);
+            if (null == record.get(pbrIndex)) return false;
         } catch (IndexOutOfBoundsException e) {
             Rlog.e(LOG_TAG, "record is empty in pbrIndex" + pbrIndex);
             return false;
