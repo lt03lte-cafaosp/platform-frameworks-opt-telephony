@@ -82,22 +82,7 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
             ar = (AsyncResult)msg.obj;
             handlePollStateResult(msg.what, ar);
             break;
-        case EVENT_RUIM_RECORDS_LOADED:
-            updatePhoneObject();
-            RuimRecords ruim = (RuimRecords)mIccRecords;
-            if ((ruim != null) && ruim.isProvisioned()) {
-                mMdn = ruim.getMdn();
-                mMin = ruim.getMin();
-                parseSidNid(ruim.getSid(), ruim.getNid());
-                mPrlVersion = ruim.getPrlVersion();
-                mIsMinInfoReady = true;
-                updateOtaspState();
-            }
-            // SID/NID/PRL is loaded. Poll service state
-            // again to update to the roaming state with
-            // the latest variables.
-            pollState();
-            break;
+
         default:
             super.handleMessage(msg);
         }
