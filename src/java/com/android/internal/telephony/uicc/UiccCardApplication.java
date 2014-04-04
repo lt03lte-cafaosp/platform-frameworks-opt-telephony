@@ -380,8 +380,7 @@ public class UiccCardApplication {
                     // a PIN/PUK/PIN2/PUK2/Network Personalization
                     // request has completed. ar.userObj is the response Message
                     ar = (AsyncResult)msg.obj;
-                    // TODO should abstract these exceptions
-                    if ((ar.exception != null) && (ar.result != null)) {
+                    if (ar.result != null) {
                         if (msg.what == EVENT_PIN1_PUK1_DONE ||
                                 msg.what == EVENT_CHANGE_PIN1_DONE) {
                             parsePinPukErrorResult(ar, true);
