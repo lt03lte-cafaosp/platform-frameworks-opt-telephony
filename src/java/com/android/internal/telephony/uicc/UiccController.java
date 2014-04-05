@@ -129,6 +129,8 @@ public class UiccController extends Handler {
                 throw new RuntimeException(
                         "UiccController.destroy() should only be called after make()");
             }
+            disposeCard(mInstance.mUiccCard);
+            mInstance.mUiccCard = null;
             mInstance.mCi.unregisterForIccStatusChanged(mInstance);
             mInstance.mCi.unregisterForAvailable(mInstance);
             mInstance.mCi.unregisterForNotAvailable(mInstance);
@@ -259,7 +261,7 @@ public class UiccController extends Handler {
     }
 
     // Destroys the card object
-    protected synchronized void disposeCard(UiccCard uiccCard) {
+    protected synchronized static void disposeCard(UiccCard uiccCard) {
         if (DBG) log("Disposing card");
         if (uiccCard != null) {
             uiccCard.dispose();
