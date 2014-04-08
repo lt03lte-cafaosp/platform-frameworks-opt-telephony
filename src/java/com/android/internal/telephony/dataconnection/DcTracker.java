@@ -753,16 +753,6 @@ public class DcTracker extends DcTrackerBase {
             log("trySetupData with mIsPsRestricted=" + mIsPsRestricted);
         }
 
-        if (mPhone.getSimulatedRadioControl() != null) {
-            // Assume data is connected on the simulator
-            // FIXME  this can be improved
-            apnContext.setState(DctConstants.State.CONNECTED);
-            mPhone.notifyDataConnection(apnContext.getReason(), apnContext.getDataProfileType());
-
-            log("trySetupData: X We're on the simulator; assuming connected retValue=true");
-            return true;
-        }
-
         boolean desiredPowerState = mPhone.getServiceStateTracker().getDesiredPowerState();
 
         // If MPDN is disabled and if the current active ApnContext cannot handle the
@@ -1705,14 +1695,6 @@ public class DcTracker extends DcTrackerBase {
     @Override
     protected void onRadioAvailable() {
         if (DBG) log("onRadioAvailable");
-        if (mPhone.getSimulatedRadioControl() != null) {
-            // Assume data is connected on the simulator
-            // FIXME  this can be improved
-            // setState(DctConstants.State.CONNECTED);
-            notifyDataConnection(null);
-
-            log("onRadioAvailable: We're on the simulator; assuming data is connected");
-        }
 
         IccRecords r = mIccRecords.get();
         if (r != null && r.getRecordsLoaded()) {
@@ -1731,14 +1713,8 @@ public class DcTracker extends DcTrackerBase {
 
         mReregisterOnReconnectFailure = false;
 
-        if (mPhone.getSimulatedRadioControl() != null) {
-            // Assume data is connected on the simulator
-            // FIXME  this can be improved
-            log("We're on the simulator; assuming radio off is meaningless");
-        } else {
-            if (DBG) log("onRadioOffOrNotAvailable: is off and clean up all connections");
-            cleanUpAllConnections(false, Phone.REASON_RADIO_TURNED_OFF);
-        }
+        if (DBG) log("onRadioOffOrNotAvailable: is off and clean up all connections");
+        cleanUpAllConnections(false, Phone.REASON_RADIO_TURNED_OFF);
         notifyOffApnsOfAvailability(null);
     }
 

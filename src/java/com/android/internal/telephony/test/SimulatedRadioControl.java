@@ -50,4 +50,6 @@ public interface SimulatedRadioControl
 
     /** Generates an incoming USSD message. */
     public void triggerIncomingUssd(String statusCode, String message);
+
+    public void setRegistrationState(String[] voice, String[] data);
 }

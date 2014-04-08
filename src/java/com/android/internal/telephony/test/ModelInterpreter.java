@@ -693,4 +693,9 @@ public class ModelInterpreter
         {"+CRSM=192,28490,0,0,15", "+CRSM: 144,0,000000416f4a040011f5550102010d\r"},
         {"+CRSM=178,28490,1,4,13", "+CRSM: 144,0,0206092143658709ffffffffff\r"}
     };
+
+    @Override
+    public void setRegistrationState(String[] voice, String[] data) {
+        // TODO Auto-generated method stub
+    }
 }
