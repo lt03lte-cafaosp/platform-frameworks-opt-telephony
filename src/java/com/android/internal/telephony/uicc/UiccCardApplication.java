@@ -407,7 +407,7 @@ public class UiccCardApplication {
                     // request has completed. ar.userObj is the response Message
                     ar = (AsyncResult)msg.obj;
                     int attemptsRemaining = -1;
-                    if ((ar.exception != null) && (ar.result != null)) {
+                    if (ar.result != null) {
                         if (msg.what == EVENT_PIN1_PUK1_DONE ||
                                 msg.what == EVENT_CHANGE_PIN1_DONE) {
                             parsePinPukErrorResult(ar, true);
