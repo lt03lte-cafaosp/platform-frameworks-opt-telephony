@@ -27,6 +27,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.provider.Telephony.Sms.Intents;
 import android.telephony.Rlog;
+import android.text.TextUtils;
 
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.MSimConstants;
@@ -83,11 +84,13 @@ public class WapPushOverSms implements ServiceConnection {
      * wap-230-wsp-20010705-a section 8 for details on the WAP PDU format.
      *
      * @param pdu The WAP PDU, made up of one or more SMS PDUs
+     * @param address The originating address
      * @return a result code from {@link android.provider.Telephony.Sms.Intents}, or
      *         {@link Activity#RESULT_OK} if the message has been broadcast
      *         to applications
      */
-    public int dispatchWapPdu(byte[] pdu, BroadcastReceiver receiver, InboundSmsHandler handler) {
+    public int dispatchWapPdu(byte[] pdu, BroadcastReceiver receiver, InboundSmsHandler handler,
+            String address) {
 
         if (DBG) Rlog.d(TAG, "Rx: " + IccUtils.bytesToHexString(pdu));
 
@@ -204,6 +207,9 @@ public class WapPushOverSms implements ServiceConnection {
                                 pduDecoder.getContentParameters());
                         intent.putExtra(MSimConstants.SUBSCRIPTION_KEY,
                             handler.getPhone().getSubscription());
+                        if (!TextUtils.isEmpty(address)){
+                            intent.putExtra("address", address);
+                        }
 
                         int procRet = wapPushMan.processMessage(wapAppId, contentType, intent);
                         if (DBG) Rlog.v(TAG, "procRet:" + procRet);
@@ -245,6 +251,9 @@ public class WapPushOverSms implements ServiceConnection {
             intent.putExtra("data", intentData);
             intent.putExtra("contentTypeParameters", pduDecoder.getContentParameters());
             intent.putExtra(MSimConstants.SUBSCRIPTION_KEY, handler.getPhone().getSubscription());
+            if (!TextUtils.isEmpty(address)){
+                intent.putExtra("address", address);
+            }
 
             // Direct the intent to only the default MMS app. If we can't find a default MMS app
             // then sent it to all broadcast receivers.
