@@ -1827,4 +1827,14 @@ public interface CommandsInterface {
     void registerForSimRefreshEvent(Handler h, int what, Object obj);
     void unregisterForSimRefreshEvent(Handler h);
 
+    /**
+     * Register/unregister for WWAN and IWLAN coexistence
+     * notification.
+     *
+     * @param h Handler for notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    void registerForWwanIwlanCoexistence(Handler h, int what, Object obj);
+    void unregisterForWwanIwlanCoexistence(Handler h);
 }
