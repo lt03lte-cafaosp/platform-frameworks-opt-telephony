@@ -162,6 +162,16 @@ public class CallDetails {
                                                                     * connected but suspended
                                                                     */
 
+    public static final int VIDEO_PAUSE_STATE_PAUSED = 1; /*
+                                                           * Indicates that
+                                                           * video is paused;
+                                                           */
+
+    public static final int VIDEO_PAUSE_STATE_RESUMED = 2; /*
+                                                            * Indicates that
+                                                            * video is resumed;
+                                                            */
+
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
     public static final String EXTRAS_PARENT_CALL_ID = "parentCallId";
     public static final String EXTRAS_HANDOVER_INFORMATION = "handoverInfo";
@@ -171,6 +181,7 @@ public class CallDetails {
     public int call_domain;
     public int callsubstate = CALL_SUBSTATE_UNDEFINED;
     public String[] extras;
+    private int mVideoPauseState = VIDEO_PAUSE_STATE_RESUMED;
 
     public static class ServiceStatus {
         public boolean isValid;
@@ -238,6 +249,19 @@ public class CallDetails {
         this.extras = getExtrasFromMap(newExtras);
     }
 
+    public void setVideoPauseState(int videoPauseState) {
+        // Validate and set the new video pause state.
+        switch (videoPauseState) {
+            case VIDEO_PAUSE_STATE_RESUMED:
+            case VIDEO_PAUSE_STATE_PAUSED:
+                mVideoPauseState = videoPauseState;
+        }
+    }
+
+    public int getVideoPauseState() {
+        return mVideoPauseState;
+    }
+
     public String getValueForKeyFromExtras(String[] extras, String key) {
         for (int i = 0; extras != null && i < extras.length; i++) {
             if (extras[i] != null) {
@@ -286,6 +310,7 @@ public class CallDetails {
                 + " " + call_domain
                 + " " + extrasResult
                 + " callSubState " + callsubstate
+                + " videoPauseState" + mVideoPauseState
                 + " Local Ability " + localSrvAbility
                 + " Peer Ability " + peerSrvAbility);
     }
