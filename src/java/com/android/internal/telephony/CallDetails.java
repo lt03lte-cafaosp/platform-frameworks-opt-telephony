@@ -151,6 +151,27 @@ public class CallDetails {
                                                                * disabled
                                                                */
 
+    public static final int CALL_SUBSTATE_UNDEFINED = 0; /*
+                                                          * Default case, substate
+                                                          * information not received
+                                                          * from lower layers
+                                                          */
+
+    public static final int CALL_SUBSTATE_CONNECTED_SUSPENDED = 1; /*
+                                                                    * Indicates that call is
+                                                                    * connected but suspended
+                                                                    */
+
+    public static final int VIDEO_PAUSE_STATE_PAUSED = 1; /*
+                                                           * Indicates that
+                                                           * video is paused;
+                                                           */
+
+    public static final int VIDEO_PAUSE_STATE_RESUMED = 2; /*
+                                                            * Indicates that
+                                                            * video is resumed;
+                                                            */
+
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
     public static final String EXTRAS_PARENT_CALL_ID = "parentCallId";
     public static final String EXTRAS_HANDOVER_INFORMATION = "handoverInfo";
@@ -158,7 +179,9 @@ public class CallDetails {
 
     public int call_type;
     public int call_domain;
+    public int callsubstate = CALL_SUBSTATE_UNDEFINED;
     public String[] extras;
+    private int mVideoPauseState = VIDEO_PAUSE_STATE_RESUMED;
 
     public static class ServiceStatus {
         public boolean isValid;
@@ -191,6 +214,7 @@ public class CallDetails {
         if (srcCall != null) {
             call_type = srcCall.call_type;
             call_domain = srcCall.call_domain;
+            callsubstate = srcCall.callsubstate;
             extras = srcCall.extras;
             localAbility = srcCall.localAbility;
             peerAbility = srcCall.peerAbility;
@@ -223,6 +247,19 @@ public class CallDetails {
 
     public void setExtrasFromMap(Map<String, String> newExtras) {
         this.extras = getExtrasFromMap(newExtras);
+    }
+
+    public void setVideoPauseState(int videoPauseState) {
+        // Validate and set the new video pause state.
+        switch (videoPauseState) {
+            case VIDEO_PAUSE_STATE_RESUMED:
+            case VIDEO_PAUSE_STATE_PAUSED:
+                mVideoPauseState = videoPauseState;
+        }
+    }
+
+    public int getVideoPauseState() {
+        return mVideoPauseState;
     }
 
     public String getValueForKeyFromExtras(String[] extras, String key) {
@@ -272,6 +309,8 @@ public class CallDetails {
         return (" " + call_type
                 + " " + call_domain
                 + " " + extrasResult
+                + " callSubState " + callsubstate
+                + " videoPauseState" + mVideoPauseState
                 + " Local Ability " + localSrvAbility
                 + " Peer Ability " + peerSrvAbility);
     }
