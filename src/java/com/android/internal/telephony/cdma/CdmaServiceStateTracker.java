@@ -56,6 +56,7 @@ import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.dataconnection.DcTrackerBase;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
+import com.android.internal.telephony.uicc.RuimRecords;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -293,14 +294,8 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
             // TODO: Consider calling setCurrentPreferredNetworkType as we do in GsmSST.
             // cm.setCurrentPreferredNetworkType();
 
-            if (mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE) {
-                // Subscription will be read from SIM I/O
-                if (DBG) log("Receive EVENT_RUIM_READY");
-                pollState();
-            } else {
-                if (DBG) log("Receive EVENT_RUIM_READY and Send Request getCDMASubscription.");
-                getSubscriptionInfoAndStartPollingThreads();
-            }
+            if (DBG) log("Receive EVENT_RUIM_READY");
+            pollState();
             mPhone.prepareEri();
             break;
 
@@ -453,7 +448,19 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
         case EVENT_RUIM_RECORDS_LOADED:
             log("EVENT_RUIM_RECORDS_LOADED: what=" + msg.what);
             updatePhoneObject();
-            updateSpnDisplay();
+            RuimRecords ruim = (RuimRecords)mIccRecords;
+            if ((ruim != null) && ruim.isProvisioned()) {
+                mMdn = ruim.getMdn();
+                mMin = ruim.getMin();
+                parseSidNid(ruim.getSid(), ruim.getNid());
+                mPrlVersion = ruim.getPrlVersion();
+                mIsMinInfoReady = true;
+                updateOtaspState();
+            }
+            // SID/NID/PRL is loaded. Poll service state
+            // again to update to the roaming state with
+            // the latest variables.
+            getSubscriptionInfoAndStartPollingThreads();
             break;
 
         case EVENT_LOCATION_UPDATES_ENABLED:
