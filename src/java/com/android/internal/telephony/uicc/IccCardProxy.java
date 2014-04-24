@@ -184,6 +184,10 @@ public class IccCardProxy extends Handler implements IccCard {
         synchronized (mLock) {
             boolean oldQuietMode = mQuietMode;
             boolean newQuietMode;
+            // "config_lte_capable" is set to true when the device is
+            // LTE capable
+            boolean isLteCapable = mContext.getResources().getBoolean(
+                    com.android.internal.R.bool.config_lte_capable);
             int cdmaSource = Phone.CDMA_SUBSCRIPTION_UNKNOWN;
             if (mCurrentAppType == UiccController.APP_FAM_3GPP) {
                 newQuietMode = false;
@@ -192,8 +196,14 @@ public class IccCardProxy extends Handler implements IccCard {
                 cdmaSource = mCdmaSSM != null ?
                         mCdmaSSM.getCdmaSubscriptionSource() : Phone.CDMA_SUBSCRIPTION_UNKNOWN;
 
-                newQuietMode = (cdmaSource == Phone.CDMA_SUBSCRIPTION_NV)
-                        && (mCurrentAppType == UiccController.APP_FAM_3GPP2);
+                if (isLteCapable) {
+                    // For a LTE capable device, always be out of Quiet Mode
+                    newQuietMode = false;
+                } else {
+                    newQuietMode = (cdmaSource == Phone.CDMA_SUBSCRIPTION_NV)
+                            && (mCurrentAppType == UiccController.APP_FAM_3GPP2);
+                }
+                if (DBG) log("updateQuietMode: 3GPP2 subscription -> newQuietMode=" + newQuietMode);
             }
 
             if (mQuietMode == false && newQuietMode == true) {
