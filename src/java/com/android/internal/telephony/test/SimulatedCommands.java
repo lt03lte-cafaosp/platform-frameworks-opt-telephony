@@ -26,6 +26,7 @@ import android.os.Message;
 import android.telephony.Rlog;
 import android.telephony.SignalStrength;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.android.internal.telephony.BaseCommands;
 import com.android.internal.telephony.CommandException;
@@ -850,12 +851,7 @@ public final class SimulatedCommands extends BaseCommands
      */
     @Override
     public void getSignalStrength (Message result) {
-        int ret[] = new int[2];
-
-        ret[0] = 23;
-        ret[1] = 0;
-
-        resultSuccess(result, ret);
+        resultSuccess(result, new SignalStrength(true));
     }
 
      /**
