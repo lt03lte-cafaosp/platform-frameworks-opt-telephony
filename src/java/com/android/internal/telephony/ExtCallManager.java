@@ -649,7 +649,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public boolean hasActiveFgCall() {
-        return hasActiveFgCall(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return hasActiveFgCall(getActiveSubscription());
+        } else {
+            return super.hasActiveFgCall();
+        }
     }
 
     /**
@@ -675,7 +680,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public boolean hasActiveBgCall() {
-        return hasActiveBgCall(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return hasActiveBgCall(getActiveSubscription());
+        } else {
+            return super.hasActiveBgCall();
+        }
     }
 
     /**
@@ -696,7 +706,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public boolean hasActiveRingingCall() {
-        return hasActiveRingingCall(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return hasActiveRingingCall(getActiveSubscription());
+        } else {
+            return super.hasActiveRingingCall();
+        }
     }
 
     /**
@@ -719,7 +734,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public Call getActiveFgCall() {
-        return getActiveFgCall(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return getActiveFgCall(getActiveSubscription());
+        } else {
+            return super.getActiveFgCall();
+        }
     }
 
     @Override
@@ -766,7 +786,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public Call getFirstActiveBgCall() {
-        return getFirstActiveBgCall(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return getFirstActiveBgCall(getActiveSubscription());
+        } else {
+            return super.getFirstActiveBgCall();
+        }
     }
 
     /**
@@ -814,7 +839,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public Call getFirstActiveRingingCall() {
-        return getFirstActiveRingingCall(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return getFirstActiveRingingCall(getActiveSubscription());
+        } else {
+            return super.getFirstActiveRingingCall();
+        }
     }
 
     @Override
@@ -835,7 +865,12 @@ public class ExtCallManager extends CallManager {
      */
     @Override
     public Call.State getActiveFgCallState() {
-        return getActiveFgCallState(getActiveSubscription());
+        if (MSimTelephonyManager.getDefault().getMultiSimConfiguration()
+                == MSimTelephonyManager.MultiSimVariants.DSDA) {
+            return getActiveFgCallState(getActiveSubscription());
+        } else {
+            return super.getActiveFgCallState();
+        }
     }
 
     @Override

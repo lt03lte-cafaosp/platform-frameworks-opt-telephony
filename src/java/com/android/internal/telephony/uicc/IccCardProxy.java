@@ -184,6 +184,10 @@ public class IccCardProxy extends Handler implements IccCard {
         synchronized (mLock) {
             boolean oldQuietMode = mQuietMode;
             boolean newQuietMode;
+            // "config_lte_capable" is set to true when the device is
+            // LTE capable
+            boolean isLteCapable = mContext.getResources().getBoolean(
+                    com.android.internal.R.bool.config_lte_capable);
             int cdmaSource = Phone.CDMA_SUBSCRIPTION_UNKNOWN;
             if (mCurrentAppType == UiccController.APP_FAM_3GPP) {
                 newQuietMode = false;
@@ -192,8 +196,14 @@ public class IccCardProxy extends Handler implements IccCard {
                 cdmaSource = mCdmaSSM != null ?
                         mCdmaSSM.getCdmaSubscriptionSource() : Phone.CDMA_SUBSCRIPTION_UNKNOWN;
 
-                newQuietMode = (cdmaSource == Phone.CDMA_SUBSCRIPTION_NV)
-                        && (mCurrentAppType == UiccController.APP_FAM_3GPP2);
+                if (isLteCapable) {
+                    // For a LTE capable device, always be out of Quiet Mode
+                    newQuietMode = false;
+                } else {
+                    newQuietMode = (cdmaSource == Phone.CDMA_SUBSCRIPTION_NV)
+                            && (mCurrentAppType == UiccController.APP_FAM_3GPP2);
+                }
+                if (DBG) log("updateQuietMode: 3GPP2 subscription -> newQuietMode=" + newQuietMode);
             }
 
             if (mQuietMode == false && newQuietMode == true) {
@@ -234,6 +244,11 @@ public class IccCardProxy extends Handler implements IccCard {
                 if (!mInitialized) {
                     updateQuietMode();
                 }
+                // When the radio is off, if EVENT_ICC_CHANGED is received, the
+                // mExternalState will be updated. After the radio turns on, if
+                // EVENT_ICC_CHANGED is not received, the mExternalState will not be
+                // be restored. Therefore, updateExternalState when the radio turns on.
+                updateExternalState();
                 break;
             case EVENT_ICC_CHANGED:
                 mIsCardStatusAvailable = true;
@@ -813,4 +828,54 @@ public class IccCardProxy extends Handler implements IccCard {
 
         pw.flush();
     }
+
+    @Override
+    public void exchangeApdu(int cla, int command, int channel, int p1, int p2,
+            int p3, String data, Message onComplete) {
+        synchronized (mLock) {
+            if (mUiccApplication != null) {
+                mUiccApplication.exchangeApdu(cla, command, channel, p1, p2, p3,
+                        data, onComplete);
+            }
+        }
+    }
+
+    @Override
+    public void openLogicalChannel(String aid, Message onComplete) {
+        synchronized (mLock) {
+            if (mUiccApplication != null) {
+                mUiccApplication.openLogicalChannel(aid, onComplete);
+            }
+        }
+    }
+
+    @Override
+    public void closeLogicalChannel(int channel, Message onComplete) {
+        synchronized (mLock) {
+            if (mUiccApplication != null) {
+                mUiccApplication.closeLogicalChannel(channel, onComplete);
+            }
+        }
+    }
+
+    @Override
+    public void exchangeIccIo(int fileId, int command,
+            int p1, int p2, int p3, String pathId, Message onComplete) {
+        synchronized (mLock) {
+            if (mUiccApplication != null) {
+                mUiccApplication.exchangeIccIo(fileId, command, p1, p2, p3,
+                        pathId, onComplete);
+            }
+        }
+    }
+
+    @Override
+    public void getAtr(Message onComplete) {
+        synchronized (mLock) {
+            if (mUiccApplication != null) {
+                mUiccApplication.getAtr(onComplete);
+            }
+        }
+    }
+
 }
