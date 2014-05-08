@@ -124,6 +124,9 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         mAnrFlags = new HashMap<Integer, ArrayList<Integer>>();
         mEmailFlags = new HashMap<Integer, ArrayList<Integer>>();
 
+        mEmailsForAdnRec = new HashMap<Integer, ArrayList<String>>();
+        mAnrsForAdnRec = new HashMap<Integer, ArrayList<String>>();
+
         // We assume its present, after the first read this is updated.
         // So we don't have to read from UICC if its not present on subsequent reads.
         mIsPbrPresent = true;
@@ -505,16 +508,14 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     }
                 }
             }
+            return;
         }
 
-        // ICC cards can be made such that they have an IAP file but all
-        // records are empty. So we read both type 1 and type 2 file
-        // email records, just to be sure.
-
         int len = mAdnLengthList.get(pbrIndex);
+        // Parse Type1 file if Email is not present in IAP.
         // Type 1 file, the number of records is the same as the number of
         // records in the ADN file.
-        if (mEmailsForAdnRec == null || !mEmailPresentInIap) {
+        if (!mEmailPresentInIap) {
             parseType1EmailFile(len, pbrIndex);
         }
         for (int i = getInitIndexBy(pbrIndex); i < numAdnRecs + getInitIndexBy(pbrIndex); i++) {
@@ -565,19 +566,18 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     if (rec != null && (!TextUtils.isEmpty(anrs[0]))) {
                         rec.setAdditionalNumbers(anrs);
                         mPhoneBookRecords.set(adnRecIndex, rec);
+                        mAnrFlags.get(pbrIndex).set(recNum - 1, 1);
                     }
 
                 }
             }
+            return;
         }
 
-        // ICC cards can be made such that they have an IAP file but all
-        // records are empty. So we read both type 1 and type 2 file
-        // anr records, just to be sure.
-
+         // Parse Type1 file if ANR is not present in IAP.
         // Type 1 file, the number of records is the same as the number of
         // records in the ADN file.
-        if (mAnrsForAdnRec == null || !mAnrPresentInIap) {
+        if (!mAnrPresentInIap) {
             parseType1AnrFile(numAdnRecs, pbrIndex);
         }
         for (int i = getInitIndexBy(pbrIndex); i < numAdnRecs + getInitIndexBy(pbrIndex); i++) {
@@ -600,14 +600,14 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     void parseType1EmailFile(int numRecs, int pbrIndex) {
-        mEmailsForAdnRec = new HashMap<Integer, ArrayList<String>>();
         byte[] emailRec = null;
         int adnRecIndex;
         if (!hasRecordIn(mEmailFileRecord, pbrIndex))
             return;
+
+        log("parseType1EmailFile: pbrIndex is: " + pbrIndex + ", numRecs is: " + numRecs);
         for (int i = 0; i < numRecs; i++) {
             try {
-                log("parseType1EmailFile: pbrIndex is: " + pbrIndex + ", i is: " + i);
                 emailRec = mEmailFileRecord.get(pbrIndex).get(i);
             } catch (IndexOutOfBoundsException e) {
                 Rlog.e(LOG_TAG, "Error: Improper ICC card: No email record for ADN, continuing");
@@ -619,16 +619,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 continue;
             }
 
-            int emailRecNum = emailRec[emailRec.length - 1];
-
-            if (mEmailPresentInIap) {
-                if (emailRecNum == -1) {
-                    continue;
-                }
-                adnRecIndex = emailRecNum - 1 + getInitIndexBy(pbrIndex);
-            } else {
-                adnRecIndex = i + getInitIndexBy(pbrIndex);
-            }
+            adnRecIndex = i + getInitIndexBy(pbrIndex);
             // SIM record numbers are 1 based.
             ArrayList<String> val = mEmailsForAdnRec.get(adnRecIndex);
             if (val == null) {
@@ -643,11 +634,11 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     void parseType1AnrFile(int numRecs, int pbrIndex) {
-        mAnrsForAdnRec = new HashMap<Integer, ArrayList<String>>();
         byte[] anrRec = null;
         int adnRecIndex;
         if (!hasRecordIn(mAnrFileRecord, pbrIndex))
             return;
+        log("parseType1AnrFile: pbrIndex is: " + pbrIndex + ", numRecs is: " + numRecs);
         for (int i = 0; i < numRecs; i++) {
             try {
                 anrRec = mAnrFileRecord.get(pbrIndex).get(i);
@@ -659,15 +650,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             if (anr == null || anr.equals("")) {
                 continue;
             }
-            int anrRecNum = anrRec[anrRec.length - 1];
-            if (mAnrPresentInIap) {
-                if (anrRecNum == -1) {
-                    continue;
-                }
-                adnRecIndex = anrRecNum - 1 + getInitIndexBy(pbrIndex);
-            } else {
-                adnRecIndex = i + getInitIndexBy(pbrIndex);
-            }
+            adnRecIndex = i + getInitIndexBy(pbrIndex);
             ArrayList<String> val = mAnrsForAdnRec.get(adnRecIndex);
             if (val == null) {
                 val = new ArrayList<String>();
@@ -769,6 +752,11 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                             log("getEmailRecNumber: Got empty record.Email record num is :" +
                                      (i + 1));
                             return i + 1;
+                        } else if (mEmailFlags.get(pbrIndex).get(i) == 0) {
+                            // This is to handle cases where the record is not used in any ADN,
+                            // but has some junk values.
+                            log("Unused but non empty record.Email record num is :" + (i + 1));
+                            return i + 1;
                         }
                     }
                 }
@@ -807,6 +795,11 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                         String anrRecord = readAnrRecord(i, pbrIndex);
                         if (TextUtils.isEmpty(anrRecord)) {
                             log("getAnrRecNumber: Empty anr record. Anr record num is :" + (i + 1));
+                            return i + 1;
+                        } else if (mAnrFlags.get(pbrIndex).get(i) == 0) {
+                            // This is to handle cases where the record is not used in any ADN,
+                            // but has some junk values.
+                            log("Unused but non empty record.Anr record num is :" + (i + 1));
                             return i + 1;
                         }
                     }
