@@ -798,6 +798,12 @@ public abstract class BaseCommands implements CommandsInterface {
     protected void onRadioAvailable() {
     }
 
+    public void getModemCapability(Message response) {
+    }
+
+    public void updateStackBinding(int stackId, int enable, Message response) {
+    }
+
     public void setTuneAway(boolean tuneAway, Message response) {
     }
 
