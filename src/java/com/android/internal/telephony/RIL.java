@@ -242,6 +242,11 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     private static final int OEMHOOK_EVT_HOOK_SET_DEFAULT_VOICE_SUB = OEMHOOK_BASE + 12;
     /** Set Local Call Hold subscription */
     private static final int OEMHOOK_EVT_HOOK_SET_LOCAL_CALL_HOLD = OEMHOOK_BASE + 13;
+    /** Get Modem Capabilities*/
+    private static final int OEMHOOK_EVT_HOOK_GET_MODEM_CAPABILITY = OEMHOOK_BASE + 35;
+    /** Update Stack Binding*/
+    private static final int OEMHOOK_EVT_HOOK_UPDATE_SUB_BINDING = OEMHOOK_BASE + 36;
+
 
     private static final int BYTE_SIZE = 1;
     private static final int INT_SIZE = 4;
@@ -2005,39 +2010,55 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     }
 
     @Override
+    public void getModemCapability(Message response) {
+        Rlog.d(RILJ_LOG_TAG, "GetModemCapability");
+        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_GET_MODEM_CAPABILITY, 0, null, response);
+    }
+
+    @Override
+    public void updateStackBinding(int stack, int enable, Message response) {
+        byte[] payload = new byte[]{(byte)stack,(byte)enable};
+        Rlog.d(RILJ_LOG_TAG, "UpdateStackBinding: on Stack: " + stack +
+                ", enable/disable: " + enable);
+
+        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_UPDATE_SUB_BINDING, 2, payload, response);
+    }
+
+    @Override
     public void setTuneAway(boolean tuneAway, Message response) {
-        byte payload = (byte)(tuneAway ? 1 : 0);
+        byte[] payload = new byte[]{(byte)(tuneAway ? 1 : 0)};
 
         Rlog.d(RILJ_LOG_TAG, "setTuneAway: TuneAway flag is " + payload);
-        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_TUNEAWAY, payload, response);
+        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_TUNEAWAY, 1, payload, response);
     }
 
     @Override
     public void setPrioritySub(int subIndex, Message response) {
-        byte payload = (byte)(subIndex & 0x7F);
+        byte[] payload = new byte[]{(byte)(subIndex & 0x7F)};
         Rlog.d(RILJ_LOG_TAG, "setPrioritySub: subIndex is " + subIndex);
 
-        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_PAGING_PRIORITY, payload, response);
+        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_PAGING_PRIORITY, 1, payload, response);
     }
 
     @Override
     public void setDefaultVoiceSub(int subIndex, Message response) {
-        byte payload = (byte)(subIndex & 0x7F);
+        byte[] payload = new byte[]{(byte)(subIndex & 0x7F)};
         Rlog.d(RILJ_LOG_TAG, "setDefaultVoiceSub: subIndex is " + subIndex);
 
-        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_DEFAULT_VOICE_SUB, payload, response);
+        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_DEFAULT_VOICE_SUB, 1, payload, response);
     }
 
     @Override
     public void setLocalCallHold(int lchStatus, Message response) {
-        byte payload = (byte)(lchStatus & 0x7F);
+        byte[] payload = new byte[]{(byte)(lchStatus & 0x7F)};
         Rlog.d(RILJ_LOG_TAG, "setLocalCallHold: lchStatus is " + lchStatus);
 
-        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_LOCAL_CALL_HOLD, payload, response);
+        sendOemRilRequestRaw(OEMHOOK_EVT_HOOK_SET_LOCAL_CALL_HOLD, 1, payload, response);
     }
 
-    private void sendOemRilRequestRaw(int requestId, byte payload, Message response) {
-        byte[] request = new byte[mHeaderSize + BYTE_SIZE];
+    private void sendOemRilRequestRaw(int requestId, int numPayload, byte[] payload,
+            Message response) {
+        byte[] request = new byte[mHeaderSize + numPayload * BYTE_SIZE];
 
         ByteBuffer buf= ByteBuffer.wrap(request);
         buf.order(ByteOrder.nativeOrder());
@@ -2046,9 +2067,13 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         buf.put(OEM_IDENTIFIER.getBytes());
         // Add Request ID
         buf.putInt(requestId);
-        // Add Request payload length
-        buf.putInt(BYTE_SIZE);
-        buf.put(payload);
+        if (numPayload > 0 && payload != null) {
+            // Add Request payload length
+            buf.putInt(numPayload * BYTE_SIZE);
+            for (byte b : payload) {
+                buf.put(b);
+            }
+        }
 
         invokeOemRilRequestRaw(request, response);
     }
