@@ -35,6 +35,7 @@ import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
 import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
 import com.android.internal.telephony.uicc.IccConstants;
 import com.android.internal.telephony.uicc.IccFileHandler;
+import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.util.HexDump;
 
 import java.util.ArrayList;
@@ -957,5 +958,19 @@ public class IccSmsInterfaceManager extends ISms.Stub {
 
     public String getImsSmsFormat() {
         return mDispatcher.getImsSmsFormat();
+    }
+
+    public int getSmsCapacityOnIcc() {
+        int numberOnIcc = -1;
+        IccRecords ir = mPhone.getIccRecords();
+
+        if (ir != null) {
+            numberOnIcc = ir.getSmsCapacityOnIcc();
+        } else {
+            log("getSmsCapacityOnIcc - aborting, no icc card present.");
+        }
+
+        log("getSmsCapacityOnIcc().numberOnIcc = " + numberOnIcc);
+        return numberOnIcc;
     }
 }
