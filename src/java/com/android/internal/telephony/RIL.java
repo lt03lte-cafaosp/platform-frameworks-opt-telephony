@@ -254,6 +254,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     final int OEMHOOK_UNSOL_CDMA_CONT_DTMF_STOP = OEMHOOK_BASE + 1003;
     final int OEMHOOK_UNSOL_WMS_READY = OEMHOOK_BASE + 1009;
     final int OEMHOOK_UNSOL_SIM_REFRESH = OEMHOOK_BASE + 1016;
+    final int OEMHOOK_UNSOL_WWAN_IWLAN_COEXIST = OEMHOOK_BASE + 1018;
 
     //***** Instance Variables
 
@@ -3372,6 +3373,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 notifySimRefresh(responseData);
                 break;
 
+            case OEMHOOK_UNSOL_WWAN_IWLAN_COEXIST:
+                notifyWwanIwlanCoexist(responseData);
+                break;
             default:
                 Rlog.d(RILJ_LOG_TAG, "Response ID " + responseId
                         + " is not served in this process.");
@@ -3409,6 +3413,13 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         AsyncResult ar = new AsyncResult(null, data, null);
         mSimRefreshRegistrants.notifyRegistrants(ar);
         Rlog.d(RILJ_LOG_TAG, "SIM_REFRESH notified to registrants");
+    }
+
+    /** Notify registrants of WWAN coexistence event. */
+    protected void notifyWwanIwlanCoexist(byte[] data) {
+        AsyncResult ar = new AsyncResult(null, data, null);
+        mWwanIwlanCoexistenceRegistrants.notifyRegistrants(ar);
+        Rlog.d(RILJ_LOG_TAG, "WWAN, IWLAN coexistence notified to registrants");
     }
 
     private Object
