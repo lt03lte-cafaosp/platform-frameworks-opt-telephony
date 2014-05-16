@@ -183,18 +183,6 @@ public class CallDetails {
     public String[] extras;
     private int mVideoPauseState = VIDEO_PAUSE_STATE_RESUMED;
 
-    public static class ServiceStatus {
-        public boolean isValid;
-        public int type;
-        public int status;
-        public byte[] userdata;
-        public int restrictCause;
-
-        public ServiceStatus() {
-            this.isValid = false;
-        }
-    }
-
     public ServiceStatus[] localAbility;
     public ServiceStatus[] peerAbility;
 
@@ -290,8 +278,12 @@ public class CallDetails {
             for (ServiceStatus srv : localAbility) {
                 if (srv != null) {
                     localSrvAbility += "isValid = " + srv.isValid + " type = "
-                            + srv.type + " status = " + srv.status + " restrictCause = "
-                            + srv.restrictCause;
+                            + srv.type + " status = " + srv.status;
+                    if (srv.accessTechStatus != null) {
+                        for(ServiceStatus.StatusForAccessTech at : srv.accessTechStatus) {
+                                localSrvAbility += " accTechStatus " + at;
+                        }
+                    }
                 }
             }
         }
@@ -300,8 +292,12 @@ public class CallDetails {
             for (ServiceStatus srv : peerAbility) {
                 if (srv != null) {
                     peerSrvAbility += "isValid = " + srv.isValid + " type = "
-                            + srv.type + " status = " + srv.status + " restrictCause = "
-                            + srv.restrictCause;
+                            + srv.type + " status = " + srv.status;
+                    if (srv.accessTechStatus != null) {
+                        for(ServiceStatus.StatusForAccessTech at : srv.accessTechStatus) {
+                                peerSrvAbility += " accTechStatus " + at;
+                        }
+                    }
                 }
             }
         }
