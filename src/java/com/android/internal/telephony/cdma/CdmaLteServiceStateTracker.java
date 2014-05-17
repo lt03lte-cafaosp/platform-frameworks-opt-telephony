@@ -363,7 +363,7 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
             if (isIwlanFeatureAvailable()
                     && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
                         == mSS.getRilDataRadioTechnology())) {
-                handleIwlan();
+                log("pollStateDone: IWLAN enabled");
             }
         }
 
@@ -469,12 +469,13 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
                     && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
                         == mSS.getRilDataRadioTechnology())) {
                 mPhone.notifyDataConnection(Phone.REASON_IWLAN_AVAILABLE);
-                //DCT shall inform the availability of APN for all non-default
-                //contexts.
-                mIwlanRegistrants.notifyRegistrants();
                 needNotifyData = false;
+                mIwlanRatAvailable = true;
             } else {
+                processIwlanToWwanTransition(mSS);
+
                 needNotifyData = true;
+                mIwlanRatAvailable = false;
             }
         }
 
