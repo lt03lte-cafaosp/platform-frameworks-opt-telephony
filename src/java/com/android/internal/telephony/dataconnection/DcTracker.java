@@ -126,13 +126,13 @@ public class DcTracker extends DcTrackerBase {
     /**
      * Property that can be used to set the IP version for CDMA
      */
-    private static final String PROPERTY_CDMA_IPPROTOCOL = SystemProperties.get(
+    public static final String PROPERTY_CDMA_IPPROTOCOL = SystemProperties.get(
             "persist.telephony.cdma.protocol", "IP");
 
     /**
      * Property that can be used to set the IP version for CDMA when roaming
      */
-    private static final String PROPERTY_CDMA_ROAMING_IPPROTOCOL = SystemProperties.get(
+    public static final String PROPERTY_CDMA_ROAMING_IPPROTOCOL = SystemProperties.get(
             "persist.telephony.cdma.rproto", "IP");
 
     /*
