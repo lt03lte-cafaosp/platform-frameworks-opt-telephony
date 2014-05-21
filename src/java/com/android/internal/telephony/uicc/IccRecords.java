@@ -103,7 +103,7 @@ public abstract class IccRecords extends Handler implements IccConstants {
 
     public static final int EVENT_GET_ICC_RECORD_DONE = 100;
     public static final int EVENT_REFRESH = 31; // ICC refresh occurred
-    public static final int EVENT_REFRESH_OEM = 32;
+    public static final int EVENT_REFRESH_OEM = 29;
     protected static final int EVENT_APP_READY = 1;
 
     private boolean mOEMHookSimRefresh = false;
@@ -450,7 +450,7 @@ public abstract class IccRecords extends Handler implements IccConstants {
                 if (mOEMHookSimRefresh) {
                     ar = (AsyncResult)msg.obj;
                     if (ar.exception == null) {
-                        handleRefreshOem((byte[])ar.result,(Integer)ar.userObj);
+                        handleRefreshOem((byte[])ar.result);
                     } else {
                         loge("Icc refresh Exception: " + ar.exception);
                     }
@@ -536,12 +536,12 @@ public abstract class IccRecords extends Handler implements IccConstants {
         }
     }
 
-    private void handleRefreshOem(byte[] data, int index){
+    private void handleRefreshOem(byte[] data){
         ByteBuffer payload = ByteBuffer.wrap(data);
         IccRefreshResponse response = UiccController.parseOemSimRefresh(payload);
-
         IccCardApplicationStatus appStatus = new IccCardApplicationStatus();
         AppType appType = appStatus.AppTypeFromRILInt(payload.getInt());
+        int subId = (int)payload.get();
         if ((appType != AppType.APPTYPE_UNKNOWN)
             && (appType != mParentApp.getType())) {
             // This is for different app. Ignore.
@@ -556,7 +556,7 @@ public abstract class IccRecords extends Handler implements IccConstants {
             Intent sendIntent = new Intent(
                     "org.codeaurora.intent.action.ACTION_SIM_REFRESH_UPDATE");
             if (MSimTelephonyManager.getDefault().isMultiSimEnabled()){
-                sendIntent.putExtra(MSimConstants.SUBSCRIPTION_KEY, index);
+                sendIntent.putExtra(MSimConstants.SUBSCRIPTION_KEY, subId);
             }
             mContext.sendBroadcast(sendIntent, null);
         }
