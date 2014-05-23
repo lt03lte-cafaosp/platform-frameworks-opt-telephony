@@ -856,4 +856,20 @@ public abstract class BaseCommands implements CommandsInterface {
 
     public void setDataSubscription(Message response) {
     }
+
+    /**
+     * SmartCard API related
+     */
+    public void iccExchangeApdu(int cla, int command, int channel, int p1, int p2,
+            int p3, String data, Message response) {
+    }
+
+    public void iccOpenChannel(String aid, Message response) {
+    }
+
+    public void iccCloseChannel(int channel, Message response) {
+    }
+
+    public void iccGetAtr(Message response) {
+    }
 }
