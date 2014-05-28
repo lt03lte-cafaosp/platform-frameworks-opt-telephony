@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.android.internal.telephony.dataconnection.DcTracker;
+import com.android.internal.telephony.DctConstants;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.dataconnection.DataProfile;
 import com.android.internal.telephony.PhoneConstants;
@@ -131,8 +132,6 @@ public final class CdmaDataProfileTracker extends Handler {
                 EVENT_LOAD_PROFILES, null);
 
         mOmhServicePriorityMap = new HashMap<String, Integer>();
-
-        sendMessage(obtainMessage(EVENT_LOAD_PROFILES));
 
         log("SUPPORT_OMH: " + OMH_ENABLED);
     }
@@ -312,11 +311,40 @@ public final class CdmaDataProfileTracker extends Handler {
         if (mOmhReadProfileCount == 0) {
             log("OMH: Modem omh profile read complete.");
             addServiceTypeToUnSpecified();
+            if (mTempOmhDataProfilesList.isEmpty()) {
+                mTempOmhDataProfilesList = addDummyDataProfiles();
+            }
             mDataProfilesList.addAll(mTempOmhDataProfilesList);
             mModemDataProfileRegistrants.notifyRegistrants();
         }
 
         return;
+    }
+
+    /*
+     * Create dummy profiles for default, dun apn types if there are
+     * no data profiles returned from OMH card
+     */
+    private ArrayList<DataProfile> addDummyDataProfiles() {
+        log("OMH profiles not found. Creating dummy data profiles");
+        ArrayList<DataProfile> mDummyProfileList = new ArrayList<DataProfile>();
+        String[] dunApnTypes = {PhoneConstants.APN_TYPE_DUN};
+
+        ApnSetting apn = new ApnSetting(DctConstants.APN_DEFAULT_ID, null, null, null,
+                null, null, null, null, null, null, null,
+                RILConstants.SETUP_DATA_AUTH_PAP_CHAP, mDefaultApnTypes,
+                DcTracker.PROPERTY_CDMA_IPPROTOCOL,
+                DcTracker.PROPERTY_CDMA_ROAMING_IPPROTOCOL, true, 0);
+        mDummyProfileList.add(apn);
+
+        apn = new ApnSetting(DctConstants.APN_DUN_ID, null, null, null,
+                null, null, null, null, null, null, null,
+                RILConstants.SETUP_DATA_AUTH_PAP_CHAP, dunApnTypes,
+                DcTracker.PROPERTY_CDMA_IPPROTOCOL,
+                DcTracker.PROPERTY_CDMA_ROAMING_IPPROTOCOL, true, 0);
+        mDummyProfileList.add(apn);
+
+        return mDummyProfileList;
     }
 
     /*
