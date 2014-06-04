@@ -58,6 +58,8 @@ public class IccSmsInterfaceManager extends ISms.Stub {
     protected static final boolean DBG = true;
 
     protected final Object mLock = new Object();
+    protected final Object mBroadcastLock = new Object();
+
     protected boolean mSuccess;
     private List<SmsRawData> mSms;
 
@@ -131,9 +133,9 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                 case EVENT_SET_BROADCAST_ACTIVATION_DONE:
                 case EVENT_SET_BROADCAST_CONFIG_DONE:
                     ar = (AsyncResult) msg.obj;
-                    synchronized (mLock) {
+                    synchronized (mBroadcastLock) {
                         mSuccess = (ar.exception == null);
-                        mLock.notifyAll();
+                        mBroadcastLock.notifyAll();
                     }
                     break;
             }
@@ -992,14 +994,14 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         if (DBG)
             log("Calling setCellBroadcastActivation(" + activate + ')');
 
-        synchronized (mLock) {
+        synchronized (mBroadcastLock) {
             Message response = mHandler.obtainMessage(EVENT_SET_BROADCAST_ACTIVATION_DONE);
 
             mSuccess = false;
             mPhone.mCi.setGsmBroadcastActivation(activate, response);
 
             try {
-                mLock.wait();
+                mBroadcastLock.wait();
             } catch (InterruptedException e) {
                 log("interrupted while trying to set cell broadcast activation");
             }
@@ -1012,14 +1014,14 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         if (DBG)
             log("Calling setCdmaBroadcastConfig with " + configs.length + " configurations");
 
-        synchronized (mLock) {
+        synchronized (mBroadcastLock) {
             Message response = mHandler.obtainMessage(EVENT_SET_BROADCAST_CONFIG_DONE);
 
             mSuccess = false;
             mPhone.mCi.setCdmaBroadcastConfig(configs, response);
 
             try {
-                mLock.wait();
+                mBroadcastLock.wait();
             } catch (InterruptedException e) {
                 log("interrupted while trying to set cdma broadcast config");
             }
