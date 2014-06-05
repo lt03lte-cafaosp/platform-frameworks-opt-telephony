@@ -1281,6 +1281,11 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.registerForModifyCallRequest(h, what, obj);
     }
 
+    public void registerForModifyCallResponse(Handler h, int what, Object obj)
+            throws CallStateException {
+        mActivePhone.registerForModifyCallResponse(h, what, obj);
+    }
+
     /*
      * To check VT call capability
      */
@@ -1290,6 +1295,10 @@ public class PhoneProxy extends Handler implements Phone {
 
     public void unregisterForModifyCallRequest(Handler h) throws CallStateException {
         mActivePhone.unregisterForModifyCallRequest(h);
+    }
+
+    public void unregisterForModifyCallResponse(Handler h) throws CallStateException {
+        mActivePhone.unregisterForModifyCallResponse(h);
     }
 
     public void registerForAvpUpgradeFailure(Handler h, int what, Object obj)
