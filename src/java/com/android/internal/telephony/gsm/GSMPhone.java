@@ -112,6 +112,11 @@ public class GSMPhone extends PhoneBase {
     // Event constant for checking if Call Forwarding is enabled
     private static final int CHECK_CALLFORWARDING_STATUS = 75;
 
+    // Event constant for reading the Call Forwarding info
+    private static final int QUERY_CALLFORWARDING_STATUS_DONE = 76;
+    //Flag used for CFU query status
+    private boolean mIsCfuQueryDone = false;
+
     // Instance Variables
     GsmCallTracker mCT;
     protected GsmServiceStateTracker mSST;
@@ -1354,6 +1359,12 @@ public class GSMPhone extends PhoneBase {
 
             case EVENT_REGISTERED_TO_NETWORK:
                 syncClirSetting();
+                IccRecords records = mIccRecords.get();
+                if (records != null) {
+                    if (records.getRecordsLoaded() && !mIsCfuQueryDone) {
+                        updateCallForwardStatus();
+                    }
+                }
                 break;
 
             case EVENT_SIM_RECORDS_LOADED:
@@ -1369,7 +1380,10 @@ public class GSMPhone extends PhoneBase {
                     setVmSimImsi(null);
                 }
 
-                updateCallForwardStatus();
+                if (getServiceState().getVoiceRegState() == ServiceState.STATE_IN_SERVICE
+                        && !mIsCfuQueryDone) {
+                    updateCallForwardStatus();
+                }
                 mSimRecordsLoadedRegistrants.notifyRegistrants();
                 updateVoiceMail();
             break;
@@ -1524,10 +1538,19 @@ public class GSMPhone extends PhoneBase {
                 break;
 
             case CHECK_CALLFORWARDING_STATUS:
-                boolean cfEnabled = getCallForwardingPreference();
-                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
-                if (cfEnabled) {
-                    notifyCallForwardingIndicator();
+                Message message = obtainMessage(QUERY_CALLFORWARDING_STATUS_DONE);
+                getCallForwardingOption(CF_REASON_UNCONDITIONAL, message);
+                break;
+
+            case QUERY_CALLFORWARDING_STATUS_DONE:
+                ar = (AsyncResult)msg.obj;
+                if (ar.exception == null) {
+                    boolean cfEnabled = getCallForwardingPreference();
+                    if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
+                    if (cfEnabled) {
+                        notifyCallForwardingIndicator();
+                    }
+                    mIsCfuQueryDone = true;
                 }
                 break;
 
