@@ -254,7 +254,6 @@ public class WapPushOverSms implements ServiceConnection {
             if (!TextUtils.isEmpty(address)){
                 intent.putExtra("address", address);
             }
-
             // Direct the intent to only the default MMS app. If we can't find a default MMS app
             // then sent it to all broadcast receivers.
             ComponentName componentName = SmsApplication.getDefaultMmsApplication(mContext, true);
