@@ -259,6 +259,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     final int OEMHOOK_UNSOL_CDMA_CONT_DTMF_STOP = OEMHOOK_BASE + 1003;
     final int OEMHOOK_UNSOL_WMS_READY = OEMHOOK_BASE + 1009;
     final int OEMHOOK_UNSOL_SIM_REFRESH = OEMHOOK_BASE + 1016;
+    final int QCRIL_EVT_HOOK_UNSOL_MODEM_CAPABILITY = OEMHOOK_BASE + 1020;
 
     //***** Instance Variables
 
@@ -744,6 +745,16 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     public void setDataSubscription(Message result) {
         RILRequest rr = RILRequest.obtain(RIL_REQUEST_SET_DATA_SUBSCRIPTION, result);
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+        send(rr);
+    }
+
+    public void requestOnDemandPsAttach(boolean isAttach, Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_ON_DEMAND_PS_ATTACH, result);
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest)
+                + "isAttach: " + isAttach);
+
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(isAttach ? 1 : 0);
         send(rr);
     }
 
@@ -2724,6 +2735,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_IMS_SEND_SMS: ret =  responseSMS(p); break;
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: ret = responseVoid(p); break;
+            case RIL_REQUEST_ON_DEMAND_PS_ATTACH: ret = responseVoid(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
@@ -3354,6 +3366,24 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         return true;
     }
 
+    final public class UnsolOemHookBuffer {
+        private int mRilInstance;
+        private byte[] mData;
+
+        public UnsolOemHookBuffer(int rilInstance, byte[] data) {
+            mRilInstance = rilInstance;
+            mData = data;
+        }
+
+        public int getRilInstance() {
+            return mRilInstance;
+        }
+
+        public byte[] getUnsolOemHookBuffer() {
+            return mData;
+        }
+    }
+
     private void processUnsolOemhookResponse(ByteBuffer oemHookResponse) {
         int responseId = 0, responseSize = 0, responseVoiceId = 0;
 
@@ -3395,6 +3425,12 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
             case OEMHOOK_UNSOL_SIM_REFRESH:
                 notifySimRefresh(responseData);
+                break;
+
+            case QCRIL_EVT_HOOK_UNSOL_MODEM_CAPABILITY:
+                Rlog.d(RILJ_LOG_TAG, "QCRIL_EVT_HOOK_UNSOL_MODEM_CAPABILITY = mInstanceId"
+                        + mInstanceId);
+                notifyModemCap(responseData, mInstanceId);
                 break;
 
             default:
@@ -3440,6 +3476,18 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         AsyncResult ar = new AsyncResult(null, userdata, null);
         mSimRefreshRegistrants.notifyRegistrants(ar);
         Rlog.d(RILJ_LOG_TAG, "SIM_REFRESH notified to registrants");
+    }
+
+    /** Notify registrants of MODEM_CAPABILITY event. */
+    protected void notifyModemCap(byte[] data, Integer subId) {
+        UnsolOemHookBuffer buffer = new UnsolOemHookBuffer(subId, data);
+
+        //Had notifyRegistrants not discarded userObj, we could have easily
+        //passed the subId as ar.userObj.
+        AsyncResult ar = new AsyncResult(null, buffer, null);
+
+        mModemCapRegistrants.notifyRegistrants(ar);
+        Rlog.d(RILJ_LOG_TAG, "MODEM_CAPABILITY on sub=" + subId + " notified to registrants");
     }
 
     private Object
@@ -4208,6 +4256,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_IMS_SEND_SMS: return "RIL_REQUEST_IMS_SEND_SMS";
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: return "RIL_REQUEST_SET_UICC_SUBSCRIPTION";
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: return "RIL_REQUEST_SET_DATA_SUBSCRIPTION";
+            case RIL_REQUEST_ON_DEMAND_PS_ATTACH: return "RIL_REQUEST_ON_DEMAND_PS_ATTACH";
             default: return "<unknown request>";
         }
     }
