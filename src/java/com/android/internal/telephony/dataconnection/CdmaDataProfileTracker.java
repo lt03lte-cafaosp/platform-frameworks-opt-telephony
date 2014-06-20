@@ -53,6 +53,8 @@ import com.android.internal.telephony.dataconnection.DataProfileOmh.DataProfileT
 import com.android.internal.telephony.cdma.CDMAPhone;
 import com.android.internal.telephony.RILConstants;
 import com.android.internal.telephony.cdma.CdmaSubscriptionSourceManager;
+import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.uicc.UiccController;
 
 /**
  * {@hide}
@@ -67,6 +69,7 @@ public final class CdmaDataProfileTracker extends Handler {
 
     private CDMAPhone mPhone;
     private CdmaSubscriptionSourceManager mCdmaSsm;
+    private IccRecords mIccRecords;
 
     /**
      * mDataProfilesList holds all the Data profiles for cdma
@@ -329,15 +332,16 @@ public final class CdmaDataProfileTracker extends Handler {
         log("OMH profiles not found. Creating dummy data profiles");
         ArrayList<DataProfile> mDummyProfileList = new ArrayList<DataProfile>();
         String[] dunApnTypes = {PhoneConstants.APN_TYPE_DUN};
+        String operator = getCdmaOperatorNumeric();
 
-        ApnSetting apn = new ApnSetting(DctConstants.APN_DEFAULT_ID, null, null, null,
+        ApnSetting apn = new ApnSetting(DctConstants.APN_DEFAULT_ID, operator, null, null,
                 null, null, null, null, null, null, null,
                 RILConstants.SETUP_DATA_AUTH_PAP_CHAP, mDefaultApnTypes,
                 DcTracker.PROPERTY_CDMA_IPPROTOCOL,
                 DcTracker.PROPERTY_CDMA_ROAMING_IPPROTOCOL, true, 0);
         mDummyProfileList.add(apn);
 
-        apn = new ApnSetting(DctConstants.APN_DUN_ID, null, null, null,
+        apn = new ApnSetting(DctConstants.APN_DUN_ID, operator, null, null,
                 null, null, null, null, null, null, null,
                 RILConstants.SETUP_DATA_AUTH_PAP_CHAP, dunApnTypes,
                 DcTracker.PROPERTY_CDMA_IPPROTOCOL,
@@ -345,6 +349,29 @@ public final class CdmaDataProfileTracker extends Handler {
         mDummyProfileList.add(apn);
 
         return mDummyProfileList;
+    }
+
+    /*
+     * Get operator numeric value
+     */
+    private String getCdmaOperatorNumeric() {
+        String operatorNumeric;
+
+        int dataNetworkType = mPhone.getServiceState().getRilDataRadioTechnology();
+        int appFamily = UiccController.getFamilyFromRadioTechnology(dataNetworkType);
+
+        if (appFamily == UiccController.APP_FAM_3GPP2 &&
+                mCdmaSsm.getCdmaSubscriptionSource() ==
+                CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_NV) {
+            operatorNumeric = SystemProperties.get(CDMAPhone.PROPERTY_CDMA_HOME_OPERATOR_NUMERIC);
+            log("getCdmaOperatorNumberic - returning from NV: " + operatorNumeric);
+        } else {
+            mIccRecords = UiccController.getInstance().getIccRecords(appFamily);
+            operatorNumeric = (mIccRecords != null) ? mIccRecords.getOperatorNumeric() : "";
+        }
+
+        log("getCdmaOperatorNumeric:  " + operatorNumeric);
+        return operatorNumeric;
     }
 
     /*
