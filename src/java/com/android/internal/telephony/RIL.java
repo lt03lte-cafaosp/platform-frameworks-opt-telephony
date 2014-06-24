@@ -3313,7 +3313,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         byte[] userdata = new byte[1 + len];
         System.arraycopy(data, 0, userdata, 0, len);
         //Add sub id in SIM_REFRESH event to notify framework: IccRecords.
-        userdata[len] = (byte)(mInstanceId & 0xFF);
+        userdata[len] = (mInstanceId == null) ? 0 : (byte)(mInstanceId & 0xFF);
 
         AsyncResult ar = new AsyncResult(null, userdata, null);
         mSimRefreshRegistrants.notifyRegistrants(ar);
