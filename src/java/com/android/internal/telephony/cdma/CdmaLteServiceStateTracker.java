@@ -208,8 +208,6 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
                         + " dataRadioTechnology=" + type);
             }
             mDataRoaming = regCodeIsRoaming(regState);
-
-            if (mDataRoaming) mNewSS.setRoaming(true);
         } else {
             super.handlePollStateResultMessage(what, ar);
         }
@@ -374,6 +372,9 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
                     ServiceState.rilRadioTechnologyToString(mSS.getRilDataRadioTechnology()));
 
+            // Query Signalstrength when there is a change in PS RAT.
+            sendMessage(obtainMessage(EVENT_POLL_SIGNAL_STRENGTH));
+
             if (isIwlanFeatureAvailable()
                     && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
                         == mSS.getRilDataRadioTechnology())) {
@@ -433,6 +434,8 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
                     SystemProperties.get(TelephonyProperties.PROPERTY_OPERATOR_NUMERIC, "");
             operatorNumeric = mSS.getOperatorNumeric();
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_NUMERIC, operatorNumeric);
+            updateCarrierMccMncConfiguration(operatorNumeric,
+                    prevOperatorNumeric, mPhone.getContext());
 
             if (operatorNumeric == null) {
                 if (DBG) log("operatorNumeric is null");

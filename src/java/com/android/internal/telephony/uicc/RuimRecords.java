@@ -429,7 +429,7 @@ public final class RuimRecords extends IccRecords {
             String operatorNumeric = getOperatorNumeric();
             if (operatorNumeric != null) {
                 if(operatorNumeric.length() <= 6){
-                    MccTable.updateMccMncConfiguration(mContext, operatorNumeric);
+                    MccTable.updateMccMncConfiguration(mContext, operatorNumeric, false);
                 }
             }
 
