@@ -296,7 +296,10 @@ public class UiccController extends Handler {
         int aidLen = payload.getInt();
         byte[] aid = new byte[QHOOK_MAX_AID_SIZE];
         payload.get(aid, 0, QHOOK_MAX_AID_SIZE);
-        response.aid = (aidLen == 0) ? null : new String(aid);
+        //Read the aid string with QHOOK_MAX_AID_SIZE from payload at first because need
+        //corresponding to the aid array length sent from qcril and need parse the payload
+        //to get app type and sub id in IccRecords.java after called this method.
+        response.aid = (aidLen == 0) ? null : (new String(aid)).substring(0, aidLen);
 
         if (DBG){
             Rlog.d(LOG_TAG, "refresh SIM card " + ", refresh result:" + response.refreshResult
