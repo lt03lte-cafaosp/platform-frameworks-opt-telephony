@@ -3309,7 +3309,13 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
     /** Notify registrants of SIM_REFRESH event. */
     protected void notifySimRefresh(byte[] data) {
-        AsyncResult ar = new AsyncResult(null, data, null);
+        int len = data.length;
+        byte[] userdata = new byte[1 + len];
+        System.arraycopy(data, 0, userdata, 0, len);
+        //Add sub id in SIM_REFRESH event to notify framework: IccRecords.
+        userdata[len] = (byte)(mInstanceId & 0xFF);
+
+        AsyncResult ar = new AsyncResult(null, userdata, null);
         mSimRefreshRegistrants.notifyRegistrants(ar);
         Rlog.d(RILJ_LOG_TAG, "SIM_REFRESH notified to registrants");
     }
