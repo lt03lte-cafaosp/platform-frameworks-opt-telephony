@@ -189,6 +189,13 @@ public interface Phone {
     /*
      * Type of the call based on the media type and the direction of the media.
      */
+    public static final int CALL_TYPE_INVALID = -1; /*
+                                                  * For internal uses. Invalid
+                                                  * Call type.  This is used to
+                                                  * pick MO CallType from shared
+                                                  * preference if callType is not
+                                                  * present in outgoing call intent.
+                                                  */
 
     public static final int CALL_TYPE_VOICE = 0; /*
                                                   * Voice call-audio in both
