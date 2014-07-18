@@ -248,6 +248,8 @@ public interface Phone {
 
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
 
+    public static final String EXTRA_SKIP_SCHEMA_PARSING = "skipSchemaParsing";
+
     /**
      * Get the current ServiceState. Use
      * <code>registerForServiceStateChanged</code> to be informed of

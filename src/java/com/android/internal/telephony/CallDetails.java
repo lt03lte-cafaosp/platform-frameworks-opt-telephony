@@ -173,6 +173,7 @@ public class CallDetails {
                                                                     */
 
     public static final String EXTRAS_IS_CONFERENCE_URI = "isConferenceUri";
+    public static final String EXTRA_SKIP_SCHEMA_PARSING = "skipSchemaParsing";
     public static final String EXTRAS_PARENT_CALL_ID = "parentCallId";
     public static final String EXTRAS_HANDOVER_INFORMATION = "handoverInfo";
     public static final int EXTRA_TYPE_LTE_TO_IWLAN_HO_FAIL = 1;
