@@ -129,6 +129,8 @@ public abstract class PhoneBase extends Handler implements Phone {
     protected static final int EVENT_ICC_RECORD_EVENTS              = 29;
     protected static final int EVENT_ICC_CHANGED                    = 30;
     protected static final int EVENT_SS                             = 31;
+    //Supplementry Service Notofication
+    protected static final int EVENT_GET_CALL_FORWARD_TIMER_DONE    = 32;
 
     // Key used to read/write current CLIR setting
     public static final String CLIR_KEY = "clir_key";
@@ -884,6 +886,31 @@ public abstract class PhoneBase extends Handler implements Phone {
             cellInfoList = privateCellInfoList;
         }
         return cellInfoList;
+    }
+
+    /**
+     * CallForward Unconditional Timer
+     * @param startHour Call Forwarding start hour
+     * @param startMin  CallForwarding start Minute
+     * @param endHour   CallForwarding end hour
+     * @param endMin    CallForwarding end Minute
+     * @param commandInterfaceCFReason is one of the valid call forwarding
+     *        CF_REASONS.
+     * @param commandInterfaceCFAction is one of the valid call forwarding
+     *        CF_ACTIONS.Currently we are supporting Activation,Registration,
+              Interrogation.
+     * @param dialingNumber is the target phone number to forward calls to
+     * @param timerSeconds is used by CFNRy to indicate the timeout before
+     *        forwarding is attempted.Currently we are not using this field.
+     * @param onComplete a callback message when the action is completed.
+     */
+    public void setCallForwardingTimerOption(int startHour,int startMin,int endHour,int endMin,
+            int commandInterfaceCFAction,
+            int commandInterfaceCFReason,
+            String dialingNumber,
+            int timerSeconds,
+            Message onComplete) {
+        Rlog.e(LOG_TAG, "setCallForwardingTimerOption: ");
     }
 
     /**
