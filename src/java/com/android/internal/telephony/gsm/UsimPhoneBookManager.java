@@ -134,6 +134,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     public void reset() {
+        log("reset");
         if ((mAnrFlagsRecord != null) && (mEmailFlagsRecord != null) && mPbrFile != null) {
             for (int i = 0; i < mPbrFile.mFileIds.size(); i++) {
                 mAnrFlagsRecord[i].clear();
@@ -932,7 +933,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 log("Loading USIM ADN records done");
                 ar = (AsyncResult) msg.obj;
                 pbrIndex = (Integer) ar.userObj;
-                if (ar.exception == null) {
+                if (ar.exception == null && mPbrFile != null) {
                     mPhoneBookRecords.addAll((ArrayList<AdnRecord>) ar.result);
                     mAdnLengthList.add(pbrIndex, ((ArrayList<AdnRecord>) ar.result).size());
                     putValidRecNums(pbrIndex);
@@ -947,7 +948,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 log("Loading USIM IAP records done");
                 ar = (AsyncResult) msg.obj;
                 pbrIndex = (Integer) ar.userObj;
-                if (ar.exception == null) {
+                if (ar.exception == null && mPbrFile != null) {
                     mIapFileRecord.put(pbrIndex, (ArrayList<byte[]>) ar.result);
                 }
                 synchronized (mLock) {
@@ -958,7 +959,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 log("Loading USIM Email records done");
                 ar = (AsyncResult) msg.obj;
                 pbrIndex = (Integer) ar.userObj;
-                if (ar.exception == null) {
+                if (ar.exception == null && mPbrFile != null) {
                     mEmailFileRecord.put(pbrIndex, (ArrayList<byte[]>) ar.result);
 
                     log("handlemessage EVENT_EMAIL_LOAD_DONE size is: "
@@ -977,7 +978,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 log("Loading USIM Anr records done");
                 ar = (AsyncResult) msg.obj;
                 pbrIndex = (Integer) ar.userObj;
-                if (ar.exception == null) {
+                if (ar.exception == null && mPbrFile != null) {
                     mAnrFileRecord.put(pbrIndex, (ArrayList<byte[]>) ar.result);
 
                     log("handlemessage EVENT_ANR_LOAD_DONE size is: "
@@ -1005,7 +1006,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     oldEmail = email[0];
                     newEmail = email[1];
                 }
-                if (ar.exception != null) {
+                if (ar.exception != null || mPbrFile == null) {
                     mSuccess = false;
                     synchronized (mLock) {
                         mLock.notify();
@@ -1045,7 +1046,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     oldAnr = anr[0];
                     newAnr = anr[1];
                 }
-                if (ar.exception != null) {
+                if (ar.exception != null || mPbrFile == null) {
                     mSuccess = false;
                     synchronized (mLock) {
                         mLock.notify();
@@ -1082,8 +1083,12 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             case EVENT_UPDATE_EMAIL_RECORD_DONE:
                 log("Loading UPDATE_EMAIL_RECORD_DONE");
                 ar = (AsyncResult) (msg.obj);
-                if (ar.exception != null) {
+                if (ar.exception != null || mPbrFile == null) {
                     mSuccess = false;
+                    synchronized (mLock) {
+                        mLock.notify();
+                    }
+                    return;
                 }
                 data = (byte[]) (ar.userObj);
                 recordNumber = (int) msg.arg1;
@@ -1114,8 +1119,12 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 recordNumber = (int) msg.arg1;
                 adnRecIndex = (int) msg.arg2;
                 pbrIndex = getPbrIndexBy(adnRecIndex);
-                if (ar.exception != null) {
+                if (ar.exception != null || mPbrFile == null) {
                     mSuccess = false;
+                    synchronized (mLock) {
+                        mLock.notify();
+                    }
+                    return;
                 }
                 log("EVENT_UPDATE_ANR_RECORD_DONE");
                 mPendingExtLoads = 0;
@@ -1138,16 +1147,16 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 ar = (AsyncResult) (msg.obj);
                 recordNumber = (int) msg.arg2;
                 adnRecIndex = ((int) msg.arg1) - 1;
-                pbrIndex = getPbrIndexBy(adnRecIndex);
-                efid = getEfidByTag(pbrIndex, USIM_EFIAP_TAG);
                 int tag = (Integer) ar.userObj;
-                if (ar.exception != null) {
+                if (ar.exception != null || mPbrFile == null) {
                     mSuccess = false;
                     synchronized (mLock) {
                         mLock.notify();
                     }
                     return;
                 }
+                pbrIndex = getPbrIndexBy(adnRecIndex);
+                efid = getEfidByTag(pbrIndex, USIM_EFIAP_TAG);
                 recordSize = (int[]) ar.result;
                 data = null;
 
@@ -1190,8 +1199,12 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             case EVENT_UPDATE_IAP_RECORD_DONE:
                 log("EVENT_UPDATE_IAP_RECORD_DONE");
                 ar = (AsyncResult) (msg.obj);
-                if (ar.exception != null) {
+                if (ar.exception != null || mPbrFile == null) {
                     mSuccess = false;
+                    synchronized (mLock) {
+                        mLock.notify();
+                    }
+                    return;
                 }
                 data = (byte[]) (ar.userObj);
                 adnRecIndex = (int) msg.arg1;
