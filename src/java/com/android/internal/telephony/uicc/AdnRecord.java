@@ -203,11 +203,105 @@ public class AdnRecord implements Parcelable {
         return (s1.equals(s2));
     }
 
+    /** Help function for ANR/EMAIL array compare. */
+    private static boolean arrayCompareNullEqualsEmpty(String s1[], String s2[]) {
+        if (s1 == s2) {
+            return true;
+        }
+
+        if (s1 == null) {
+            s1 = new String[1];
+            s1[0] = "";
+        }
+
+        if (s2 == null) {
+            s2 = new String[1];
+            s2[0] = "";
+        }
+
+        for (String str:s1) {
+            if (TextUtils.isEmpty(str)) {
+                continue;
+            } else {
+                if (Arrays.asList(s2).contains(str)) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        for (String str:s2) {
+            if (TextUtils.isEmpty(str)) {
+                continue;
+            } else {
+                if (Arrays.asList(s1).contains(str)) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     public boolean isEqual(AdnRecord adn) {
         return ( stringCompareNullEqualsEmpty(mAlphaTag, adn.mAlphaTag) &&
                 stringCompareNullEqualsEmpty(mNumber, adn.mNumber) &&
-                Arrays.equals(mEmails, adn.mEmails)
-                && Arrays.equals(mAdditionalNumbers, adn.mAdditionalNumbers));
+                arrayCompareNullEqualsEmpty(mEmails, adn.mEmails)
+                && arrayCompareNullEqualsEmpty(mAdditionalNumbers, adn.mAdditionalNumbers));
+    }
+
+    public String[] updateAnrEmailArrayHelper(String dest[], String src[], int fileCount) {
+        if (fileCount == 0) {
+            return null;
+        }
+
+        // delete insert scenario
+        if (dest == null || src == null) {
+            return dest;
+        }
+
+        String[] ref = new String[fileCount];
+        for (int i = 0; i < fileCount; i++) {
+            ref[i] = "";
+        }
+
+        // Find common elements and put in the ref
+        // To save SIM_IO
+        for (int i = 0; i < src.length; i++) {
+            if (TextUtils.isEmpty(src[i])) {
+                continue;
+            }
+            for (int j = 0; j < dest.length; j++) {
+                if (src[i].equals(dest[j])) {
+                    ref[i] = src[i];
+                    break;
+                }
+            }
+        }
+
+        // fill out none common element into the ""
+        for (int i = 0; i < dest.length; i++) {
+            if (Arrays.asList(ref).contains(dest[i])) {
+                continue;
+            } else {
+                for (int j = 0; j < ref.length; j++) {
+                    if (TextUtils.isEmpty(ref[j])) {
+                        ref[j] = dest[i];
+                        break;
+                    }
+                }
+            }
+        }
+        return ref;
+    }
+
+    public void updateAnrEmailArray(AdnRecord adn, int emailFileNum, int anrFileNum) {
+        mEmails = updateAnrEmailArrayHelper(mEmails, adn.mEmails, emailFileNum);
+        mAdditionalNumbers = updateAnrEmailArrayHelper(mAdditionalNumbers,
+                    adn.mAdditionalNumbers, anrFileNum);
     }
     //***** Parcelable Implementation
 

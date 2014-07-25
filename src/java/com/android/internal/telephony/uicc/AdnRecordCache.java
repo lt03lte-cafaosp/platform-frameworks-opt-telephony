@@ -287,6 +287,12 @@ public final class AdnRecordCache extends Handler implements IccConstants {
             newAdn.mEfid = foundAdn.mEfid;
             newAdn.mExtRecord = foundAdn.mExtRecord;
             newAdn.mRecordNumber = foundAdn.mRecordNumber;
+            // make sure the sequence is same with foundAdn
+            oldAdn.setAdditionalNumbers(foundAdn.getAdditionalNumbers());
+            oldAdn.setEmails(foundAdn.getEmails());
+            newAdn.updateAnrEmailArray(oldAdn,
+                    mUsimPhoneBookManager.getEmailFilesCountEachAdn(),
+                    mUsimPhoneBookManager.getAnrFilesCountEachAdn());
         }
 
         Message pendingResponse = mUserWriteResponse.get(efid);
@@ -485,12 +491,36 @@ public final class AdnRecordCache extends Handler implements IccConstants {
         }
     }
 
+    private boolean updateAnrEmailFile(String oldRecord,
+                String newRecord, int index, int tag, int efidIndex) {
+        boolean success = true;
+        try {
+            switch (tag) {
+                case USIM_EFEMAIL_TAG:
+                    success = mUsimPhoneBookManager
+                            .updateEmailFile(index, oldRecord, newRecord, efidIndex);
+                    break;
+                case USIM_EFANR_TAG:
+                    success = mUsimPhoneBookManager
+                            .updateAnrFile(index, oldRecord, newRecord, efidIndex);
+                    break;
+                default:
+                    success = false;
+            }
+        } catch (RuntimeException e) {
+            success = false;
+            Log.e("AdnRecordCache", "update usim record failed", e);
+        }
+
+        return success;
+    }
+
     private boolean updateUsimRecord(AdnRecord oldAdn, AdnRecord newAdn, int index, int tag) {
         String[] oldRecords = null;
         String[] newRecords = null;
         String oldRecord = null;
         String newRecord = null;
-        boolean success = false;
+        boolean success = true;
         // currently we only support one email records
         switch (tag) {
             case USIM_EFEMAIL_TAG:
@@ -502,42 +532,46 @@ public final class AdnRecordCache extends Handler implements IccConstants {
                 newRecords = newAdn.getAdditionalNumbers();
                 break;
             default:
-                return success;
+                return false;
         }
-        if (oldRecords != null) {
-            for (String record : oldRecords) {
-                oldRecord = record;
-                break;
-            }
+
+        if (null == oldRecords && null == newRecords) {
+            // UI send empty string, no need to update
+            Log.e("AdnRecordCache", "Both old and new EMAIL/ANR are null");
+            return true;
         }
-        if (newRecords != null) {
-            for (String record : newRecords) {
-                newRecord = record;
-                break;
-            }
-        }
-        if (TextUtils.isEmpty(oldRecord) && TextUtils.isEmpty(newRecord)
-                || (oldRecord != null && oldRecord.equals(newRecord))) {
-            // when there is no change of record, no need to update them
-            success = true;
-        } else {
-            try {
-                switch (tag) {
-                    case USIM_EFEMAIL_TAG:
-                        success = mUsimPhoneBookManager
-                                .updateEmailFile(index, oldRecord, newRecord);
-                        break;
-                    case USIM_EFANR_TAG:
-                        success = mUsimPhoneBookManager.updateAnrFile(index, oldRecord, newRecord);
-                        break;
-                    default:
-                        success = false;
+
+        // insert scenario
+        if (null == oldRecords && null != newRecords) {
+            for (int i = 0; i < newRecords.length; i++) {
+                if (!TextUtils.isEmpty(newRecords[i])) {
+                    success &= updateAnrEmailFile(null, newRecords[i], index, tag, i);
                 }
-            } catch (RuntimeException e) {
-                success = false;
-                Log.e("AdnRecordCache", "update usim record failed", e);
+            }
+        // delete scenario
+        } else if (null != oldRecords && null == newRecords) {
+            for (int i = 0; i < oldRecords.length; i++) {
+                if (!TextUtils.isEmpty(oldRecords[i])) {
+                    success &= updateAnrEmailFile(oldRecords[i], null, index, tag, i);
+                }
+            }
+        // update scenario
+        } else {
+            int maxLen = (oldRecords.length > newRecords.length) ?
+                            oldRecords.length : newRecords.length;
+            for (int i = 0; i < maxLen; i++) {
+                oldRecord = (i >= oldRecords.length) ? null : oldRecords[i];
+                newRecord = (i >= newRecords.length) ? null : newRecords[i];
+
+                if ((TextUtils.isEmpty(oldRecord) && TextUtils.isEmpty(newRecord)) ||
+                    (oldRecord != null && newRecord != null && oldRecord.equals(newRecord))) {
+                    continue;
+                } else {
+                    success &= updateAnrEmailFile(oldRecord, newRecord, index, tag, i);
+                }
             }
         }
+
         return success;
     }
 
