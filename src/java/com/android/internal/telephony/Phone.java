@@ -2040,4 +2040,10 @@ public interface Phone {
      * @param response is callback message
      */
     void setLocalCallHold(int lchStatus, Message response);
+
+    /**
+     * Checks whether the dialString in an MMI
+     * @param dialString, string containing the number
+     */
+    public boolean isMMI(String dialString);
 }
