@@ -167,6 +167,8 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
     static final int PS_NOTIFICATION = 888;  // Id to update and cancel PS restricted
     static final int CS_NOTIFICATION = 999;  // Id to update and cancel CS restricted
 
+    private boolean mNtwSelectionInProgress = false;
+
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -465,6 +467,10 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
 
                 onRestrictedStateChanged(ar);
                 break;
+
+             case EVENT_NETWORK_SELECTION_MODE_DONE:
+                 mNtwSelectionInProgress = false;
+                 break;
 
             default:
                 super.handleMessage(msg);
@@ -766,9 +772,15 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                          * selection is not allowed in the current mode so
                          * switch to automatic registration
                          */
-                        mPhone.setNetworkSelectionModeAutomatic (null);
-                        log(" Forcing Automatic Network Selection, " +
-                                "manual selection is not allowed");
+                        Message msg = obtainMessage(EVENT_NETWORK_SELECTION_MODE_DONE);
+                        if (!mNtwSelectionInProgress) {
+                            mPhone.setNetworkSelectionModeAutomatic (msg);
+                            mNtwSelectionInProgress = true;
+                            log(" Forcing Automatic Network Selection, " +
+                                    "manual selection is not allowed");
+                        } else {
+                            log("Automatic Network Selection already in progress ");
+                        }
                     }
                     break;
                 }
