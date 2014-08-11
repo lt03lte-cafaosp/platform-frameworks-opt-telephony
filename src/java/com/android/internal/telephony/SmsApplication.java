@@ -49,6 +49,7 @@ public final class SmsApplication {
     static final String LOG_TAG = "SmsApplication";
     private static final String PHONE_PACKAGE_NAME = "com.android.phone";
     private static final String BLUETOOTH_PACKAGE_NAME = "com.android.bluetooth";
+    private static final String BLUETOOTH_MAP_PACKAGE_NAME = "org.codeaurora.bluetooth";
 
     private static final String SCHEME_SMS = "sms";
     private static final String SCHEME_SMSTO = "smsto";
@@ -601,7 +602,8 @@ public final class SmsApplication {
         }
 
         if ((defaultSmsPackage == null || !defaultSmsPackage.equals(packageName)) &&
-                !packageName.equals(BLUETOOTH_PACKAGE_NAME)) {
+                !packageName.equals(BLUETOOTH_PACKAGE_NAME) &&
+                !packageName.equals(BLUETOOTH_MAP_PACKAGE_NAME)) {
             // To write the message for someone other than the default SMS and BT app
             return true;
         }
