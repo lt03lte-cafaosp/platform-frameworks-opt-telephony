@@ -52,6 +52,7 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.EventLog;
 import android.telephony.Rlog;
+import android.telephony.MSimTelephonyManager;
 
 import com.android.internal.R;
 import com.android.internal.telephony.DctConstants;
@@ -1147,6 +1148,7 @@ public abstract class DcTrackerBase extends Handler {
      *         connection to the APN has been established.
      */
     public synchronized int enableApnType(String type) {
+        log("DcTrackerBase: enableApnType");
         int id = apnTypeToId(type);
         if (id == DctConstants.APN_INVALID_ID) {
             return PhoneConstants.APN_REQUEST_FAILED;
@@ -1733,7 +1735,13 @@ public abstract class DcTrackerBase extends Handler {
     }
 
     protected void setInitialAttachApn() {
-        DataProfile iaApnSetting = null;
+        MSimTelephonyManager mtmgr = (MSimTelephonyManager)
+            mPhone.getContext().getSystemService (Context.MSIM_TELEPHONY_SERVICE);
+        if (mPhone.getSubscription() != mtmgr.getDefaultDataSubscription()) {
+            log("setInitialAttachApn is not allowed on non-dds subscription");
+            return;
+        }
+                DataProfile iaApnSetting = null;
         DataProfile defaultApnSetting = null;
         DataProfile firstApnSetting = null;
 

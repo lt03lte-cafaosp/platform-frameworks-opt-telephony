@@ -75,6 +75,7 @@ public abstract class BaseCommands implements CommandsInterface {
     protected RegistrantList mCdmaFwdContDtmfStopRegistrants = new RegistrantList();
     protected RegistrantList mWmsReadyRegistrants = new RegistrantList();
     protected RegistrantList mSimRefreshRegistrants = new RegistrantList();
+    protected RegistrantList mModemCapRegistrants = new RegistrantList();
 
     protected Registrant mGsmSmsRegistrant;
     protected Registrant mCdmaSmsRegistrant;
@@ -735,6 +736,14 @@ public abstract class BaseCommands implements CommandsInterface {
         mSimRefreshRegistrants.remove(h);
     }
 
+    public void registerForModemCapEvent(Handler h, int what, Object obj) {
+        mModemCapRegistrants.addUnique(h, what, obj);
+    }
+
+    public void unregisterForModemCapEvent(Handler h) {
+        mModemCapRegistrants.remove(h);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -867,4 +876,11 @@ public abstract class BaseCommands implements CommandsInterface {
 
     public void iccGetAtr(Message response) {
     }
+
+     /* isAttach = true  : Request PS ATTACH.
+     * isAttach = false : Request PS DETACH.
+     */
+    public void requestOnDemandPsAttach(boolean isAttach, Message response) {
+    }
+
 }
