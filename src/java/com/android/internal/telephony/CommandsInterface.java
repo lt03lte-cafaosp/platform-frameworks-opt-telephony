@@ -65,6 +65,7 @@ public interface CommandsInterface {
     static final int CF_REASON_NOT_REACHABLE    = 3;
     static final int CF_REASON_ALL              = 4;
     static final int CF_REASON_ALL_CONDITIONAL  = 5;
+    static final int CF_REASON_UNCONDITIONAL_TIMER = 6;
 
     // Used for call barring methods below
     static final String CB_FACILITY_BAOC         = "AO";
@@ -1820,6 +1821,14 @@ public interface CommandsInterface {
     void updateStackBinding(int stackId, int enable, Message response);
 
     /**
+     * Request PS ATTACH or PS DETACH.
+     *
+     * @param result
+     *          Callback message contains the information of SUCCESS/FAILURE.
+     */
+    public void requestOnDemandPsAttach (boolean isAttach, Message result);
+
+    /**
      * Request to enable or disable the tune away state.
      * @param tuneAway true to enable, false to disable
      * @param response is callback message
@@ -1857,4 +1866,14 @@ public interface CommandsInterface {
     void registerForSimRefreshEvent(Handler h, int what, Object obj);
     void unregisterForSimRefreshEvent(Handler h);
 
+    /**
+     * Register/unregister for modem capability oem hook event
+     *
+     * @param h Handler for notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+
+    void registerForModemCapEvent(Handler h, int what, Object obj);
+    void unregisterForModemCapEvent(Handler h);
 }

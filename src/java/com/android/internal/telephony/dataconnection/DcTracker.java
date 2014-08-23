@@ -52,6 +52,7 @@ import android.telephony.gsm.GsmCellLocation;
 import android.text.TextUtils;
 import android.util.EventLog;
 import android.telephony.Rlog;
+import android.telephony.MSimTelephonyManager;
 
 
 import com.android.internal.telephony.cdma.CDMAPhone;
@@ -282,12 +283,21 @@ public class DcTracker extends DcTrackerBase {
                 (apnContextState == DctConstants.State.FAILED));
         boolean dataAllowed = isDataAllowed();
         boolean possible = dataAllowed && apnTypePossible;
+        MSimTelephonyManager mtmgr = (MSimTelephonyManager)
+            mPhone.getContext().getSystemService (Context.MSIM_TELEPHONY_SERVICE);
 
-        if ((apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_DEFAULT)
-                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_IA))
-                && mPhone.getServiceState().getRilDataRadioTechnology()
+        if (apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_DEFAULT)
+                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_IA)
+                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_HIPRI)) {
+
+            if (mPhone.getServiceState().getRilDataRadioTechnology()
                 == ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN) {
-            possible = false;
+                possible = false;
+            } else if (mPhone.getSubscription()!= mtmgr.getDefaultDataSubscription()) {
+
+                log("Default data activation not possible on non-DDS subscription");
+                possible =  false;
+            }
         }
 
         if (VDBG) {
@@ -305,16 +315,27 @@ public class DcTracker extends DcTrackerBase {
     }
 
     protected void supplyMessenger() {
+       int subId = mPhone.getSubscription();
+
+       log("supplyMessenger for subId = "+subId);
         ConnectivityManager cm = (ConnectivityManager)mPhone.getContext().getSystemService(
                 Context.CONNECTIVITY_SERVICE);
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_MMS, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_SUPL, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_DUN, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_HIPRI, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_FOTA, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_IMS, new Messenger(this));
-        cm.supplyMessenger(ConnectivityManager.TYPE_MOBILE_CBS, new Messenger(this));
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_MMS,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_SUPL,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_DUN,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_HIPRI,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_FOTA,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_IMS,
+                new Messenger(this), subId);
+        cm.supplyMessengerForSubscription(ConnectivityManager.TYPE_MOBILE_CBS,
+                new Messenger(this), subId);
     }
 
     private ApnContext addApnContext(String type, NetworkConfig networkConfig) {
@@ -522,6 +543,8 @@ public class DcTracker extends DcTrackerBase {
      */
     @Override
     public synchronized int enableApnType(String apnType) {
+        log("DcTracker: enableApnType");
+
         ApnContext apnContext = mApnContexts.get(apnType);
         if (apnContext == null || !isApnTypeAvailable(apnType)) {
             if (DBG) log("enableApnType: " + apnType + " is type not available");
@@ -617,15 +640,27 @@ public class DcTracker extends DcTrackerBase {
     protected boolean isDataAllowed(ApnContext apnContext) {
         //If RAT is iwlan then dont allow default/IA PDP at all.
         //Rest of APN types can be evaluated for remaining conditions.
-        if ((apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_DEFAULT)
-                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_IA))
-                && mPhone.getServiceState().getRilDataRadioTechnology()
-                == ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN) {
-            log("Default data call activation not allowed in iwlan.");
-            return false;
-        } else {
-            return apnContext.isReady() && isDataAllowed();
+
+        if (apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_DEFAULT)
+                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_IA)
+                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_HIPRI)) {
+
+            if (mPhone.getServiceState().getRilDataRadioTechnology()
+                    == ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN) {
+                log("Default data call activation not allowed in iwlan.");
+                return false;
+            }
+
+            MSimTelephonyManager mtmgr = (MSimTelephonyManager)
+                mPhone.getContext().getSystemService (Context.MSIM_TELEPHONY_SERVICE);
+
+            if (mPhone.getSubscription() != mtmgr.getDefaultDataSubscription()) {
+                log("Default data activation not allowed on non-DDS subscription");
+                return false;
+            }
         }
+
+        return apnContext.isReady() && isDataAllowed();
     }
 
     //****** Called from ServiceStateTracker
@@ -641,7 +676,16 @@ public class DcTracker extends DcTrackerBase {
         if (DBG) log ("onDataConnectionDetached: stop polling and notify detached");
         stopNetStatPoll();
         stopDataStallAlarm();
-        notifyDataConnection(Phone.REASON_DATA_DETACHED);
+
+        MSimTelephonyManager mtmgr = (MSimTelephonyManager)
+            mPhone.getContext().getSystemService (Context.MSIM_TELEPHONY_SERVICE);
+
+        if (mPhone.getSubscription() == mtmgr.getDefaultDataSubscription()) {
+            log ("PS detach on default data subscription, notify.");
+            notifyDataConnection(Phone.REASON_DATA_DETACHED);
+        } else {
+            log ("PS detach on non-default data subscription, dont notify.");
+        }
         mAttached.set(false);
     }
 
