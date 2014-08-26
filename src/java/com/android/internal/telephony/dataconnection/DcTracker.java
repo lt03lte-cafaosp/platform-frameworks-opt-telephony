@@ -1656,6 +1656,13 @@ public class DcTracker extends DcTrackerBase {
                             case CONNECTING:
                                 potentialDcac = curDcac;
                                 potentialApnCtx = curApnCtx;
+                                break;
+                            case DISCONNECTING:
+                                //Update for DISCONNECTING only if there is no other potential match
+                                if (potentialDcac == null) {
+                                    potentialDcac = curDcac;
+                                    potentialApnCtx = curApnCtx;
+                                }
                             default:
                                 // Not connected, potential unchanged
                                 break;
@@ -1674,6 +1681,13 @@ public class DcTracker extends DcTrackerBase {
                         case CONNECTING:
                             potentialDcac = curDcac;
                             potentialApnCtx = curApnCtx;
+                            break;
+                        case DISCONNECTING:
+                            // Update for DISCONNECTING only if there is no other potential match
+                            if (potentialDcac == null) {
+                                potentialDcac = curDcac;
+                                potentialApnCtx = curApnCtx;
+                            }
                         default:
                             // Not connected, potential unchanged
                             break;
