@@ -200,34 +200,13 @@ public class CDMALTEPhone extends CDMAPhone {
 
     }
 
-
-    /**
-     * Sets the "current" field in the telephony provider according to the
-     * build-time operator numeric property
-     *
-     * @return true for success; false otherwise.
-     */
-    @Override
-    boolean updateCurrentCarrierInProvider(String operatorNumeric) {
-        boolean retVal;
-        if (mUiccController.getUiccCardApplication(UiccController.APP_FAM_3GPP) == null) {
-            if (DBG) log("updateCurrentCarrierInProvider APP_FAM_3GPP == null");
-            retVal = super.updateCurrentCarrierInProvider(operatorNumeric);
-        } else {
-            if (DBG) log("updateCurrentCarrierInProvider not updated");
-            retVal = true;
-        }
-        if (DBG) log("updateCurrentCarrierInProvider X retVal=" + retVal);
-        return retVal;
-    }
-
     @Override
     public boolean updateCurrentCarrierInProvider() {
-        if (mIccRecords.get() != null) {
+        if (mSimRecords != null) {
             try {
                 Uri uri = Uri.withAppendedPath(Telephony.Carriers.CONTENT_URI, "current");
                 ContentValues map = new ContentValues();
-                String operatorNumeric = mIccRecords.get().getOperatorNumeric();
+                String operatorNumeric = mSimRecords.getOperatorNumeric();
                 map.put(Telephony.Carriers.NUMERIC, operatorNumeric);
                 if (DBG) log("updateCurrentCarrierInProvider from UICC: numeric=" +
                         operatorNumeric);
