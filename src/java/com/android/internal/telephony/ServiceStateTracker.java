@@ -163,6 +163,7 @@ public abstract class ServiceStateTracker extends Handler {
     public static final int EVENT_ICC_CHANGED                          = 42;
     protected static final int EVENT_GET_CELL_INFO_LIST                = 43;
     protected static final int EVENT_UNSOL_CELL_INFO_LIST              = 44;
+    protected static final int EVENT_NETWORK_SELECTION_MODE_DONE       = 45;
 
     protected static final String TIMEZONE_PROPERTY = "persist.sys.timezone";
 
