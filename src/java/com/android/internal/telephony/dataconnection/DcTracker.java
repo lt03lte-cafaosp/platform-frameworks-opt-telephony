@@ -641,26 +641,16 @@ public class DcTracker extends DcTrackerBase {
         //If RAT is iwlan then dont allow default/IA PDP at all.
         //Rest of APN types can be evaluated for remaining conditions.
 
-        if (apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_DEFAULT)
+        if ((apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_DEFAULT)
                     || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_IA)
-                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_HIPRI)) {
-
-            if (mPhone.getServiceState().getRilDataRadioTechnology()
+                    || apnContext.getDataProfileType().equals(PhoneConstants.APN_TYPE_HIPRI))
+                    && mPhone.getServiceState().getRilDataRadioTechnology()
                     == ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN) {
-                log("Default data call activation not allowed in iwlan.");
-                return false;
-            }
-
-            MSimTelephonyManager mtmgr = (MSimTelephonyManager)
-                mPhone.getContext().getSystemService (Context.MSIM_TELEPHONY_SERVICE);
-
-            if (mPhone.getSubscription() != mtmgr.getDefaultDataSubscription()) {
-                log("Default data activation not allowed on non-DDS subscription");
-                return false;
-            }
+            log("Default data call activation not allowed in iwlan.");
+            return false;
+        } else {
+            return apnContext.isReady() && isDataAllowed();
         }
-
-        return apnContext.isReady() && isDataAllowed();
     }
 
     //****** Called from ServiceStateTracker
