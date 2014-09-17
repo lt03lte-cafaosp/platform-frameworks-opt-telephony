@@ -447,6 +447,9 @@ public class ModemBindingPolicyHandler extends Handler {
         }
 
         logd("setPreferredNetworkType: nwMode:" + networkType + ", on phoneId:" + phoneId);
+        //save the network mode to DB first
+        TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                android.provider.Settings.Global.PREFERRED_NETWORK_MODE, phoneId, networkType);
 
         mIsSetPrefNwModeInProgress = true;
 
