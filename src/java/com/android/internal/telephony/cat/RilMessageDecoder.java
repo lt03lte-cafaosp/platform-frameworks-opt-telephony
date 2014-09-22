@@ -180,6 +180,7 @@ public class RilMessageDecoder extends StateMachine {
     }
 
     public void dispose() {
+        quitNow();
         mStateStart = null;
         mStateCmdParamsReady = null;
         mCmdParamsFactory.dispose();
