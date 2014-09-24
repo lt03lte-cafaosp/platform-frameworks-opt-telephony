@@ -220,9 +220,6 @@ public class CDMAPhone extends PhoneBase {
 
         // Sets current entry in the telephony carrier table
         updateCurrentCarrierInProvider(operatorNumeric);
-
-        // Notify voicemails.
-        updateVoiceMail();
     }
 
     @Override
@@ -1133,6 +1130,7 @@ public class CDMAPhone extends PhoneBase {
             case EVENT_RUIM_RECORDS_LOADED:{
                 Rlog.d(LOG_TAG, "Event EVENT_RUIM_RECORDS_LOADED Received");
                 updateCurrentCarrierInProvider();
+                updateVoiceMail();
             }
             break;
 
@@ -1166,6 +1164,7 @@ public class CDMAPhone extends PhoneBase {
             case EVENT_NV_READY:{
                 Rlog.d(LOG_TAG, "Event EVENT_NV_READY Received");
                 prepareEri();
+                updateVoiceMail();
             }
             break;
 
