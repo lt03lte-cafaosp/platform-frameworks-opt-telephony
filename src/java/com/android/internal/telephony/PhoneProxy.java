@@ -1301,9 +1301,14 @@ public class PhoneProxy extends Handler implements Phone {
         mActivePhone.unregisterForAvpUpgradeFailure(h);
     }
 
+    public void addParticipant(String dialString, int clir, int callType, String[] extras,
+            Message response) throws CallStateException {
+        mActivePhone.addParticipant(dialString, clir, callType, extras, response);
+    }
+
     public void addParticipant(String dialString, int clir, int callType, String[] extras)
             throws CallStateException {
-        mActivePhone.addParticipant(dialString, clir, callType, extras);
+        addParticipant(dialString, clir, callType, extras, null);
     }
 
     public void hangupWithReason(int callId, String userUri,
