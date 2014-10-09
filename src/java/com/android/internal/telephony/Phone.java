@@ -819,6 +819,19 @@ public interface Phone {
      * @param clir
      * @param callType
      * @param extras
+     * @param response
+     * @throws CallStateException
+     */
+    void addParticipant(String dialString, int clir, int callType, String[] extras,
+            Message response) throws CallStateException;
+
+    /**
+     * Add participant during Conference Call
+     *
+     * @param dialString
+     * @param clir
+     * @param callType
+     * @param extras
      * @throws CallStateException
      */
     void addParticipant(String dialString, int clir, int callType, String[] extras)

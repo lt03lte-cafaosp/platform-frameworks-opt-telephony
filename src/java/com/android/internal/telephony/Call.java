@@ -17,7 +17,9 @@
 package com.android.internal.telephony;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import android.telephony.Rlog;
 
@@ -45,8 +47,50 @@ public abstract class Call {
         }
     }
 
+    /**
+     * Represents a participant in IMS conference.
+     * status string can be null or any status string as defined by RFC.
+     */
+    public static class ConfUser {
+        public String uri;
+        public String displayText;
+        // A single user can have multiple endpoints. However safely assuming a single
+        // endpoint per user here. Status of the user is taken as the status of first end point.
+        public String status;
+
+        public String toString() {
+            return "Uri: " + uri + " dispText: " + displayText + " status: " + status;
+        }
+    }
+
+    /**
+     * Represents IMS conference state.
+     * version denotes version from last received refresh xml.
+     * Applications can use the version number to check if there is any
+     * need to update the conference UI state.Only versions above the
+     * locally cached version needs update.
+     * usersMap is a HashMap of user objects with key as the uri of the
+     * user.
+     */
+    public static class ConferenceStateInfo {
+        public int version;
+        public HashMap<String, ConfUser> usersMap;
+
+        public String[] getUserUriList() {
+            String[] uriList = null;
+            if (usersMap != null) {
+                Set uriSet = usersMap.keySet();
+                if (uriSet != null) {
+                    uriList = (String[])uriSet.toArray(new String[0]);
+                }
+            }
+            return uriList;
+        }
+    }
+
     public boolean isMpty = false;
     private String[] mConfUriList;
+    private ConferenceStateInfo mConfStateInfo;
 
     /* Instance Variables */
 
@@ -154,6 +198,14 @@ public abstract class Call {
 
     public void setConfUriList(String[] urilist) {
         mConfUriList = urilist;
+    }
+
+    public ConferenceStateInfo getConfStateInfo() {
+        return mConfStateInfo;
+    }
+
+    public void setConfStateInfo(ConferenceStateInfo confStateInfo) {
+        mConfStateInfo = confStateInfo;
     }
 
     public long
