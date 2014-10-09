@@ -1599,9 +1599,14 @@ public abstract class PhoneBase extends Handler implements Phone {
                 + this);
     }
 
+    public void addParticipant(String dialString, int clir, int callType, String[] extras,
+            Message response) throws CallStateException {
+        throw new CallStateException("addParticipant is not supported in this phone " + this);
+    }
+
     public void addParticipant(String dialString, int clir, int callType, String[] extras)
             throws CallStateException {
-        throw new CallStateException("addParticipant is not supported in this phone " + this);
+        addParticipant(dialString, clir, callType, extras, null);
     }
 
     public void hangupWithReason(int callId, String userUri,
