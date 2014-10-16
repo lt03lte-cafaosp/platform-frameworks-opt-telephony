@@ -1009,7 +1009,6 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         if (hasChanged) {
             String operatorNumeric;
 
-            updateSpnDisplay();
 
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_ALPHA,
                 mSS.getOperatorAlphaLong());
@@ -1140,6 +1139,7 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                 mSS.getRoaming() ? "true" : "false");
 
             mPhone.notifyServiceStateChanged(mSS);
+            updateSpnDisplay();
         }
 
         // First notify detached, then rat changed, then attached - that's the way it
