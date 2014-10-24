@@ -813,6 +813,19 @@ public class GSMPhone extends PhoneBase {
     }
 
     @Override
+    public boolean isMMI(String dialString) {
+        String newDialString = PhoneNumberUtils.stripSeparators(dialString);
+        String networkPortion = PhoneNumberUtils.extractNetworkPortionAlt(newDialString);
+        GsmMmiCode mmi =
+                GsmMmiCode.newFromDialString(networkPortion, this, mUiccApplication.get());
+        if (mmi == null) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
     public boolean handlePinMmi(String dialString) {
         GsmMmiCode mmi = GsmMmiCode.newFromDialString(dialString, this, mUiccApplication.get());
 
