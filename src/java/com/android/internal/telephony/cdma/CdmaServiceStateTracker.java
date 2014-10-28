@@ -1151,8 +1151,8 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_ISROAMING,
                     mSS.getRoaming() ? "true" : "false");
 
-            updateSpnDisplay();
             mPhone.notifyServiceStateChanged(mSS);
+            updateSpnDisplay();
         }
 
         // First notify detached, then rat changed, then attached - that's the way it
