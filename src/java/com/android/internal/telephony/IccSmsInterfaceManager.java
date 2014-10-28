@@ -794,18 +794,34 @@ public class IccSmsInterfaceManager {
     }
 
     public boolean enableCellBroadcastRange(int startMessageId, int endMessageId) {
+        long subId = mPhone.getSubId();
+        int slotId = SubscriptionController.getInstance().getSlotId(subId);
+        int lteOnCdma = TelephonyManager.getLteOnCdmaModeStatic(slotId);
         if (PhoneConstants.PHONE_TYPE_GSM == mPhone.getPhoneType()) {
             return enableGsmBroadcastRange(startMessageId, endMessageId);
         } else {
-            return enableCdmaBroadcastRange(startMessageId, endMessageId);
+            boolean cdmaRange = enableCdmaBroadcastRange(startMessageId, endMessageId);
+            if (PhoneConstants.LTE_ON_CDMA_TRUE == lteOnCdma){
+                boolean gsmRange = enableGsmBroadcastRange(startMessageId, endMessageId);
+                return gsmRange && cdmaRange;
+            }
+            return cdmaRange;
         }
     }
 
     public boolean disableCellBroadcastRange(int startMessageId, int endMessageId) {
+        long subId = mPhone.getSubId();
+        int slotId = SubscriptionController.getInstance().getSlotId(subId);
+        int lteOnCdma = TelephonyManager.getLteOnCdmaModeStatic(slotId);
         if (PhoneConstants.PHONE_TYPE_GSM == mPhone.getPhoneType()) {
             return disableGsmBroadcastRange(startMessageId, endMessageId);
         } else {
-            return disableCdmaBroadcastRange(startMessageId, endMessageId);
+            boolean cdmaRange = disableCdmaBroadcastRange(startMessageId, endMessageId);
+            if (PhoneConstants.LTE_ON_CDMA_TRUE == lteOnCdma){
+                boolean gsmRange = disableGsmBroadcastRange(startMessageId, endMessageId);
+                return gsmRange && cdmaRange;
+            }
+            return cdmaRange;
         }
     }
 
