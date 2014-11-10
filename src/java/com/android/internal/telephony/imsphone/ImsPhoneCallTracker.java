@@ -81,6 +81,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
     private boolean mIsVolteEnabled = false;
     private boolean mIsVtEnabled = false;
+    private boolean mIsUtEnabled = false;
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -1396,6 +1397,12 @@ public final class ImsPhoneCallTracker extends CallTracker {
                         ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI) {
                     mIsVtEnabled = false;
                 }
+                if (disabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE] ==
+                         ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE ||
+                         disabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI] ==
+                         ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI) {
+                    mIsUtEnabled = false;
+                }
                 if (enabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE] ==
                         ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE ||
                         enabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI] ==
@@ -1408,6 +1415,12 @@ public final class ImsPhoneCallTracker extends CallTracker {
                         ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI) {
                     mIsVtEnabled = true;
                 }
+                if (enabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE] ==
+                        ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE ||
+                        enabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI] ==
+                        ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI) {
+                    mIsUtEnabled = true;
+                 }
 
                 if (tmpIsVtEnabled != mIsVtEnabled) {
                     mPhone.notifyForVideoCapabilityChanged(mIsVtEnabled);
@@ -1415,7 +1428,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
             }
 
             if (DBG) log("onFeatureCapabilityChanged, mIsVolteEnabled = " +  mIsVolteEnabled
-                    + " mIsVtEnabled = " + mIsVtEnabled);
+                    + " mIsVtEnabled = " + mIsVtEnabled + "mIsUtEnabled = " + mIsUtEnabled);
         }
 
         @Override
@@ -1587,5 +1600,9 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     new ImsVideoCallProviderWrapper(imsVideoCallProvider);
             conn.setVideoProvider(imsVideoCallProviderWrapper);
         }
+    }
+
+    public boolean isUtEnabled() {
+        return mIsUtEnabled;
     }
 }
