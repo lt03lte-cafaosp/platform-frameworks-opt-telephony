@@ -92,6 +92,9 @@ public class IccSmsInterfaceManager extends ISms.Stub {
                     ar = (AsyncResult) msg.obj;
                     synchronized (mLock) {
                         mSuccess = (ar.exception == null);
+                        if (DBG) {
+                            log("EVENT_UPDATE_DONE: mSuccess=" + mSuccess);
+                        }
                         mLock.notifyAll();
                     }
                     break;
@@ -266,6 +269,9 @@ public class IccSmsInterfaceManager extends ISms.Stub {
             } catch (InterruptedException e) {
                 log("interrupted while trying to update by index");
             }
+        }
+        if (DBG) {
+            log("updateMessageOnIccEf: mSuccess=" + mSuccess);
         }
         return mSuccess;
     }
@@ -974,14 +980,14 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         if (DBG)
             log("Calling setGsmBroadcastConfig with " + configs.length + " configurations");
 
-        synchronized (mLock) {
+        synchronized (mBroadcastLock) {
             Message response = mHandler.obtainMessage(EVENT_SET_BROADCAST_CONFIG_DONE);
 
             mSuccess = false;
             mPhone.mCi.setGsmBroadcastConfig(configs, response);
 
             try {
-                mLock.wait();
+                mBroadcastLock.wait();
             } catch (InterruptedException e) {
                 log("interrupted while trying to set cell broadcast config");
             }
@@ -1034,14 +1040,14 @@ public class IccSmsInterfaceManager extends ISms.Stub {
         if (DBG)
             log("Calling setCdmaBroadcastActivation(" + activate + ")");
 
-        synchronized (mLock) {
+        synchronized (mBroadcastLock) {
             Message response = mHandler.obtainMessage(EVENT_SET_BROADCAST_ACTIVATION_DONE);
 
             mSuccess = false;
             mPhone.mCi.setCdmaBroadcastActivation(activate, response);
 
             try {
-                mLock.wait();
+                mBroadcastLock.wait();
             } catch (InterruptedException e) {
                 log("interrupted while trying to set cdma broadcast activation");
             }
