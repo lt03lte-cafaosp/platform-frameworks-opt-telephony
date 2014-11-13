@@ -54,6 +54,7 @@ import com.android.ims.ImsManager;
 import com.android.internal.R;
 import com.android.internal.telephony.dataconnection.DcTrackerBase;
 import com.android.internal.telephony.imsphone.ImsPhone;
+import com.android.internal.telephony.imsphone.ImsPhoneConnection;
 import com.android.internal.telephony.test.SimulatedRadioControl;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppType;
 import com.android.internal.telephony.uicc.IccFileHandler;
@@ -182,6 +183,9 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     // Key used to read/write "disable DNS server check" pref (used for testing)
     public static final String DNS_SERVER_CHECK_DISABLED_KEY = "dns_server_check_disabled_key";
+
+   //Telephony System Property used to indicate a multimode target
+    public static final String PROPERTY_MULTIMODE_CDMA = "ro.config.multimode_cdma";
 
     /**
      * Small container class used to hold information relevant to
@@ -1459,6 +1463,31 @@ public abstract class PhoneBase extends Handler implements Phone {
         return false;
     }
 
+    public static int getVideoState(Call call) {
+        int videoState = VideoProfile.VideoState.AUDIO_ONLY;
+        ImsPhoneConnection conn = (ImsPhoneConnection) call.getEarliestConnection();
+        if (conn != null) {
+            videoState = conn.getVideoState();
+        }
+        return videoState;
+    }
+
+    private boolean isImsVideoCall(Call call) {
+        int videoState = getVideoState(call);
+        return (VideoProfile.VideoState.isVideo(videoState));
+    }
+
+    public boolean isImsVtCallPresent() {
+        boolean isVideoCallActive = false;
+        if (mImsPhone != null) {
+            isVideoCallActive = isImsVideoCall(mImsPhone.getForegroundCall()) ||
+                    isImsVideoCall(mImsPhone.getBackgroundCall()) ||
+                    isImsVideoCall(mImsPhone.getRingingCall());
+        }
+        Rlog.d(LOG_TAG, "isVideoCallActive: " + isVideoCallActive);
+        return isVideoCallActive;
+    }
+
     @Override
     public abstract int getPhoneType();
 
@@ -1765,6 +1794,12 @@ public abstract class PhoneBase extends Handler implements Phone {
                     + " mCallRingContinueToken=" + mCallRingContinueToken
                     + " mIsVoiceCapable=" + mIsVoiceCapable);
         }
+    }
+
+    public boolean isManualNetSelAllowed() {
+        // This function should be overridden in GsmPhone.
+        // Not implemented by default.
+        return false;
     }
 
     @Override
