@@ -561,7 +561,9 @@ public class ExtCallManager extends CallManager {
         }
 
         setSubInConversation(subscription);
-        updateLchOnOtherSub(subscription);
+        if (!basePhone.isMMI(dialString)) {
+            updateLchOnOtherSub(subscription);
+        }
 
         if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
             result = basePhone.dial(dialString, callType, extras);

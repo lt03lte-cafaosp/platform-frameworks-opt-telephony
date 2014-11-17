@@ -255,10 +255,12 @@ public class PhoneProxy extends Handler implements Phone {
                 + (ServiceState.isGsm(newVoiceRadioTech) ? "GSM" : "CDMA"));
 
         if (oldPhone != null) {
-            cm.unregisterPhone(oldPhone);
-            cm.unregisterPhone(cm.getImsPhone());
+            // ensure all events received, so dispose it firstly then unregister
+            // listeners
             logd("Disposing old phone..");
             oldPhone.dispose();
+            cm.unregisterPhone(oldPhone);
+            cm.unregisterPhone(cm.getImsPhone());
         }
 
         // Give the garbage collector a hint to start the garbage collection
@@ -1342,5 +1344,10 @@ public class PhoneProxy extends Handler implements Phone {
     @Override
     public void setLocalCallHold(int lchStatus, Message response) {
         mActivePhone.setLocalCallHold(lchStatus, response);
+    }
+
+    @Override
+    public boolean isMMI(String dialString) {
+        return mActivePhone.isMMI(dialString);
     }
 }
