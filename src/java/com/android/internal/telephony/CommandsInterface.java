@@ -1789,6 +1789,22 @@ public interface CommandsInterface {
      */
     public void setDataSubscription (Message result);
 
+
+    /**
+      * Request to get modem stack capabilities
+      * @param response is callback message
+      */
+    void getModemCapability(Message response);
+
+
+    /**
+      * Request to update binding status on the stack
+      * @param stackId is stack to update binding
+      * @param enable is to tell enable or disable binding
+      * @param response is callback message
+      */
+    void updateStackBinding(int stackId, int enable, Message response);
+
     /**
      * Request to enable or disable the tune away state.
      * @param tuneAway true to enable, false to disable
