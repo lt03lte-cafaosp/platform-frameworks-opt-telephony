@@ -235,9 +235,14 @@ public final class DcTracker extends DcTrackerBase {
         if (DBG) log(LOG_TAG + ".constructor");
 
         if (p.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
-            mOmhApt = new CdmaApnProfileTracker((CDMAPhone)p);
-            mOmhApt.registerForModemProfileReady(this,
-                    DctConstants.EVENT_MODEM_DATA_PROFILE_READY, null);
+            final boolean fetchApnFromOmhCard = p.getContext().getResources().
+                    getBoolean(com.android.internal.R.bool.config_fetch_apn_from_omh_card);
+            log(LOG_TAG + " fetchApnFromOmhCard: " + fetchApnFromOmhCard);
+            if (fetchApnFromOmhCard) {
+                mOmhApt = new CdmaApnProfileTracker((CDMAPhone)p);
+                mOmhApt.registerForModemProfileReady(this,
+                        DctConstants.EVENT_MODEM_DATA_PROFILE_READY, null);
+            }
         }
 
         mDataConnectionTracker = this;
@@ -463,21 +468,6 @@ public final class DcTracker extends DcTrackerBase {
             log("Ready to handle network requests");
         }
 
-        private long getSubIdFromNetworkRequest(NetworkRequest networkRequest) {
-            String requestedSpecifierStr = networkRequest.networkCapabilities
-                .getNetworkSpecifier();
-            long requestedSpecifier = SubscriptionManager.INVALID_SUB_ID;
-
-            try {
-                requestedSpecifier = (requestedSpecifierStr != null)? Long.parseLong(
-                        requestedSpecifierStr) : SubscriptionManager.INVALID_SUB_ID;
-            } catch (NumberFormatException e){
-                //nop
-            }
-
-            return requestedSpecifier;
-        }
-
         @Override
         protected void needNetworkFor(NetworkRequest networkRequest, int score) {
             // figure out the apn type and enable it
@@ -487,7 +477,7 @@ public final class DcTracker extends DcTrackerBase {
 
             long currentDds = subController.getDefaultDataSubId();
             long subId = mPhone.getSubId();
-            long requestedSpecifier = getSubIdFromNetworkRequest(networkRequest);
+            long requestedSpecifier = subController.getSubIdFromNetworkRequest(networkRequest);
 
             log("CurrentDds = " + currentDds);
             log("mySubId = " + subId);
@@ -499,8 +489,15 @@ public final class DcTracker extends DcTrackerBase {
                 return;
             }
 
-            if ((requestedSpecifier != SubscriptionManager.INVALID_SUB_ID)
-                    && (currentDds != requestedSpecifier)) {
+            // For clients that do not send subId in NetworkCapabilities,
+            // Connectivity will send to all network factories. Accept only
+            // when requestedSpecifier is same as current factory's subId
+            if (requestedSpecifier != subId) {
+                log("requestedSpecifier is not same as mysubId. Bail out.");
+                return;
+            }
+
+            if (currentDds != requestedSpecifier) {
                 log("This request would result in DDS switch");
                 log("Requested DDS switch to subId = " + requestedSpecifier);
 
@@ -571,6 +568,13 @@ public final class DcTracker extends DcTrackerBase {
             if(!isNetworkRequestForInternet(n)) {
                 SubscriptionController subController = SubscriptionController.getInstance();
                 subController.stopOnDemandDataSubscriptionRequest(n);
+            } else {
+                // Internet requests are not queued in DDS list. So deactivate here explicitly.
+                ApnContext apnContext = apnContextForNetworkRequest(n);
+                if (apnContext != null) {
+                    log("Deactivating APN=" + apnContext);
+                    apnContext.decRefCount();
+                }
             }
         }
 
@@ -749,6 +753,40 @@ public final class DcTracker extends DcTrackerBase {
         if (apnContext == null) return false;
 
         return (apnContext.getDcAc() != null);
+    }
+
+    @Override
+    public boolean isOnDemandDataPossible(String apnType) {
+        /*
+         * Check if APN enabled
+         * Check if MobileData is ON
+         * Check if MobileData UI override present
+         */
+
+        boolean flag = false;
+        ApnContext apnContext = mApnContexts.get(apnType);
+        if (apnContext == null) {
+            return false;
+        }
+        boolean apnContextIsEnabled = apnContext.isEnabled();
+
+        DctConstants.State apnContextState = apnContext.getState();
+        boolean apnTypePossible = !(apnContextIsEnabled &&
+                (apnContextState == DctConstants.State.FAILED));
+
+        boolean userDataEnabled = mUserDataEnabled;
+
+        if (PhoneConstants.APN_TYPE_MMS.equals(apnType)) {
+            boolean mobileDataOffOveride = mPhone.getContext().getResources().
+                getBoolean(com.android.internal.R.bool.config_enable_mms_with_mobile_data_off);
+            log("isOnDemandDataPossible MobileDataEnabled override = " + mobileDataOffOveride);
+
+            userDataEnabled = (mUserDataEnabled || mobileDataOffOveride);
+        }
+
+        flag = apnTypePossible && userDataEnabled;
+        log("isOnDemandDataPossible, possible =" + flag + ", apnContext = " + apnContext);
+        return flag;
     }
 
     @Override
@@ -2013,20 +2051,7 @@ public final class DcTracker extends DcTrackerBase {
                 }
             } else if (met) {
                 apnContext.setReason(Phone.REASON_DATA_DISABLED);
-                // If ConnectivityService has disabled this network, stop trying to bring
-                // it up, but do not tear it down - ConnectivityService will do that
-                // directly by talking with the DataConnection.
-                //
-                // This doesn't apply to DUN, however.  Those connections have special
-                // requirements from carriers and we need stop using them when the dun
-                // request goes away.  This applies to both CDMA and GSM because they both
-                // can declare the DUN APN sharable by default traffic, thus still satisfying
-                // those requests and not torn down organically.
-                if (apnContext.getApnType() == PhoneConstants.APN_TYPE_DUN && teardownForDun()) {
-                    cleanup = true;
-                } else {
-                    cleanup = false;
-                }
+
             } else {
                 apnContext.setReason(Phone.REASON_DATA_DEPENDENCY_UNMET);
             }

@@ -304,8 +304,12 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
             if (DBG) log("Receive EVENT_RUIM_READY");
             pollState();
 
-            // Only support automatic selection mode in CDMA.
-            mPhone.setNetworkSelectionModeAutomatic(null);
+            boolean skipRestoringSelection = mPhone.getContext().getResources().getBoolean(
+                    com.android.internal.R.bool.skip_restoring_network_selection);
+            if (!skipRestoringSelection) {
+                 // Only support automatic selection mode in CDMA.
+                 mPhone.setNetworkSelectionModeAutomatic(null);
+            }
 
             mPhone.prepareEri();
             break;
@@ -722,13 +726,9 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
                 // When registration state is roaming and TSB58
                 // roaming indicator is not in the carrier-specified
                 // list of ERIs for home system, mCdmaRoaming is true.
-                mCdmaRoaming =
-                        regCodeIsRoaming(registrationState) && !isRoamIndForHomeSystem(states[10]);
-                mCdmaRoaming = mCdmaRoaming || mDataRoaming;
+                mCdmaRoaming = regCodeIsRoaming(registrationState);
                 mNewSS.setState (regCodeToServiceState(registrationState));
-
                 mNewSS.setRilVoiceRadioTechnology(radioTechnology);
-
                 mNewSS.setCssIndicator(cssIndicator);
                 mNewSS.setSystemAndNetworkId(systemId, networkId);
                 mRoamingIndicator = roamingIndicator;
@@ -836,7 +836,9 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
             if (!isSidsAllZeros() && isHomeSid(mNewSS.getSystemId())) {
                 namMatch = true;
             }
-
+            mCdmaRoaming =
+                    (mCdmaRoaming || mDataRoaming) &&
+                            !isRoamIndForHomeSystem(String.valueOf(mRoamingIndicator));
             // Setting SS Roaming (general)
             if (mIsSubscriptionFromRuim) {
                 mNewSS.setRoaming(isRoamingBetweenOperators(mCdmaRoaming, mNewSS));

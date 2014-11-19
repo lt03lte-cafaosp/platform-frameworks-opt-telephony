@@ -135,8 +135,7 @@ public class ImsPhoneConnection extends Connection {
 
             ImsCallProfile imsCallProfile = imsCall.getCallProfile();
             if (imsCallProfile != null) {
-                int callType = imsCall.getCallProfile().mCallType;
-                setVideoState(ImsCallProfile.getVideoStateFromCallType(callType));
+                setVideoState(ImsCallProfile.getVideoStateFromImsCallProfile(imsCallProfile));
 
                 ImsStreamMediaProfile mediaProfile = imsCallProfile.mMediaProfile;
                 if (mediaProfile != null) {
@@ -676,6 +675,16 @@ public class ImsPhoneConnection extends Connection {
                         changed = true;
                     }
                 }
+
+                // Check if call substate has changed. If so notify listeners of call state changed.
+                int callSubstate = getCallSubstate();
+                int newCallSubstate = imsCall.getCallSubstate();
+
+                if (callSubstate != newCallSubstate) {
+                    setCallSubstate(newCallSubstate);
+                    changed = true;
+                }
+
             } catch (ImsException e) {
                 // No session in place -- no change
             }
@@ -685,7 +694,7 @@ public class ImsPhoneConnection extends Connection {
             ImsCallProfile callProfile = imsCall.getCallProfile();
             if (callProfile != null) {
                 int oldVideoState = getVideoState();
-                int newVideoState = ImsCallProfile.getVideoStateFromCallType(callProfile.mCallType);
+                int newVideoState = ImsCallProfile.getVideoStateFromImsCallProfile(callProfile);
 
                 if (oldVideoState != newVideoState) {
                     setVideoState(newVideoState);
