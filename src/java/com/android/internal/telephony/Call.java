@@ -19,7 +19,6 @@ package com.android.internal.telephony;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.os.Bundle;
 import android.telephony.Rlog;
 
 /**
@@ -119,15 +118,6 @@ public abstract class Call {
      */
     public State getState() {
         return mState;
-    }
-
-    /**
-    * getExtras
-    * @return Call Extras. Subclasses of Call that support call extras need
-    *         to override this method to return the extras.
-    */
-    public Bundle getExtras() {
-        return null;
     }
 
     /**
