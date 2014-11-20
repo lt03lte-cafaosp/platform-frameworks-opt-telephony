@@ -16,7 +16,6 @@
 
 package com.android.internal.telephony;
 
-import android.os.Bundle;
 import android.os.SystemClock;
 import android.telephony.Rlog;
 import android.util.Log;
@@ -255,23 +254,6 @@ public abstract class Connection {
             return Call.State.IDLE;
         } else {
             return c.getState();
-        }
-    }
-
-    /**
-     * Get the extras for the connection's call.
-     *
-     * Returns getCall().getExtras()
-     */
-    public Bundle getExtras() {
-        Call c;
-
-        c = getCall();
-
-        if (c == null) {
-            return null;
-        } else {
-            return c.getExtras();
         }
     }
 
