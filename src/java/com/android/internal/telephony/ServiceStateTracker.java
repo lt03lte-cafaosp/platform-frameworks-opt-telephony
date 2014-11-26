@@ -840,7 +840,7 @@ public abstract class ServiceStateTracker extends Handler {
                         .CONNECTIVITY_SERVICE);
         NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 
-        boolean wifi = mWifi.isConnected();
+        boolean wifi = (mWifi != null) ? mWifi.isConnected() : false;
         log("isWifiConnected = " + wifi);
 
         return wifi;
