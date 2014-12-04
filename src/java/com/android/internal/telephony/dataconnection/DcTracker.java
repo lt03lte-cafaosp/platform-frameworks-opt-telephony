@@ -2022,6 +2022,14 @@ public class DcTracker extends DcTrackerBase {
         }
 
         if(DBG) log("onDisconnectDone: EVENT_DISCONNECT_DONE apnContext=" + apnContext);
+
+        // If apncontext is in CONNECTING state, the DISCONNECT event could be due to a previous
+        // disconnect arriving at DCT delayed. In connecting state we expect DATA_SETUP_COMPLETE.
+        if (apnContext.getState() == DctConstants.State.CONNECTING) {
+            log("onDisconnectDone: apncontext in CONNECTING state. Ignore disconnect.");
+            return;
+        }
+
         apnContext.setState(DctConstants.State.IDLE);
 
         mPhone.notifyDataConnection(apnContext.getReason(), apnContext.getDataProfileType());
@@ -2044,8 +2052,10 @@ public class DcTracker extends DcTrackerBase {
                 // Retry immediately if reason is nw_type_changed and
                 // the overall state is disconnected (like rat switch, for instance)
                 if (isDisconnected()) {
-                    log("onDisconnectDone: Cleanup due to NW type changed done. Restart all apns");
-                    setupDataOnConnectableApns(Phone.REASON_NW_TYPE_CHANGED);
+                    log("onDisconnectDone: Cleanup due to NW type changed done."
+                            + " Try restart all apns");
+                    sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                            Phone.REASON_NW_TYPE_CHANGED));
                 }
             } else {
                 SystemProperties.set(PUPPET_MASTER_RADIO_STRESS_TEST, "false");
@@ -2068,7 +2078,8 @@ public class DcTracker extends DcTrackerBase {
             if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())) {
                 if(DBG) log("onDisconnectDone: isOnlySigneDcAllowed true so setup single apn");
                 if (isDisconnected()) {
-                    setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+                    sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                            Phone.REASON_SINGLE_PDN_ARBITRATION));
                 } else {
                     if(DBG) log("onDisconnectDone: Wait for all apn contexts to be disconnected");
                 }
@@ -2078,7 +2089,8 @@ public class DcTracker extends DcTrackerBase {
         }
 
         if (SUPPORT_MPDN == false && isDisconnected()) {
-            setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+            sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                    Phone.REASON_SINGLE_PDN_ARBITRATION));
         }
     }
 
