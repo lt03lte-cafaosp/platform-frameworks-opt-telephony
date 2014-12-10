@@ -257,6 +257,12 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     int mHeaderSize = OEM_IDENTIFIER.length() + 2 * INT_SIZE;
     final int QCRIL_EVT_HOOK_UNSOL_MODEM_CAPABILITY = OEMHOOK_BASE + 1020;
 
+    /** qcrilhook unsolicited response IDs */
+    final int OEMHOOK_UNSOL_CDMA_BURST_DTMF = OEMHOOK_BASE + 1001;
+    final int OEMHOOK_UNSOL_CDMA_CONT_DTMF_START = OEMHOOK_BASE + 1002;
+    final int OEMHOOK_UNSOL_CDMA_CONT_DTMF_STOP = OEMHOOK_BASE + 1003;
+    final int OEMHOOK_UNSOL_WMS_READY = OEMHOOK_BASE + 1009;
+
     //***** Instance Variables
 
     LocalSocket mSocket;
@@ -3454,6 +3460,22 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 notifyModemCap(responseData, mInstanceId);
                 break;
 
+            case OEMHOOK_UNSOL_CDMA_BURST_DTMF:
+                notifyCdmaFwdBurstDtmf(responseData);
+                break;
+
+            case OEMHOOK_UNSOL_CDMA_CONT_DTMF_START:
+                notifyCdmaFwdContDtmfStart(responseData);
+                break;
+
+            case OEMHOOK_UNSOL_CDMA_CONT_DTMF_STOP:
+                notifyCdmaFwdContDtmfStop();
+                break;
+
+            case OEMHOOK_UNSOL_WMS_READY:
+                notifyWmsReady(responseData);
+                break;
+
             default:
                 Rlog.d(RILJ_LOG_TAG, "Response ID " + responseId
                         + " is not served in this process.");
@@ -3491,6 +3513,31 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
         mModemCapRegistrants.notifyRegistrants(ar);
         Rlog.d(RILJ_LOG_TAG, "MODEM_CAPABILITY on phone=" + phoneId + " notified to registrants");
+    }
+
+    /** Notify registrants of FWD Burst DTMF Tone. */
+    protected void notifyCdmaFwdBurstDtmf(byte[] data) {
+        AsyncResult ar = new AsyncResult(null, data, null);
+        mCdmaFwdBurstDtmfRegistrants.notifyRegistrants(ar);
+    }
+
+    /** Notify registrants of FWD Continuous DTMF Tone Start. */
+    protected void notifyCdmaFwdContDtmfStart(byte[] data) {
+        AsyncResult ar = new AsyncResult(null, data, null);
+        mCdmaFwdContDtmfStartRegistrants.notifyRegistrants(ar);
+    }
+
+    /** Notify registrants of FWD Continuous DTMF Tone Stop. */
+    protected void notifyCdmaFwdContDtmfStop() {
+        AsyncResult ar = new AsyncResult(null, null, null);
+        mCdmaFwdContDtmfStopRegistrants.notifyRegistrants(ar);
+    }
+
+    /** Notify registrants of WMS_READY event. */
+    protected void notifyWmsReady(byte[] data) {
+        AsyncResult ar = new AsyncResult(null, data, null);
+        mWmsReadyRegistrants.notifyRegistrants(ar);
+        Rlog.d(RILJ_LOG_TAG, "WMS_READY notified to registrants");
     }
 
     private Object
