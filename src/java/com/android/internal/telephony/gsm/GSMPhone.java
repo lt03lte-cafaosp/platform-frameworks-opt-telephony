@@ -528,7 +528,7 @@ public class GSMPhone extends PhoneBase {
     }
 
     void notifyUnknownConnection(Connection cn) {
-        mUnknownConnectionRegistrants.notifyResult(cn);
+        super.notifyUnknownConnectionP(cn);
     }
 
     void notifySuppServiceFailed(SuppService code) {
