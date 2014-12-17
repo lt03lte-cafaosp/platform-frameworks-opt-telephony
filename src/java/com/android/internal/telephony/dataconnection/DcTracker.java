@@ -571,7 +571,7 @@ public class DcTracker extends DcTrackerBase {
         if (DBG) log("disableApnType:" + type);
         ApnContext apnContext = mApnContexts.get(type);
 
-        if (apnContext != null) {
+        if (apnContext != null && isApnTypeAvailable(type)) {
             setEnabled(apnTypeToId(type), false);
             if (apnContext.getState() != DctConstants.State.IDLE && apnContext.getState()
                     != DctConstants.State.FAILED) {
@@ -584,7 +584,8 @@ public class DcTracker extends DcTrackerBase {
 
         } else {
             if (DBG) {
-                log("disableApnType: no apn context was found, return APN_REQUEST_FAILED");
+                log("disableApnType: apn context was not found or apnType: " + type +
+                       " is not available, return APN_REQUEST_FAILED");
             }
             return PhoneConstants.APN_REQUEST_FAILED;
         }
