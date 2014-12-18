@@ -2055,4 +2055,11 @@ public interface Phone {
     public void setLocalCallHold(int lchStatus);
 
     public boolean isImsVtCallPresent();
+
+    /**
+     * Query the IMS Registration Status.
+     *
+     * @return true if IMS is Registered
+     */
+    public boolean isImsRegistered();
 }
