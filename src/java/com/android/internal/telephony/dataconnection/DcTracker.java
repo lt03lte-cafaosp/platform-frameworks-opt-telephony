@@ -617,7 +617,7 @@ public class DcTracker extends DcTrackerBase {
         return getAnyDataEnabled(false);
     }
 
-    private boolean getAnyDataEnabled(boolean enableMmsData) {
+    protected boolean getAnyDataEnabled(boolean enableMmsData) {
         synchronized (mDataEnabledLock) {
             if (!(mInternalDataEnabled && (mUserDataEnabled || enableMmsData)
                     && sPolicyDataEnabled)) {
