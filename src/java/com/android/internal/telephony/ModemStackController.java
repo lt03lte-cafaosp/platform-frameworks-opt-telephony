@@ -369,8 +369,7 @@ public class ModemStackController extends Handler {
             loge("onGetModemCapabilityDone: EXIT!, result null or Exception =" + ar.exception);
             //On Modem Packages which do not support GetModemCaps RIl will return exception
             //On such Modem packages notify stack is ready so that SUB Activation can continue.
-            mIsStackReady = true;
-            mStackReadyRegistrants.notifyRegistrants();
+            notifyStackReady(false);
             return;
         }
 
@@ -430,9 +429,7 @@ public class ModemStackController extends Handler {
             //if any deact failed notify registrants to activate any deactivated subs
             //and stop binding process. No need to recover here.
             if (isAnyCmdFailed()) {
-                mIsRecoveryInProgress = false;
-                mIsStackReady = true;
-                mStackReadyRegistrants.notifyRegistrants();
+                notifyStackReady(false);
             } else {
                 mDeactivationInProgress = false;
                 triggerUnBindingOnAllSubs();
@@ -508,7 +505,7 @@ public class ModemStackController extends Handler {
                 mUpdateStackMsg = null;
             }
             updateNetworkSelectionMode();
-            notifyStackReady();
+            notifyStackReady(true);
         }
     }
 
@@ -720,7 +717,7 @@ public class ModemStackController extends Handler {
             }
         } else {
             //incase of bootup if cross binding is not required send stack ready notification.
-            if (isBootUp) notifyStackReady();
+            if (isBootUp) notifyStackReady(false);
             return FAILURE;
         }
         return SUCCESS;
@@ -730,6 +727,10 @@ public class ModemStackController extends Handler {
         SubscriptionController subCtrlr = SubscriptionController.getInstance();
         List<SubInfoRecord> subInfoList = subCtrlr.getActiveSubInfoList();
         mActiveSubCount = 0;
+        if (subInfoList == null) {
+            //if getting sub info list is failed, abort cross mapping process.
+            notifyStackReady(false);
+        }
         for (SubInfoRecord subInfo : subInfoList) {
             int subStatus = subCtrlr.getSubState(subInfo.subId);
             if (subStatus == SubscriptionManager.ACTIVE) {
@@ -747,17 +748,18 @@ public class ModemStackController extends Handler {
         }
     }
 
-    private void notifyStackReady() {
+    private void notifyStackReady(boolean isCrossMapDone) {
         logd("notifyStackReady: Stack is READY!!!");
         mIsRecoveryInProgress = false;
         mIsStackReady = true;
         resetSubStates();
 
-        for (int i = 0; i < mNumPhones; i++) {
-            //update the current stackIds
-            mCurrentStackId[i] = mPreferredStackId[i];
+        if (isCrossMapDone) {
+            for (int i = 0; i < mNumPhones; i++) {
+                //update the current stackIds
+                mCurrentStackId[i] = mPreferredStackId[i];
+            }
         }
-
         //notify binding completed to all StackReady registrants.
         //including subscriptionManager which activates available subs on binding complete.
         mStackReadyRegistrants.notifyRegistrants();
@@ -814,7 +816,7 @@ public class ModemStackController extends Handler {
             if(STATE_SET_PREF_MODE == mSubState[0]) {
                 //Already recovery in progress, got failure in SetPrefNwmode. We are bailing out.
                 //As Set Pref is failed, Binding is completed. so update and notify same.
-                notifyStackReady();
+                notifyStackReady(true);
             }
             return;
         }
