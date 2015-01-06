@@ -1483,7 +1483,11 @@ public final class DcTracker extends DcTrackerBase {
         if (DBG) log("tryRestartDataConnections: createAllApnList and cleanUpAllConnections");
         createAllApnList();
         if (isCleanupNeeded) {
-            cleanUpAllConnections(!isDisconnected, reason);
+            if (Phone.REASON_APN_CHANGED.equals(reason)) {
+                cleanUpConnectionsOnUpdatedApns(!isDisconnected);
+            } else {
+                cleanUpAllConnections(!isDisconnected, reason);
+            }
         }
         // If the state is already connected don't setup data now.
         if (isDisconnected &&
@@ -3408,6 +3412,56 @@ public final class DcTracker extends DcTrackerBase {
                     log("addEmergencyApnSetting - E-APN setting is already present");
                 }
             }
+        }
+    }
+
+    private void cleanUpConnectionsOnUpdatedApns(boolean tearDown) {
+        if (DBG) log("cleanUpConnectionsOnUpdatedApns: tearDown=" + tearDown);
+        if (mAllApnSettings.isEmpty()) {
+            cleanUpAllConnections(tearDown, Phone.REASON_APN_CHANGED);
+        } else {
+            for (ApnContext apnContext : mApnContexts.values()) {
+                if (VDBG) log("cleanUpConnectionsOnUpdatedApns for "+ apnContext);
+
+                boolean cleanUpApn = true;
+                ArrayList<ApnSetting> currentWaitingApns = apnContext.getWaitingApns();
+
+                if ((currentWaitingApns != null) && (!apnContext.isDisconnected())) {
+                    int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
+                    ArrayList<ApnSetting> waitingApns = buildWaitingApns(
+                            apnContext.getApnType(), radioTech);
+                    if (VDBG) log("new waitingApns:" + waitingApns);
+                    if (waitingApns.size() == currentWaitingApns.size()) {
+                        cleanUpApn = false;
+                        for (int i = 0; i < waitingApns.size(); i++) {
+                            if (!currentWaitingApns.get(i).equals(waitingApns.get(i))) {
+                                if (VDBG) log("new waiting apn is different at " + i);
+                                cleanUpApn = true;
+                                apnContext.setWaitingApns(waitingApns);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (cleanUpApn) {
+                    apnContext.setReason(Phone.REASON_APN_CHANGED);
+                    cleanUpConnection(true, apnContext);
+                }
+            }
+        }
+
+        if (!isConnected()) {
+            stopNetStatPoll();
+            stopDataStallAlarm();
+        }
+
+        mRequestedApnType = PhoneConstants.APN_TYPE_DEFAULT;
+
+        if (DBG) log("mDisconnectPendingCount = " + mDisconnectPendingCount);
+        if (tearDown && mDisconnectPendingCount == 0) {
+            notifyDataDisconnectComplete();
+            notifyAllDataDisconnected();
         }
     }
 }
