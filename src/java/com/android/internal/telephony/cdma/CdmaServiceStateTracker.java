@@ -1218,6 +1218,10 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
 
         boolean hasLocationChanged = !mNewCellLoc.equals(mCellLoc);
 
+        TelephonyManager tm =
+                (TelephonyManager) mPhone.getContext().getSystemService(
+                Context.TELEPHONY_SERVICE);
+
         // Add an event log when connection state changes
         if (mSS.getVoiceRegState() != mNewSS.getVoiceRegState() ||
                 mSS.getDataRegState() != mNewSS.getDataRegState()) {
@@ -1242,8 +1246,7 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
         }
 
         if (hasRilDataRadioTechnologyChanged) {
-            mPhone.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
-                    ServiceState.rilRadioTechnologyToString(mSS.getRilDataRadioTechnology()));
+            tm.setDataNetworkTypeForPhone(mPhone.getPhoneId(), mSS.getRilDataRadioTechnology());
 
             if (isIwlanFeatureAvailable()
                     && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
