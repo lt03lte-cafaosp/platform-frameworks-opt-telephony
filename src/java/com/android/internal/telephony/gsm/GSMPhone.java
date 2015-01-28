@@ -46,8 +46,10 @@ import android.telephony.TelephonyManager;
 
 import com.android.ims.ImsManager;
 import com.android.internal.telephony.CallTracker;
+
 import android.text.TextUtils;
 import android.telephony.Rlog;
+import android.util.Log;
 
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_DISABLE;
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_ENABLE;
@@ -80,7 +82,6 @@ import com.android.internal.telephony.PhoneNotifier;
 import com.android.internal.telephony.PhoneProxy;
 import com.android.internal.telephony.PhoneSubInfo;
 import com.android.internal.telephony.SubscriptionController;
-
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.UUSInfo;
@@ -94,7 +95,6 @@ import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.ServiceStateTracker;
 import com.android.internal.telephony.uicc.IsimRecords;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
-
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -1142,6 +1142,15 @@ public class GSMPhone extends PhoneBase {
     public String getMeid() {
         Rlog.e(LOG_TAG, "[GSMPhone] getMeid() is a CDMA method");
         return "0";
+    }
+
+    @Override
+    public String getNai() {
+        IccRecords r = mUiccController.getIccRecords(mPhoneId, UiccController.APP_FAM_3GPP2);
+        if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
+            Rlog.v(LOG_TAG, "IccRecords is " + r);
+        }
+        return (r != null) ? r.getNAI() : null;
     }
 
     @Override
