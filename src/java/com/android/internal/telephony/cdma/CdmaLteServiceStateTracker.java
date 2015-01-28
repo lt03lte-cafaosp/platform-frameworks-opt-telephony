@@ -387,7 +387,8 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
         }
 
         if (hasChanged) {
-            if ((mCi.getRadioState().isOn()) && (mPhone.isEriFileLoaded())) {
+            if ((mCi.getRadioState().isOn()) && (mPhone.isEriFileLoaded()) &&
+                    !mIsSubscriptionFromRuim) {
                 String eriText;
                 // Now the CDMAPhone sees the new ServiceState so it can get the
                 // new ERI text
