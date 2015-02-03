@@ -1148,6 +1148,18 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
             case ImsReasonInfo.CODE_FDN_BLOCKED:
                 return DisconnectCause.FDN_BLOCKED;
+
+            /* If CS retry is required, then is it silent redial or user constent? */
+            case ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED:
+                if (mImsManager.isCsRetrySettingEnabledByPlatform(mPhone.getContext())) {
+                    if (mImsManager.isCsRetrySettingEnabledByUser(mPhone.getContext())) {
+                        cause = DisconnectCause.CALL_RETRY_BY_SILENT_REDIAL;
+                    } else {
+                        cause = DisconnectCause.CALL_RETRY_BY_USER_CONSENT;
+                    }
+                }
+                break;
+
             default:
         }
 
