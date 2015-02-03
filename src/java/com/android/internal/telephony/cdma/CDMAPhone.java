@@ -444,7 +444,8 @@ public class CDMAPhone extends PhoneBase {
                 ImsManager.isNonTtyOrTtyOnVolteEnabled(mContext) &&
                 imsPhone != null &&
                 imsPhone.isVolteEnabled() &&
-                (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE);
+                (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE) &&
+                !shallDialOnCircuitSwitch(extras);
 
         boolean useImsForEmergency = imsPhone != null &&
                 PhoneNumberUtils.isEmergencyNumber(dialString) &&
