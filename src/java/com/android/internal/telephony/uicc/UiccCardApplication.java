@@ -56,10 +56,18 @@ public class UiccCardApplication {
     private int mPin1RetryCount = -1;
     private int mPin2RetryCount = -1;
 
+    /**
+     * These values are for authContext (parameter P2) per 3GPP TS 31.102 (Section 7.1.2)
+     */
+    public static final int AUTH_CONTEXT_EAP_SIM = 128;
+    public static final int AUTH_CONTEXT_EAP_AKA = 129;
+    public static final int AUTH_CONTEXT_UNDEFINED = -1;
+
     private final Object  mLock = new Object();
     private UiccCard      mUiccCard; //parent
     private AppState      mAppState;
     private AppType       mAppType;
+    private int           mAuthContext;
     private PersoSubState mPersoSubState;
     private String        mAid;
     private String        mAppLabel;
@@ -91,6 +99,7 @@ public class UiccCardApplication {
         mUiccCard = uiccCard;
         mAppState = as.app_state;
         mAppType = as.app_type;
+        mAuthContext = getAuthContext(mAppType);
         mPersoSubState = as.perso_substate;
         mAid = as.aid;
         mAppLabel = as.app_label;
@@ -123,6 +132,7 @@ public class UiccCardApplication {
             AppState oldAppState = mAppState;
             PersoSubState oldPersoSubState = mPersoSubState;
             mAppType = as.app_type;
+            mAuthContext = getAuthContext(mAppType);
             mAppState = as.app_state;
             mPersoSubState = as.perso_substate;
             mAid = as.aid;
@@ -623,6 +633,39 @@ public class UiccCardApplication {
         synchronized (mLock) {
             return mAppType;
         }
+    }
+
+    public int getAuthContext() {
+        synchronized (mLock) {
+            return mAuthContext;
+        }
+    }
+
+    /**
+     * Returns the authContext based on the type of UiccCard.
+     *
+     * @param appType the app type
+     * @return authContext corresponding to the type or AUTH_CONTEXT_UNDEFINED if appType not
+     * supported
+     */
+    private static int getAuthContext(AppType appType) {
+        int authContext;
+
+        switch (appType) {
+            case APPTYPE_SIM:
+                authContext = AUTH_CONTEXT_EAP_SIM;
+                break;
+
+            case APPTYPE_USIM:
+                authContext = AUTH_CONTEXT_EAP_AKA;
+                break;
+
+            default:
+                authContext = AUTH_CONTEXT_UNDEFINED;
+                break;
+        }
+
+        return authContext;
     }
 
     public PersoSubState getPersoSubState() {
