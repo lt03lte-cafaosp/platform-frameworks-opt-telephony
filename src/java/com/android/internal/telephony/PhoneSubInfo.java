@@ -25,8 +25,10 @@ import android.telephony.PhoneNumberUtils;
 import android.telephony.Rlog;
 
 import com.android.internal.telephony.uicc.IsimRecords;
+import com.android.internal.telephony.uicc.UiccCard;
+import com.android.internal.telephony.uicc.UiccCardApplication;
 
-public class PhoneSubInfo extends IPhoneSubInfo.Stub {
+public class PhoneSubInfo {
     static final String LOG_TAG = "PhoneSubInfo";
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
@@ -212,6 +214,37 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Returns the response of the SIM application on the UICC to authentication
+     * challenge/response algorithm. The data string and challenge response are
+     * Base64 encoded Strings.
+     * Can support EAP-SIM, EAP-AKA with results encoded per 3GPP TS 31.102.
+     *
+     * @param appType ICC application family
+     * (@see com.android.internal.telephony.PhoneConstants#APPTYPE_xxx)
+     * @param data authentication challenge data
+     * @return challenge response
+     */
+    public String getIccSimChallengeResponse(int appType, String data) {
+        mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
+            "Requires READ_PRIVILEGED_PHONE_STATE");
+
+        UiccCard uiccCard = mPhone.getUiccCard();
+        if (uiccCard == null) {
+            Rlog.e(LOG_TAG, "getIccSimChallengeResponse() UiccCard is null");
+            return null;
+        }
+
+        UiccCardApplication uiccApp = uiccCard.getApplicationByType(appType);
+        if (uiccApp == null) {
+        Rlog.e(LOG_TAG, "getIccSimChallengeResponse() no app with specified type -- " +
+                appType);
+            return null;
+        }
+
+        return uiccApp.getIccRecords().getIccSimChallengeResponse(data);
     }
 
     private void log(String s) {

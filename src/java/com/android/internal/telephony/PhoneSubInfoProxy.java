@@ -145,6 +145,21 @@ public class PhoneSubInfoProxy extends IPhoneSubInfo.Stub {
         return mPhoneSubInfo.getIsimImpu();
     }
 
+    /**
+     * Returns the response of the SIM application on the UICC to authentication
+     * challenge/response algorithm. The data string and challenge response are
+     * Base64 encoded Strings.
+     * Can support EAP-SIM, EAP-AKA with results encoded per 3GPP TS 31.102.
+     *
+     * @param appType ICC application type
+     * (@see com.android.internal.telephony.PhoneConstants#APPTYPE_xxx)
+     * @param data authentication challenge data
+     * @return challenge response
+     */
+    public String getIccSimChallengeResponse(int appType, String data) {
+        return mPhoneSubInfo.getIccSimChallengeResponse(appType, data);
+    }
+
     @Override
     protected void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         mPhoneSubInfo.dump(fd, pw, args);

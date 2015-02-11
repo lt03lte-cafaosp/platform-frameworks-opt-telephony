@@ -2736,6 +2736,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_ON_DEMAND_PS_ATTACH: ret = responseVoid(p); break;
+            case RIL_REQUEST_ICC_SIM_AUTHENTICATION: ret =  responseString(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
@@ -4257,6 +4258,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: return "RIL_REQUEST_SET_UICC_SUBSCRIPTION";
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: return "RIL_REQUEST_SET_DATA_SUBSCRIPTION";
             case RIL_REQUEST_ON_DEMAND_PS_ATTACH: return "RIL_REQUEST_ON_DEMAND_PS_ATTACH";
+            case RIL_REQUEST_ICC_SIM_AUTHENTICATION: return "RIL_REQUEST_SIM_AUTHENTICATION";
             default: return "<unknown request>";
         }
     }
@@ -4599,6 +4601,17 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     @Override
     public void getCellInfoList(Message result) {
         RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_CELL_INFO_LIST, result);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    @Override
+    public void requestIccSimAuthentication(String data, Message response) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_ICC_SIM_AUTHENTICATION, response);
+
+        rr.mParcel.writeString(data);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
 

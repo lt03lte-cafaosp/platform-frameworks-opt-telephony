@@ -1659,6 +1659,11 @@ public final class SimulatedCommands extends BaseCommands
     }
 
     @Override
+    public void requestIccSimAuthentication(String data, Message response) {
+        unimplemented(response);
+    }
+
+    @Override
     public void getVoiceRadioTechnology(Message response) {
         unimplemented(response);
     }

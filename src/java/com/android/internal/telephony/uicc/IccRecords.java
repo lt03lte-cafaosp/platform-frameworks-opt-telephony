@@ -75,6 +75,7 @@ public abstract class IccRecords extends Handler implements IccConstants {
     protected String mNewVoiceMailTag = null;
     protected boolean mIsVoiceMailFixed = false;
     protected String mImsi;
+    private String auth_rsp;
 
     protected int mMncLength = UNINITIALIZED;
     protected int mMailboxIndex = 0; // 0 is no mailbox dailing number associated
@@ -105,7 +106,8 @@ public abstract class IccRecords extends Handler implements IccConstants {
     public static final int EVENT_REFRESH = 31; // ICC refresh occurred
     public static final int EVENT_REFRESH_OEM = 29;
     protected static final int EVENT_APP_READY = 1;
-
+    private static final int EVENT_AKA_AUTHENTICATE_DONE          = 90;
+    private final Object mLock = new Object();
     private boolean mOEMHookSimRefresh = false;
     protected static final int EVENT_GET_SMS_RECORD_SIZE_DONE = 35;
 
@@ -456,6 +458,26 @@ public abstract class IccRecords extends Handler implements IccConstants {
                     }
                 }
                 break;
+            case EVENT_AKA_AUTHENTICATE_DONE:
+                ar = (AsyncResult)msg.obj;
+                auth_rsp = null;
+                if (DBG) log("EVENT_AKA_AUTHENTICATE_DONE");
+                if (ar.exception != null) {
+                    loge("Exception ICC SIM AKA: " + ar.exception);
+                    break;
+                } else {
+                    try {
+                        auth_rsp = (IccIoResult)ar.result;
+                        if (DBG) log("ICC SIM AKA: auth_rsp = " + auth_rsp);
+                    } catch (Exception e) {
+                        loge("Failed to parse ICC SIM AKA contents: " + e);
+                    }
+                }
+                synchronized (mLock) {
+                    mLock.notifyAll();
+                }
+
+                break;
             case EVENT_GET_SMS_RECORD_SIZE_DONE:
                 ar = (AsyncResult) msg.obj;
 
@@ -665,6 +687,41 @@ public abstract class IccRecords extends Handler implements IccConstants {
     public int getSmsCapacityOnIcc() {
         if (DBG) log("getSmsCapacityOnIcc: " + mSmsCountOnIcc);
         return mSmsCountOnIcc;
+    }
+
+    /**
+     * Returns the response of the SIM application on the UICC to authentication
+     * challenge/response algorithm. The data string and challenge response are
+     * Base64 encoded Strings.
+     * Can support EAP-SIM, EAP-AKA with results encoded per 3GPP TS 31.102.
+     *
+     * @param data authentication challenge data
+     * @return challenge response
+     */
+    public String getIccSimChallengeResponse(String data) {
+        if (DBG) log("getIccSimChallengeResponse-data: (original) " + data);
+
+        data = data + mParentApp.getAid();
+
+        if (DBG) log("getIccSimChallengeResponse-data: (with AID) " + data);
+
+        try {
+            synchronized(mLock) {
+                mCi.requestIccSimAuthentication(data, obtainMessage(EVENT_AKA_AUTHENTICATE_DONE));
+                try {
+                    mLock.wait();
+                } catch (InterruptedException e) {
+                    loge("interrupted while trying to request Icc Sim Auth");
+                }
+            }
+        } catch(Exception e) {
+            loge( "Fail while trying to request Icc Sim Auth");
+            return null;
+        }
+
+        if (DBG) log("getIccSimChallengeResponse-auth_rsp" + auth_rsp);
+
+        return auth_rsp;
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
