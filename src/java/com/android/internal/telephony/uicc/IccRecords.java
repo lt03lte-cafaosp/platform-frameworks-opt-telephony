@@ -705,12 +705,23 @@ public abstract class IccRecords extends Handler implements IccConstants {
 
         try {
             synchronized(mLock) {
-                mCi.requestIccSimAuthentication(authContext, data, mParentApp.getAid(),
-                        obtainMessage(EVENT_AKA_AUTHENTICATE_DONE));
-                try {
-                    mLock.wait();
-                } catch (InterruptedException e) {
-                    loge("interrupted while trying to request Icc Sim Auth");
+                CommandsInterface ci = mCi;
+                UiccCardApplication parentApp = mParentApp;
+                if (ci != null && parentApp != null) {
+                    ci.requestIccSimAuthentication(authContext, data,
+                            parentApp.getAid(),
+                            obtainMessage(EVENT_AKA_AUTHENTICATE_DONE));
+                    try {
+                        mLock.wait();
+                    } catch (InterruptedException e) {
+                        loge("getIccSimChallengeResponse: Fail, interrupted"
+                                + " while trying to request Icc Sim Auth");
+                        return null;
+                    }
+                } else {
+                    loge( "getIccSimChallengeResponse: "
+                            + "Fail, ci or parentApp is null");
+                    return null;
                 }
             }
         } catch(Exception e) {
@@ -720,7 +731,7 @@ public abstract class IccRecords extends Handler implements IccConstants {
 
         if (DBG) log("getIccSimChallengeResponse-auth_rsp" + auth_rsp);
 
-        return IccUtils.bytesToHexString(auth_rsp.payload);
+        return android.util.Base64.encodeToString(auth_rsp.payload, android.util.Base64.NO_WRAP);
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
