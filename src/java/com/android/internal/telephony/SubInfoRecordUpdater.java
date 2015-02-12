@@ -325,6 +325,12 @@ public class SubInfoRecordUpdater extends Handler {
             sFh[slotId] = null;
             sNeedUpdate = true;
             queryIccId(slotId);
+        } else if (oldState.isCardPresent() && newState.isCardPresent() &&
+                (subHelper.needSubActivationAfterRefresh(slotId))) {
+            logd("SIM" + (slotId + 1) + " refresh happened, need sub activation");
+            if (isAllIccIdQueryDone()) {
+                updateSimInfoByIccId();
+            }
         }
     }
 
