@@ -26,6 +26,7 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.Registrant;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.telecom.Log;
 import android.telephony.DisconnectCause;
 import android.telephony.PhoneNumberUtils;
@@ -33,6 +34,7 @@ import android.telephony.Rlog;
 
 import com.android.ims.ImsException;
 import com.android.ims.ImsStreamMediaProfile;
+import com.android.ims.internal.CallGroup;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.Connection;
 import com.android.internal.telephony.Phone;
@@ -49,8 +51,16 @@ public class ImsPhoneConnection extends Connection {
     private static final String LOG_TAG = "ImsPhoneConnection";
     private static final boolean DBG = true;
 
+    /**
+     * When enabled will not show merge button when we are not an owner of a conference
+     */
+    private static final String PROPERTY_ENABLE_RESTRICT_NON_OWNER_MERGE =
+            "persist.radio.restrict_merge";
+
+
     //***** Instance Variables
 
+    private Context mContext;
     private ImsPhoneCallTracker mOwner;
     private ImsPhoneCall mParent;
     private ImsCall mImsCall;
@@ -61,6 +71,7 @@ public class ImsPhoneConnection extends Connection {
     private Bundle mCallExtras = null;
 
     private boolean mMptyState = false;
+    private boolean mIsConferenceUri = false;
 
     /*
     int mIndex;          // index in ImsPhoneCallTracker.connections[], -1 if unassigned
@@ -123,6 +134,7 @@ public class ImsPhoneConnection extends Connection {
         createWakeLock(context);
         acquireWakeLock();
 
+        mContext = context;
         mOwner = ct;
         mHandler = new MyHandler(mOwner.getLooper());
         mImsCall = imsCall;
@@ -203,9 +215,11 @@ public class ImsPhoneConnection extends Connection {
                     TelephonyProperties.EXTRA_SKIP_SCHEMA_PARSING, false);
         }
 
+        mContext = context;
         mOwner = ct;
         mHandler = new MyHandler(mOwner.getLooper());
 
+        mIsConferenceUri = isConferenceUri;
         mDialString = dialString;
 
         if (isConferenceUri || isSkipSchemaParsing) {
@@ -616,6 +630,27 @@ public class ImsPhoneConnection extends Connection {
         return mImsCall != null && mImsCall.isMultiparty();
     }
 
+    @Override
+    public boolean isMergeAllowed() {
+        /* Merge should be allowed if we are not conference OR
+         * while are conference and owner of it
+         */
+        if (!restrictedMergeFeatureEnabled()) {
+            return true;
+        }
+        if (mImsCall != null) {
+            if (mImsCall.isMultiparty()) {
+                CallGroup cg = mImsCall.getCallGroup();
+                if (cg == null && !mIsConferenceUri) {
+                    // CallGroup gets created when user merges calls
+                    // Hence if there is no CallGroup - we are not the owner
+                    // of conference call
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     /*package*/ ImsCall getImsCall() {
         return mImsCall;
     }
@@ -744,6 +779,15 @@ public class ImsPhoneConnection extends Connection {
 
     public Bundle getCallExtras() {
         return mCallExtras;
+    }
+
+    private boolean restrictedMergeFeatureEnabled() {
+        if (SystemProperties.get(
+                PROPERTY_ENABLE_RESTRICT_NON_OWNER_MERGE, "false").equals("true")) {
+            return true;
+        }
+        return mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_restricted_merge);
     }
 
     /**
