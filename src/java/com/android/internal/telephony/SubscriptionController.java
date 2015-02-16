@@ -54,6 +54,7 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.NumberFormatException;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -143,6 +144,8 @@ public class SubscriptionController extends ISub.Stub {
     private static int mDefaultPhoneId = 0;
 
     private static final int EVENT_WRITE_MSISDN_DONE = 1;
+
+    private AtomicBoolean mSetDdsInProgress = new AtomicBoolean(false);
 
     protected Handler mHandler = new Handler() {
         @Override
@@ -1247,6 +1250,8 @@ public class SubscriptionController extends ISub.Stub {
     public void setDefaultDataSubId(long subId) {
         logdl("[setDefaultDataSubId] subId=" + subId);
 
+        mSetDdsInProgress.set(true);
+
         if (mDctController == null) {
             mDctController = DctController.getInstance();
             mDctController.registerForDefaultDataSwitchInfo(mDataConnectionHandler,
@@ -1389,6 +1394,8 @@ public class SubscriptionController extends ISub.Stub {
                     AsyncResult ar = (AsyncResult) msg.obj;
                     logd("EVENT_SET_DEFAULT_DATA_DONE subId:" + (Long)ar.result);
                     updateDataSubId(ar);
+                    mSetDdsInProgress.set(false);
+                    mSchedulerAc.notifySetDdsDone();
                     break;
                 }
             }
@@ -1751,4 +1758,9 @@ public class SubscriptionController extends ISub.Stub {
             }
         }
     }
+
+    public boolean isSetDdsInProgress() {
+        return mSetDdsInProgress.get();
+    }
+
 }

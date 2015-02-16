@@ -528,6 +528,11 @@ public final class DcTracker extends DcTrackerBase {
                 log("This request would result in DDS switch");
                 log("Requested DDS switch to subId = " + requestedSpecifier);
 
+                if (SubscriptionController.getInstance().isSetDdsInProgress()) {
+                    log("Set DDS in progress. Cannot handle request now");
+                    return;
+                }
+
                 //Queue this request and initiate temp DDS switch.
                 //Once the DDS switch is done we will revist the pending requests.
                 mDdsRequests.put(networkRequest.requestId, networkRequest);
