@@ -72,9 +72,10 @@ public class DctController extends Handler {
     private static DctController sDctController;
 
     private static final int EVENT_ALL_DATA_DISCONNECTED = 1;
-    private static final int EVENT_SET_DATA_ALLOW_DONE = 2;
+    private static final int EVENT_SET_DATA_ALLOW_TRUE_DONE = 2;
     private static final int EVENT_DELAYED_RETRY = 3;
     private static final int EVENT_LEGACY_SET_DATA_SUBSCRIPTION = 4;
+    private static final int EVENT_SET_DATA_ALLOW_FALSE_DONE = 5;
 
     private RegistrantList mNotifyDefaultDataSwitchInfo = new RegistrantList();
     private RegistrantList mNotifyOnDemandDataSwitchInfo = new RegistrantList();
@@ -154,6 +155,17 @@ public class DctController extends Handler {
         }
     };
 
+    boolean isActiveSubId(long subId) {
+        long[] activeSubs = mSubController.getActiveSubIdList();
+        for (int i = 0; i < activeSubs.length; i++) {
+            if (subId == activeSubs[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     private class DataStateReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
             synchronized(this) {
@@ -162,12 +174,12 @@ public class DctController extends Handler {
 
                     long subId = intent.getLongExtra(PhoneConstants.SUBSCRIPTION_KEY, PhoneConstants.SUB1);
                     int phoneId = SubscriptionManager.getPhoneId(subId);
-                    logd("DataStateReceiver: phoneId= " + phoneId);
-
                     // for the case of network out of service when bootup (ignore dummy values too)
-                    if (!SubscriptionManager.isValidSubId(subId) || (subId < 0)) {
+                    if (!SubscriptionManager.isValidSubId(subId) || (subId < 0) ||
+                            !isActiveSubId(subId)) {
                         // FIXME: Maybe add SM.isRealSubId(subId)??
-                        logd("DataStateReceiver: ignore invalid subId=" + subId);
+                        logd("DataStateReceiver: ignore invalid subId=" + subId
+                                + " phoneId = " + phoneId);
                         return;
                     }
                     if (!SubscriptionManager.isValidPhoneId(phoneId)) {
@@ -567,7 +579,7 @@ public class DctController extends Handler {
         SwitchInfo s = new SwitchInfo(new Integer(phoneId), n, false, true);
 
         Message psAttachDone = Message.obtain(this,
-                EVENT_SET_DATA_ALLOW_DONE, s);
+                EVENT_SET_DATA_ALLOW_TRUE_DONE, s);
 
         int defDdsPhoneId = getDataConnectionFromSetting();
         informDefaultDdsToPropServ(defDdsPhoneId);
@@ -652,7 +664,7 @@ public class DctController extends Handler {
                         mPhones[prefPhoneId].unregisterForAllDataDisconnected(this);
                     }
                     Message allowedDataDone = Message.obtain(this,
-                            EVENT_SET_DATA_ALLOW_DONE, s);
+                            EVENT_SET_DATA_ALLOW_TRUE_DONE, s);
                     Phone phone = mPhones[phoneId].getActivePhone();
 
                     informDefaultDdsToPropServ(phoneId);
@@ -672,14 +684,14 @@ public class DctController extends Handler {
                     long[] subId = mSubController.getSubId(phoneId);
 
                     Message psAttachDone = Message.obtain(this,
-                            EVENT_SET_DATA_ALLOW_DONE, s);
+                            EVENT_SET_DATA_ALLOW_TRUE_DONE, s);
                     Phone phone = mPhones[phoneId].getActivePhone();
                     DcTrackerBase dcTracker =((PhoneBase)phone).mDcTracker;
                     dcTracker.setDataAllowed(true, psAttachDone);
                     break;
                 }
 
-                case EVENT_SET_DATA_ALLOW_DONE: {
+                case EVENT_SET_DATA_ALLOW_TRUE_DONE: {
                     AsyncResult ar = (AsyncResult)msg.obj;
                     SwitchInfo s = (SwitchInfo)ar.userObj;
 
@@ -687,7 +699,7 @@ public class DctController extends Handler {
 
                     Integer phoneId = s.mPhoneId;
                     long[] subId = mSubController.getSubId(phoneId);
-                    Rlog.d(LOG_TAG, "EVENT_SET_DATA_ALLOWED_DONE  phoneId :" + subId[0]
+                    Rlog.d(LOG_TAG, "EVENT_SET_DATA_ALLOW_TRUE_DONE  subId :" + subId[0]
                             + ", switchInfo = " + s);
 
                     if (ar.exception != null) {
@@ -720,6 +732,27 @@ public class DctController extends Handler {
                     }
                     break;
                 }
+
+                case EVENT_SET_DATA_ALLOW_FALSE_DONE: {
+                    AsyncResult ar = (AsyncResult)msg.obj;
+                    SwitchInfo s = (SwitchInfo)ar.userObj;
+                    Exception errorEx = null;
+                    long[] subId = mSubController.getSubId(s.mPhoneId);
+                    Rlog.d(LOG_TAG, "EVENT_SET_DATA_ALLOW_FALSE_DONE  subId :" + subId[0]
+                            + ", switchInfo = " + s);
+
+                    if (ar.exception != null) {
+                        Rlog.d(LOG_TAG, "PS DETACH Failed, switchInfo = " + s);
+                        errorEx = new RuntimeException("PS DETACH failed");
+                        mDdsSwitchSerializer.unLock();
+                        mNotifyOnDemandDataSwitchInfo.notifyRegistrants(
+                                new AsyncResult(null, s.mNetworkRequest, errorEx));
+                    } else {
+                        Rlog.d(LOG_TAG, "PS DETACH success = " + s);
+                    }
+                    break;
+                }
+
                 case AsyncChannel.CMD_CHANNEL_HALF_CONNECTED: {
                     if(msg.arg1 == AsyncChannel.STATUS_SUCCESSFUL) {
                         logd("HALF_CONNECTED: Connection successful with DDS switch"
@@ -804,7 +837,12 @@ public class DctController extends Handler {
                             mSubController.getCurrentDds());
                     Phone phone = mPhones[prefPhoneId].getActivePhone();
                     DcTrackerBase dcTracker =((PhoneBase)phone).mDcTracker;
-                    dcTracker.setDataAllowed(false, null);
+                    SwitchInfo prefSwitchInfo = new SwitchInfo(new Integer(prefPhoneId), n, false,
+                            false);
+                    Message dataAllowFalse = Message.obtain(DctController.this,
+                            EVENT_SET_DATA_ALLOW_FALSE_DONE, prefSwitchInfo);
+                    dcTracker.setDataAllowed(false, dataAllowFalse);
+
                     if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
                         //cleanup data from apss as there is no detach procedure for CDMA
                         dcTracker.cleanUpAllConnections("Ondemand DDS switch");
@@ -812,8 +850,6 @@ public class DctController extends Handler {
                     SwitchInfo s = new SwitchInfo(new Integer(phoneId), n, false, false);
                     mPhones[prefPhoneId].registerForAllDataDisconnected(
                             sDctController, EVENT_ALL_DATA_DISCONNECTED, s);
-
-
                     break;
                 }
             }

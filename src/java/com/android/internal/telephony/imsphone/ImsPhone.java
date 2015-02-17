@@ -488,6 +488,10 @@ public class ImsPhone extends ImsPhoneBase {
         mDefaultPhone.notifyNewRingingConnectionP(c);
     }
 
+    void notifyUnknownConnection(Connection c) {
+        mDefaultPhone.notifyUnknownConnectionP(c);
+    }
+
     public void notifyForVideoCapabilityChanged(boolean isVideoCapable) {
         mIsVideoCapable = isVideoCapable;
         mDefaultPhone.notifyForVideoCapabilityChanged(isVideoCapable);
@@ -848,10 +852,18 @@ public class ImsPhone extends ImsPhoneBase {
         Message resp;
         resp = obtainMessage(EVENT_SET_CALL_BARRING_DONE, onComplete);
 
+        int action;
+        if (lockState) {
+            action = CommandsInterface.CF_ACTION_ENABLE;
+        }
+        else {
+            action = CommandsInterface.CF_ACTION_DISABLE;
+        }
+
         try {
             ImsUtInterface ut = mCT.getUtInterface();
             // password is not required with Ut interface
-            ut.updateCallBarring(getCBTypeFromFacility(facility), lockState, resp, null);
+            ut.updateCallBarring(getCBTypeFromFacility(facility), action, resp, null);
         } catch (ImsException e) {
             sendErrorResponse(onComplete, e);
         }
@@ -906,7 +918,12 @@ public class ImsPhone extends ImsPhoneBase {
 
     /* package */
     CommandException getCommandException(int code) {
-        Rlog.d(LOG_TAG, "getCommandException code=" + code);
+        return getCommandException(code, null);
+    }
+
+    CommandException getCommandException(int code, String errorString) {
+        Rlog.d(LOG_TAG, "getCommandException code= " + code
+                + ", errorString= " + errorString);
         CommandException.Error error = CommandException.Error.GENERIC_FAILURE;
 
         switch(code) {
@@ -920,7 +937,7 @@ public class ImsPhone extends ImsPhoneBase {
                 break;
         }
 
-        return new CommandException(error);
+        return new CommandException(error, errorString);
     }
 
     /* package */
@@ -928,7 +945,7 @@ public class ImsPhone extends ImsPhoneBase {
         CommandException ex = null;
 
         if (e instanceof ImsException) {
-            ex = getCommandException(((ImsException)e).getCode());
+            ex = getCommandException(((ImsException)e).getCode(), e.getMessage());
         } else {
             Rlog.d(LOG_TAG, "getCommandException generic failure");
             ex = new CommandException(CommandException.Error.GENERIC_FAILURE);
@@ -1142,15 +1159,9 @@ public class ImsPhone extends ImsPhoneBase {
     sendResponse(Message onComplete, Object result, Throwable e) {
         if (onComplete != null) {
             CommandException ex = null;
-            ImsException imsEx = null;
             if (e != null) {
-                if (e instanceof ImsException) {
-                    imsEx = (ImsException) e;
-                    AsyncResult.forMessage(onComplete, result, imsEx);
-                } else {
                     ex = getCommandException(e);
                     AsyncResult.forMessage(onComplete, result, ex);
-                }
             } else {
                 AsyncResult.forMessage(onComplete, result, null);
             }
@@ -1348,5 +1359,9 @@ public class ImsPhone extends ImsPhoneBase {
 
     public boolean isVtEnabled() {
         return mCT.isVtEnabled();
+    }
+
+    public boolean isUtEnabled() {
+        return mCT.isUtEnabled();
     }
 }

@@ -453,7 +453,9 @@ public final class DcTracker extends DcTrackerBase {
             log("update networkCapabilites for subId = " + subId);
 
             mNetworkCapabilities.setNetworkSpecifier(""+subId);
-            if (subId == SubscriptionController.getInstance().getDefaultDataSubId()) {
+            if ((subId > 0 && SubscriptionController.getInstance().
+                    getSubState(subId) == SubscriptionManager.ACTIVE) &&
+                    (subId == SubscriptionController.getInstance().getDefaultDataSubId())) {
                 log("INTERNET capability is with subId = " + subId);
                 //Only defaultDataSub provides INTERNET.
                 mNetworkCapabilities.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
@@ -1975,6 +1977,12 @@ public final class DcTracker extends DcTrackerBase {
     }
 
     private void onRecordsLoaded() {
+        mAutoAttachOnCreationConfig = mPhone.getContext().getResources()
+                .getBoolean(com.android.internal.R.bool.config_auto_attach_data_on_creation);
+        if (mAutoAttachOnCreationConfig && mAttached.get()) {
+            mAutoAttachOnCreation = true;
+        }
+
         if (mOmhApt != null) {
             log("OMH: onRecordsLoaded(): calling loadProfiles()");
             /* query for data profiles stored in the modem */
@@ -2051,7 +2059,21 @@ public final class DcTracker extends DcTrackerBase {
                 }
             } else if (met) {
                 apnContext.setReason(Phone.REASON_DATA_DISABLED);
-
+                // If ConnectivityService has disabled this network, stop trying to bring
+                // it up, but do not tear it down - ConnectivityService will do that
+                // directly by talking with the DataConnection.
+                //
+                // This doesn't apply to DUN, however.  Those connections have special
+                // requirements from carriers and we need stop using them when the dun
+                // request goes away.  This applies to both CDMA and GSM because they both
+                // can declare the DUN APN sharable by default traffic, thus still satisfying
+                // those requests and not torn down organically.
+                if ((apnContext.getApnType() == PhoneConstants.APN_TYPE_DUN && teardownForDun()) ||
+                        (apnContext.getApnType() == PhoneConstants.APN_TYPE_MMS)) {
+                    cleanup = true;
+                } else {
+                    cleanup = false;
+                }
             } else {
                 apnContext.setReason(Phone.REASON_DATA_DEPENDENCY_UNMET);
             }
@@ -2484,8 +2506,9 @@ public final class DcTracker extends DcTrackerBase {
     /**
      * @return number of milli-seconds to delay between trying apns'
      */
-    private int getApnDelay() {
-        if (mFailFast) {
+    private int getApnDelay(String reason) {
+        if (mFailFast || Phone.REASON_NW_TYPE_CHANGED.equals(reason) ||
+                Phone.REASON_APN_CHANGED.equals(reason)) {
             return SystemProperties.getInt("persist.radio.apn_ff_delay",
                     APN_FAIL_FAST_DELAY_DEFAULT_MILLIS);
         } else {
@@ -2522,7 +2545,7 @@ public final class DcTracker extends DcTrackerBase {
                     log("onDataSetupCompleteError: All APN's had permanent failures, stop retrying");
                 }
             } else {
-                int delay = getApnDelay();
+                int delay = getApnDelay(Phone.REASON_APN_FAILED);
                 if (DBG) {
                     log("onDataSetupCompleteError: Not all APN's had permanent failures delay="
                             + delay);
@@ -2534,7 +2557,7 @@ public final class DcTracker extends DcTrackerBase {
             apnContext.setState(DctConstants.State.SCANNING);
             // Wait a bit before trying the next APN, so that
             // we're not tying up the RIL command channel
-            startAlarmForReconnect(getApnDelay(), apnContext);
+            startAlarmForReconnect(getApnDelay(Phone.REASON_APN_FAILED), apnContext);
         }
     }
 
@@ -2586,7 +2609,7 @@ public final class DcTracker extends DcTrackerBase {
             // we're not tying up the RIL command channel.
             // This also helps in any external dependency to turn off the context.
             if(DBG) log("onDisconnectDone: attached, ready and retry after disconnect");
-            startAlarmForReconnect(getApnDelay(), apnContext);
+            startAlarmForReconnect(getApnDelay(apnContext.getReason()), apnContext);
         } else {
             boolean restartRadioAfterProvisioning = mPhone.getContext().getResources().getBoolean(
                     com.android.internal.R.bool.config_restartRadioAfterProvisioning);
@@ -2755,7 +2778,7 @@ public final class DcTracker extends DcTrackerBase {
         int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
 
         if (mOmhApt != null && ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD !=
-                radioTech) {
+                radioTech && !ServiceState.isGsm(radioTech)) {
             ArrayList<ApnSetting> mOmhApnsList = new ArrayList<ApnSetting>();
             mOmhApnsList = mOmhApt.getOmhApnProfilesList();
             if (!mOmhApnsList.isEmpty()) {

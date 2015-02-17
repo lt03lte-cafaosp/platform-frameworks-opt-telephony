@@ -39,6 +39,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Registrant;
 import android.os.RegistrantList;
+import android.os.SystemProperties;
 import android.provider.Settings.SettingNotFoundException;
 import android.telephony.Rlog;
 import android.telephony.SubscriptionManager;
@@ -683,6 +684,8 @@ public class ModemStackController extends Handler {
             loge("No need to update Stack Binding in case of Single Sim.");
             return FAILURE;
         }
+        boolean isFlexmapDisabled = (SystemProperties.getInt(
+                "persist.radio.disable_flexmap", 0) == 1);
 
         if (callInProgress || mIsPhoneInEcbmMode || (!mIsStackReady && !isBootUp)) {
             loge("updateStackBinding: Calls is progress = " + callInProgress +
@@ -702,7 +705,7 @@ public class ModemStackController extends Handler {
             }
         }
 
-        if (isUpdateRequired) {
+        if (!isFlexmapDisabled && isUpdateRequired) {
             mIsStackReady = false;
             //Store the msg object , so that result of updateStackbinding can be sent later.
             mUpdateStackMsg = msg;
@@ -714,6 +717,7 @@ public class ModemStackController extends Handler {
                 triggerDeactivationOnAllSubs();
             }
         } else {
+            loge("updateStackBinding: FlexMap Disabled : " + isFlexmapDisabled);
             //incase of bootup if cross binding is not required send stack ready notification.
             if (isBootUp) notifyStackReady();
             return FAILURE;

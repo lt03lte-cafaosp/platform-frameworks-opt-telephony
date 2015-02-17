@@ -17,6 +17,7 @@
 package com.android.internal.telephony.imsphone;
 
 import android.content.Context;
+import android.net.Uri;
 import android.os.AsyncResult;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,6 +26,7 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.Registrant;
 import android.os.SystemClock;
+import android.telecom.Log;
 import android.telephony.DisconnectCause;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.Rlog;
@@ -58,6 +60,8 @@ public class ImsPhoneConnection extends Connection {
 
     private Bundle mCallExtras = null;
 
+    private boolean mMptyState = false;
+
     /*
     int mIndex;          // index in ImsPhoneCallTracker.connections[], -1 if unassigned
                         // The GSM index is 1 + this
@@ -74,9 +78,6 @@ public class ImsPhoneConnection extends Connection {
     private int mCause = DisconnectCause.NOT_DISCONNECTED;
     private PostDialState mPostDialState = PostDialState.NOT_STARTED;
     private UUSInfo mUusInfo;
-
-    private boolean mIsMultiparty = false;
-
     private Handler mHandler;
 
     private PowerManager.WakeLock mPartialWakeLock;
@@ -117,7 +118,8 @@ public class ImsPhoneConnection extends Connection {
 
     /** This is probably an MT call */
     /*package*/
-    ImsPhoneConnection(Context context, ImsCall imsCall, ImsPhoneCallTracker ct, ImsPhoneCall parent) {
+    ImsPhoneConnection(Context context, ImsCall imsCall, ImsPhoneCallTracker ct,
+           ImsPhoneCall parent, boolean isUnknown) {
         createWakeLock(context);
         acquireWakeLock();
 
@@ -167,14 +169,15 @@ public class ImsPhoneConnection extends Connection {
             mCnapNamePresentation = PhoneConstants.PRESENTATION_UNKNOWN;
         }
 
-        mIsIncoming = true;
+        mIsIncoming = !isUnknown;
         mCreateTime = System.currentTimeMillis();
         mUusInfo = null;
 
         //mIndex = index;
 
         mParent = parent;
-        mParent.attach(this, ImsPhoneCall.State.INCOMING);
+        mParent.attach(this,
+                (mIsIncoming? ImsPhoneCall.State.INCOMING: ImsPhoneCall.State.DIALING));
     }
 
     /** This is an MO call, created when dialing */
@@ -373,7 +376,7 @@ public class ImsPhoneConnection extends Connection {
     }
 
     /** Called when the connection has been disconnected */
-    /*package*/ boolean
+    public boolean
     onDisconnect(int cause) {
         Rlog.d(LOG_TAG, "onDisconnect: cause=" + cause);
         if (mCause != DisconnectCause.LOCAL) mCause = cause;
@@ -401,6 +404,7 @@ public class ImsPhoneConnection extends Connection {
             if (mImsCall != null) mImsCall.close();
             mImsCall = null;
         }
+        clearPostDialListeners();
         releaseWakeLock();
         return changed;
     }
@@ -437,7 +441,9 @@ public class ImsPhoneConnection extends Connection {
     private boolean
     processPostDialChar(char c) {
         if (PhoneNumberUtils.is12Key(c)) {
-            mOwner.mCi.sendDtmf(c, mHandler.obtainMessage(EVENT_DTMF_DONE));
+            if (mOwner != null) {
+                mOwner.sendDtmf(c, mHandler.obtainMessage(EVENT_DTMF_DONE));
+            }
         } else if (c == PhoneNumberUtils.PAUSE) {
             // From TS 22.101:
             // It continues...
@@ -481,6 +487,7 @@ public class ImsPhoneConnection extends Connection {
     @Override
     protected void finalize()
     {
+        clearPostDialListeners();
         releaseWakeLock();
     }
 
@@ -556,6 +563,7 @@ public class ImsPhoneConnection extends Connection {
             releaseWakeLock();
         }
         mPostDialState = s;
+        notifyPostDialListeners();
     }
 
     private void
@@ -595,15 +603,9 @@ public class ImsPhoneConnection extends Connection {
         return null;
     }
 
-    /* package */ void
-    setMultiparty(boolean isMultiparty) {
-        Rlog.d(LOG_TAG, "setMultiparty " + isMultiparty);
-        mIsMultiparty = isMultiparty;
-    }
-
     @Override
     public boolean isMultiparty() {
-        return mIsMultiparty;
+        return mImsCall != null && mImsCall.isMultiparty();
     }
 
     /*package*/ ImsCall getImsCall() {
@@ -643,7 +645,12 @@ public class ImsPhoneConnection extends Connection {
         }
 
         changed = mParent.update(this, imsCall, state);
+        return (update(imsCall) || changed);
+    }
 
+    /*package*/ boolean
+    update(ImsCall imsCall) {
+        boolean changed = false;
         if (imsCall != null) {
             // Check for a change in the video capabilities for the call and update the
             // {@link ImsPhoneConnection} with this information.
@@ -712,6 +719,12 @@ public class ImsPhoneConnection extends Connection {
                     }
                 }
             }
+
+            boolean mptyState = isMultiparty();
+            if (mptyState != mMptyState) {
+                changed = true;
+                mMptyState = mptyState;
+            }
         }
         return changed;
     }
@@ -723,6 +736,50 @@ public class ImsPhoneConnection extends Connection {
 
     public Bundle getCallExtras() {
         return mCallExtras;
+    }
+
+    /**
+     * Notifies this Connection of a request to disconnect a participant of the conference managed
+     * by the connection.
+     *
+     * @param endpoint the {@link android.net.Uri} of the participant to disconnect.
+     */
+    @Override
+    public void onDisconnectConferenceParticipant(Uri endpoint) {
+        ImsCall imsCall = getImsCall();
+        if (imsCall == null) {
+            return;
+        }
+        try {
+            imsCall.removeParticipants(new String[]{endpoint.toString()});
+        } catch (ImsException e) {
+            // No session in place -- no change
+            Rlog.e(LOG_TAG, "onDisconnectConferenceParticipant: no session in place. "+
+                    "Failed to disconnect endpoint = " + endpoint);
+        }
+    }
+
+    /**
+     * Provides a string representation of the {@link ImsPhoneConnection}.  Primarily intended for
+     * use in log statements.
+     *
+     * @return String representation of call.
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[ImsPhoneConnection objId: ");
+        sb.append(System.identityHashCode(this));
+        sb.append(" address:");
+        sb.append(Log.pii(getAddress()));
+        sb.append(" ImsCall:");
+        if (mImsCall == null) {
+            sb.append("null");
+        } else {
+            sb.append(mImsCall);
+        }
+        sb.append("]");
+        return sb.toString();
     }
 }
 
