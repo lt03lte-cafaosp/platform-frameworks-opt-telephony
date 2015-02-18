@@ -316,7 +316,7 @@ public class GSMPhone extends PhoneBase {
             countVoiceMessages = r.getVoiceMessageCount();
         }
         // Card read error or unknown voicemail count. Check count stored in persist memory.
-        if (countVoiceMessages == -1) {
+        if (countVoiceMessages == IccRecords.DEFAULT_VOICE_MESSAGE_COUNT) {
             countVoiceMessages = getStoredVoiceMessageCount();
         }
         Rlog.d(LOG_TAG, "updateVoiceMail countVoiceMessages = " + countVoiceMessages);
