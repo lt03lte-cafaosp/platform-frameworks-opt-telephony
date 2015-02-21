@@ -336,6 +336,15 @@ public class ImsPhoneConnection extends Connection {
     }
 
     @Override
+    public void hangupWithReason(int disconnectCause) throws CallStateException {
+        if (!mDisconnected) {
+            mOwner.hangupWithReason(this, disconnectCause);
+        } else {
+            throw new CallStateException ("disconnected");
+        }
+    }
+
+    @Override
     public void separate() throws CallStateException {
         throw new CallStateException ("not supported");
     }

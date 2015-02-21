@@ -257,6 +257,12 @@ public class CdmaConnection extends Connection {
     }
 
     @Override
+    public void hangupWithReason(int disconnectCause) throws CallStateException {
+        //TODO not passing disconnect cause in CS.
+        hangup();
+    }
+
+    @Override
     public void separate() throws CallStateException {
         if (!mDisconnected) {
             mOwner.separate(this);

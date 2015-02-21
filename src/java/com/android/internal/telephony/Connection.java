@@ -351,6 +351,12 @@ public abstract class Connection {
     public abstract void hangup() throws CallStateException;
 
     /**
+     * Hangup individual Connection with disconnect cause
+     * @param disconnectCause reason for diconnecting the call
+     */
+    public abstract void hangupWithReason(int disconnectCause) throws CallStateException;
+
+    /**
      * Separate this call from its owner Call and assigns it to a new Call
      * (eg if it is currently part of a Conference call
      * TODO: Throw exception? Does GSM require error display on failure here?

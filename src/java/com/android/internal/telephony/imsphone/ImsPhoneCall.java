@@ -105,6 +105,12 @@ public class ImsPhoneCall extends Call {
     }
 
     @Override
+    public void
+    hangupWithReason(int cause) throws CallStateException {
+        mOwner.hangupWithReason(this, cause);
+    }
+
+    @Override
     public String
     toString() {
         return mState.toString();
