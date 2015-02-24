@@ -400,8 +400,6 @@ public class SubscriptionInfoUpdater extends Handler {
 
             SubscriptionInfo subInfo = mSubscriptionManager.getActiveSubscriptionInfo(subId);
             String nameToSet;
-            String CarrierName = TelephonyManager.getDefault().getSimOperator(subId);
-            logd("CarrierName = " + CarrierName);
             String simCarrierName = TelephonyManager.getDefault()
                     .getSimOperatorNameForSubscription(subId);
             ContentValues name = new ContentValues(1);
@@ -415,6 +413,9 @@ public class SubscriptionInfoUpdater extends Handler {
                 }
                 name.put(SubscriptionManager.DISPLAY_NAME, nameToSet);
                 logd("sim name = " + nameToSet);
+                contentResolver.update(SubscriptionManager.CONTENT_URI, name,
+                        SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID
+                        + "=" + Integer.toString(subId), null);
             }
             name.put(SubscriptionManager.CARRIER_NAME,
                     !TextUtils.isEmpty(simCarrierName) ? simCarrierName :
