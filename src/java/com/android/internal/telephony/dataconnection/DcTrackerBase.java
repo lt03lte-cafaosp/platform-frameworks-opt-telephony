@@ -1623,7 +1623,7 @@ public abstract class DcTrackerBase extends Handler {
             mSentSinceLastRecv = 0;
             putRecoveryAction(RecoveryAction.GET_DATA_CALL_LIST);
         } else if (sent > 0 && received == 0) {
-            if (mPhone.getState() == PhoneConstants.State.IDLE) {
+            if (isPhoneStateIdle()) {
                 mSentSinceLastRecv += sent;
             } else {
                 mSentSinceLastRecv = 0;
@@ -1730,6 +1730,10 @@ public abstract class DcTrackerBase extends Handler {
         if (VDBG_STALL) log("restartDataStallAlarm: stop then start.");
         stopDataStallAlarm();
         startDataStallAlarm(DATA_STALL_NOT_SUSPECTED);
+    }
+
+    protected boolean isPhoneStateIdle() {
+        return (mPhone.getState() == PhoneConstants.State.IDLE);
     }
 
     protected void setInitialAttachApn() {
