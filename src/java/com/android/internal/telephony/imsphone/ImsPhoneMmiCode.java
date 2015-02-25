@@ -1110,10 +1110,12 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
                     boolean cffEnabled = (msg.arg2 == 1);
                     if (mIccRecords != null) {
                         mIccRecords.setVoiceCallForwardingFlag(1, cffEnabled, mDialingNumber);
+                        mPhone.setCallForwardingPreference(cffEnabled);
                     }
                 }
 
                 onSetComplete(msg, ar);
+                mPhone.updateCallForwardStatus();
                 break;
 
             case EVENT_SET_CFF_TIMER_COMPLETE:
@@ -1373,6 +1375,8 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
             boolean cffEnabled = (info.status == 1);
             if (mIccRecords != null) {
                 mIccRecords.setVoiceCallForwardingFlag(1, cffEnabled, info.number);
+                Rlog.d(LOG_TAG, "makeCFQueryResultMessage cffEnabled  = "+cffEnabled);
+                mPhone.setCallForwardingPreference(cffEnabled);
             }
         }
 
@@ -1410,6 +1414,7 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
 
                 // Set unconditional CFF in SIM to false
                 if (mIccRecords != null) {
+                    mPhone.setCallForwardingPreference(false);
                     mIccRecords.setVoiceCallForwardingFlag(1, false, null);
                 }
             } else {
