@@ -317,6 +317,11 @@ public class PhoneProxy extends Handler implements Phone {
         return mActivePhone.getServiceState();
     }
 
+    public ServiceState
+    getBaseServiceState() {
+        return mActivePhone.getBaseServiceState();
+    }
+
     @Override
     public CellLocation getCellLocation() {
         return mActivePhone.getCellLocation();
