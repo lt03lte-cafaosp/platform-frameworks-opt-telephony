@@ -69,6 +69,7 @@ public class ExtCallManager extends CallManager {
 
     private static final int LOCAL_CALL_HOLD_INACTIVE = 0;
     private static final int LOCAL_CALL_HOLD_ACTIVE = 1;
+    private static ArrayList<String> mCallAddress;
 
     // Holds the current active SUB, all actions would be
     // taken on this sub.
@@ -997,6 +998,23 @@ public class ExtCallManager extends CallManager {
         mActiveSubChangeRegistrants.remove(h);
     }
 
+    private boolean isRingingDuplicateCall() {
+        int subscription = getActiveSubscription();
+        int i = 0;
+        mCallAddress = new ArrayList<String>();
+
+        for (Call call : mRingingCalls){
+            if ((call.getState().isRinging()) &&
+                    ((call.getPhone().getSubscription() == subscription) ||
+                    (call.getPhone() instanceof SipPhone))) {
+                mCallAddress.add(i, call.getLatestConnection().getAddress());
+                ++i;
+            }
+        }
+        return ((mRingingCalls.size() > 1) &&
+                ((mCallAddress.get(0)).equals(mCallAddress.get(1))));
+    }
+
     protected class ExtCmHandler extends CmHandler {
 
         @Override
@@ -1007,7 +1025,8 @@ public class ExtCallManager extends CallManager {
                     if (VDBG) Rlog.d(LOG_TAG, " handleMessage (EVENT_NEW_RINGING_CONNECTION)");
                     Connection c = (Connection) ((AsyncResult) msg.obj).result;
                     int sub = c.getCall().getPhone().getSubscription();
-                    if (getActiveFgCallState(sub).isDialing() || hasMoreThanOneRingingCall()) {
+                    if (getActiveFgCallState(sub).isDialing() ||
+                            (hasMoreThanOneRingingCall()  && !isRingingDuplicateCall())) {
                         try {
                             Rlog.d(LOG_TAG, "silently drop incoming call: " + c.getCall());
                             c.getCall().hangup();
