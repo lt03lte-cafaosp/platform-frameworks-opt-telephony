@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2007 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +19,8 @@
 
 package android.telephony.gsm;
 
+import android.util.SeempLog;
+import android.util.SeempJavaFilter;
 import android.app.PendingIntent;
 
 import java.util.ArrayList;
@@ -76,6 +81,15 @@ import java.util.ArrayList;
     public final void sendTextMessage(
             String destinationAddress, String scAddress, String text,
             PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.gsm.SmsManager","sendTextMessage")) {
+            String paras = "android.telephony.gsm.SmsManager|sendTextMessage|"
+            + "destinationAddress," + ((destinationAddress == null) ? "null" : destinationAddress) + " "
+            + "scAddress," + ((scAddress == null) ? "null" : scAddress) + " "
+            + "text," + "null" + "|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         mSmsMgrProxy.sendTextMessage(destinationAddress, scAddress, text,
                 sentIntent, deliveryIntent);
     }
@@ -128,6 +142,14 @@ import java.util.ArrayList;
     public final void sendMultipartTextMessage(
             String destinationAddress, String scAddress, ArrayList<String> parts,
             ArrayList<PendingIntent> sentIntents, ArrayList<PendingIntent> deliveryIntents) {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.SmsManager","sendMultipartTextMessage")) {
+            String paras = "android.telephony.SmsManager|sendMultipartTextMessage|"
+            + "destinationAddress," + ((destinationAddress == null) ? "null" : destinationAddress) + " "
+            + "scAddress," + ((scAddress == null) ? "null" : scAddress) + "|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         mSmsMgrProxy.sendMultipartTextMessage(destinationAddress, scAddress, parts,
                 sentIntents, deliveryIntents);
     }
@@ -161,6 +183,14 @@ import java.util.ArrayList;
     public final void sendDataMessage(
             String destinationAddress, String scAddress, short destinationPort,
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.SmsManager","sendDataMessage")) {
+            String paras = "android.telephony.SmsManager|sendDataMessage|"
+            + "destinationAddress," + ((destinationAddress == null) ? "null" : destinationAddress) + " "
+            + "scAddress," + ((scAddress == null) ? "null" : scAddress) + "|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         mSmsMgrProxy.sendDataMessage(destinationAddress, scAddress, destinationPort,
                 data, sentIntent, deliveryIntent);
     }
@@ -178,6 +208,12 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final boolean copyMessageToSim(byte[] smsc, byte[] pdu, int status) {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.gsm.SmsManager","copyMessageToSim")) {
+            String paras = "android.telephony.gsm.SmsManager|copyMessageToSim|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         return mSmsMgrProxy.copyMessageToIcc(smsc, pdu, status);
     }
 
@@ -191,6 +227,12 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final boolean deleteMessageFromSim(int messageIndex) {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.gsm.SmsManager","deleteMessageFromSim")) {
+            String paras = "android.telephony.gsm.SmsManager|deleteMessageFromSim|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         return mSmsMgrProxy.deleteMessageFromIcc(messageIndex);
     }
 
@@ -208,6 +250,12 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final boolean updateMessageOnSim(int messageIndex, int newStatus, byte[] pdu) {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.gsm.SmsManager","updateMessageOnSim")) {
+            String paras = "android.telephony.gsm.SmsManager|updateMessageOnSim|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         return mSmsMgrProxy.updateMessageOnIcc(messageIndex, newStatus, pdu);
     }
 
@@ -219,6 +267,12 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final ArrayList<android.telephony.SmsMessage> getAllMessagesFromSim() {
+        // Begin: code added for the SeempLog
+        if (SeempJavaFilter.check("android.telephony.gsm.SmsManager","getAllMessagesFromSim")) {
+            String paras = "android.telephony.gsm.SmsManager|getAllMessagesFromSim|--end";
+            SeempLog.record(paras);
+        }
+        // End: code added for the SeempLog
         return android.telephony.SmsManager.getDefault().getAllMessagesFromIcc();
     }
 

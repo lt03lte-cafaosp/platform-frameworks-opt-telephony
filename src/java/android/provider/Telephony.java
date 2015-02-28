@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2006 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +19,8 @@
 
 package android.provider;
 
+import android.util.SeempLog;
+import android.util.SeempJavaFilter;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.content.ComponentName;
@@ -315,6 +320,12 @@ public final class Telephony {
          * @hide
          */
         public static Cursor query(ContentResolver cr, String[] projection) {
+            // Begin: code added for the SeempLog
+            if (SeempJavaFilter.check("Telephony","query")) {
+                String paras = "Telephony|query|--end";
+                SeempLog.record(paras);
+            }
+            // End: code added for the SeempLog
             return cr.query(CONTENT_URI, projection, null, null, DEFAULT_SORT_ORDER);
         }
 
@@ -324,6 +335,14 @@ public final class Telephony {
          */
         public static Cursor query(ContentResolver cr, String[] projection,
                 String where, String orderBy) {
+            // Begin: code added for the SeempLog
+            if (SeempJavaFilter.check("Telephony","query")) {
+                String paras = "Telephony|query|"
+                + "where," + ((where == null) ? "null" : where) + " "
+                + "orderBy," + ((orderBy == null) ? "null" : orderBy) + "|--end";
+                SeempLog.record(paras);
+            }
+            // End: code added for the SeempLog
             return cr.query(CONTENT_URI, projection, where,
                     null, orderBy == null ? DEFAULT_SORT_ORDER : orderBy);
         }
@@ -2022,6 +2041,12 @@ public final class Telephony {
          */
         public static Cursor query(
                 ContentResolver cr, String[] projection) {
+            // Begin: code added for the SeempLog
+            if (SeempJavaFilter.check("Telephony","query")) {
+                String paras = "Telephony|query|--end";
+                SeempLog.record(paras);
+            }
+            // End: code added for the SeempLog
             return cr.query(CONTENT_URI, projection, null, null, DEFAULT_SORT_ORDER);
         }
 
@@ -2032,6 +2057,14 @@ public final class Telephony {
         public static Cursor query(
                 ContentResolver cr, String[] projection,
                 String where, String orderBy) {
+            // Begin: code added for the SeempLog
+            if (SeempJavaFilter.check("Telephony","query")) {
+                String paras = "Telephony|query|"
+                + "where," + ((where == null) ? "null" : where) + " "
+                + "orderBy," + ((orderBy == null) ? "null" : orderBy) + "|--end";
+                SeempLog.record(paras);
+            }
+            // End: code added for the SeempLog
             return cr.query(CONTENT_URI, projection,
                     where, null, orderBy == null ? DEFAULT_SORT_ORDER : orderBy);
         }
