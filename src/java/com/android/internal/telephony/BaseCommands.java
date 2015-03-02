@@ -858,6 +858,10 @@ public abstract class BaseCommands implements CommandsInterface {
             Message response) {
     }
 
+    public void requestIccSimAuthentication(int authContext, String data, String aid,
+            Message response) {
+    }
+
     public void setDataSubscription(Message response) {
     }
 

@@ -2736,7 +2736,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_ON_DEMAND_PS_ATTACH: ret = responseVoid(p); break;
-            case RIL_REQUEST_SIM_AUTHENTICATION: ret =  responseICC_IO(p); break;
+            case RIL_REQUEST_SIM_AUTHENTICATION: ret =  responseICC_IOBase64(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
@@ -3617,6 +3617,25 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 + s);
 
         return new IccIoResult(sw1, sw2, s);
+    }
+
+    private Object
+    responseICC_IOBase64(Parcel p) {
+        int sw1, sw2;
+        Message ret;
+
+        sw1 = p.readInt();
+        sw2 = p.readInt();
+
+        String s = p.readString();
+
+        if (RILJ_LOGV) riljLog("< iccIO: "
+        + " 0x" + Integer.toHexString(sw1)
+        + " 0x" + Integer.toHexString(sw2) + " "
+        + s);
+
+
+        return new IccIoResult(sw1, sw2, android.util.Base64.decode(s, android.util.Base64.DEFAULT));
     }
 
     private Object

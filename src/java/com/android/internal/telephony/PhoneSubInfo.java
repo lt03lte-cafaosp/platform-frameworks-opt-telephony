@@ -27,8 +27,9 @@ import android.telephony.Rlog;
 import com.android.internal.telephony.uicc.IsimRecords;
 import com.android.internal.telephony.uicc.UiccCard;
 import com.android.internal.telephony.uicc.UiccCardApplication;
+import com.android.internal.telephony.uicc.UiccController;
 
-public class PhoneSubInfo {
+public class PhoneSubInfo extends IPhoneSubInfo.Stub {
     static final String LOG_TAG = "PhoneSubInfo";
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
@@ -43,6 +44,7 @@ public class PhoneSubInfo {
     private static final String READ_PRIVILEGED_PHONE_STATE =
         android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE;
 
+    protected UiccController mUiccController = null;
     public PhoneSubInfo(Phone phone) {
         mPhone = phone;
         mContext = phone.getContext();
@@ -231,7 +233,7 @@ public class PhoneSubInfo {
         mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
             "Requires READ_PRIVILEGED_PHONE_STATE");
 
-        UiccCard uiccCard = mPhone.getUiccCard();
+        UiccCard uiccCard = mUiccController.getInstance().getUiccCard();
         if (uiccCard == null) {
             Rlog.e(LOG_TAG, "getIccSimChallengeResponse() UiccCard is null");
             return null;
@@ -239,12 +241,21 @@ public class PhoneSubInfo {
 
         UiccCardApplication uiccApp = uiccCard.getApplicationByType(appType);
         if (uiccApp == null) {
-        Rlog.e(LOG_TAG, "getIccSimChallengeResponse() no app with specified type -- " +
-                appType);
+            Rlog.e(LOG_TAG, "getIccSimChallengeResponse() no app with specified type -- " +
+                    appType);
             return null;
+        } else {
+            Rlog.e(LOG_TAG, "getIccSimChallengeResponse() found app " + uiccApp.getAid()
+                    + "specified type -- " + appType);
         }
 
         int authContext = uiccApp.getAuthContext();
+
+        if (data.length() < 32) {
+            /* must use EAP_SIM context */
+            Rlog.e(LOG_TAG, "data is too small to use EAP_AKA, using EAP_SIM instead");
+            authContext = UiccCardApplication.AUTH_CONTEXT_EAP_SIM;
+        }
 
         if(authContext == UiccCardApplication.AUTH_CONTEXT_UNDEFINED) {
             Rlog.e(LOG_TAG, "getIccSimChallengeResponse() authContext undefined for app type " +
