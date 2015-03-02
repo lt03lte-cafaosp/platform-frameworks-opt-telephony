@@ -1703,8 +1703,21 @@ public interface CommandsInterface {
      *
      * @param nonce the nonce string to pass with the ISIM authentication request
      * @param response a callback message with the String response in the obj field
+     * @deprecated
+     * @see requestIccSimAuthentication
      */
     public void requestIsimAuthentication(String nonce, Message response);
+
+    /**
+     * Request the SIM application on the UICC to perform authentication
+     * challenge/response algorithm. The data string and challenge response are
+     * Base64 encoded Strings.
+     * Can support EAP-SIM, EAP-AKA with results encoded per 3GPP TS 31.102.
+     *
+     * @param data authentication challenge data
+     * @param response a callback message with the String response in the obj field
+     */
+    public void requestIccSimAuthentication(String data, Message response);
 
     /**
      * Get the current Voice Radio Technology.

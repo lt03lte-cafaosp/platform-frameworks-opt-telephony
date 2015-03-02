@@ -363,6 +363,25 @@ public class UiccCard {
         }
     }
 
+    /**
+     * Returns the SIM application of the specified type.
+     *
+     * @param type ICC application type
+     *         (@see com.android.internal.telephony.PhoneConstants#APPTYPE_xxx)
+     * @return application corresponding to type or a null if no match found
+     */
+    public UiccCardApplication getApplicationByType(int type) {
+        synchronized (mLock) {
+            for (int i = 0 ; i < mUiccApplications.length; i++) {
+                if (mUiccApplications[i] != null &&
+                        mUiccApplications[i].getType().ordinal() == type) {
+                    return mUiccApplications[i];
+                }
+            }
+            return null;
+        }
+    }
+
     /* Returns number of applications on this card */
     public int getNumApplications() {
         int count = 0;
