@@ -2736,7 +2736,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: ret = responseVoid(p); break;
             case RIL_REQUEST_ON_DEMAND_PS_ATTACH: ret = responseVoid(p); break;
-            case RIL_REQUEST_ICC_SIM_AUTHENTICATION: ret =  responseString(p); break;
+            case RIL_REQUEST_SIM_AUTHENTICATION: ret =  responseString(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
@@ -4258,7 +4258,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_SET_UICC_SUBSCRIPTION: return "RIL_REQUEST_SET_UICC_SUBSCRIPTION";
             case RIL_REQUEST_SET_DATA_SUBSCRIPTION: return "RIL_REQUEST_SET_DATA_SUBSCRIPTION";
             case RIL_REQUEST_ON_DEMAND_PS_ATTACH: return "RIL_REQUEST_ON_DEMAND_PS_ATTACH";
-            case RIL_REQUEST_ICC_SIM_AUTHENTICATION: return "RIL_REQUEST_SIM_AUTHENTICATION";
+            case RIL_REQUEST_SIM_AUTHENTICATION: return "RIL_REQUEST_SIM_AUTHENTICATION";
             default: return "<unknown request>";
         }
     }
@@ -4609,7 +4609,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
     @Override
     public void requestIccSimAuthentication(String data, Message response) {
-        RILRequest rr = RILRequest.obtain(RIL_REQUEST_ICC_SIM_AUTHENTICATION, response);
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SIM_AUTHENTICATION, response);
 
         rr.mParcel.writeString(data);
 
