@@ -138,11 +138,6 @@ public class ImsPhoneConnection extends Connection {
             ImsCallProfile imsCallProfile = imsCall.getCallProfile();
             if (imsCallProfile != null) {
                 setVideoState(ImsCallProfile.getVideoStateFromImsCallProfile(imsCallProfile));
-
-                ImsStreamMediaProfile mediaProfile = imsCallProfile.mMediaProfile;
-                if (mediaProfile != null) {
-                    setAudioQuality(getAudioQualityFromMediaProfile(mediaProfile));
-                }
             }
 
             // Determine if the current call have video capabilities.
@@ -153,6 +148,11 @@ public class ImsPhoneConnection extends Connection {
                             == ImsCallProfile.CALL_TYPE_VT;
 
                     setLocalVideoCapable(isLocalVideoCapable);
+
+                    ImsStreamMediaProfile mediaProfile = localCallProfile.mMediaProfile;
+                    if (mediaProfile != null) {
+                        setAudioQuality(getAudioQualityFromMediaProfile(mediaProfile));
+                    }
                 }
                 ImsCallProfile remoteCallProfile = imsCall.getRemoteCallProfile();
                 if (remoteCallProfile != null) {
@@ -678,6 +678,18 @@ public class ImsPhoneConnection extends Connection {
                         setLocalVideoCapable(newLocalVideoCapable);
                         changed = true;
                     }
+
+                    ImsStreamMediaProfile mediaProfile = localCallProfile.mMediaProfile;
+                    if (mediaProfile != null) {
+                        int oldAudioQuality = getAudioQuality();
+                        int newAudioQuality = getAudioQualityFromMediaProfile(mediaProfile);
+                        if (oldAudioQuality != newAudioQuality) {
+                            Rlog.d(LOG_TAG, " update audio quality: old = " + oldAudioQuality +
+                                    " new = " + newAudioQuality);
+                            setAudioQuality(newAudioQuality);
+                            changed = true;
+                        }
+                    }
                 }
 
                 ImsCallProfile remoteCallProfile = imsCall.getRemoteCallProfile();
@@ -716,17 +728,6 @@ public class ImsPhoneConnection extends Connection {
                 if (oldVideoState != newVideoState) {
                     setVideoState(newVideoState);
                     changed = true;
-                }
-
-                ImsStreamMediaProfile mediaProfile = callProfile.mMediaProfile;
-                if (mediaProfile != null) {
-                    int oldAudioQuality = getAudioQuality();
-                    int newAudioQuality = getAudioQualityFromMediaProfile(mediaProfile);
-
-                    if (oldAudioQuality != newAudioQuality) {
-                        setAudioQuality(newAudioQuality);
-                        changed = true;
-                    }
                 }
             }
 
