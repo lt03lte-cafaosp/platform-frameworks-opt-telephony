@@ -228,6 +228,34 @@ public class ImsPhone extends ImsPhoneBase {
         return mCT;
     }
 
+    public boolean getCallForwardingIndicator() {
+        boolean cf = false;
+        IccRecords r = getIccRecords();
+        if (r != null && r.isCallForwardStatusStored()) {
+            cf = r.getVoiceCallForwardingFlag();
+        } else {
+            cf = getCallForwardingPreference();
+        }
+        return cf;
+    }
+
+    /**
+     * Used to check if Call Forwarding status is present on sim card. If not, a message is
+     * sent so we can check if the CF status is stored as a Shared Preference.
+     */
+    public void updateCallForwardStatus() {
+        Rlog.d(LOG_TAG, "updateCallForwardStatus");
+        IccRecords r = getIccRecords();
+        if (r != null && r.isCallForwardStatusStored()) {
+            // The Sim card has the CF info
+            Rlog.d(LOG_TAG, "Callforwarding info is present on sim");
+            notifyCallForwardingIndicator();
+        } else {
+            Message msg = obtainMessage(EVENT_GET_CALLFORWARDING_STATUS);
+            sendMessage(msg);
+        }
+    }
+
     @Override
     public List<? extends ImsPhoneMmiCode>
     getPendingMmiCodes() {
@@ -752,8 +780,18 @@ public class ImsPhone extends ImsPhoneBase {
             String dialingNumber,
             int timerSeconds,
             Message onComplete) {
+        setCallForwardingOption(commandInterfaceCFAction, commandInterfaceCFReason, dialingNumber,
+                CommandsInterface.SERVICE_CLASS_VOICE, timerSeconds, onComplete);
+    }
+
+    public void setCallForwardingOption(int commandInterfaceCFAction,
+            int commandInterfaceCFReason,
+            String dialingNumber,
+            int serviceClass,
+            int timerSeconds,
+            Message onComplete) {
         if (DBG) Rlog.d(LOG_TAG, "setCallForwardingOption action=" + commandInterfaceCFAction
-                + ", reason=" + commandInterfaceCFReason);
+                + ", reason=" + commandInterfaceCFReason + " serviceClass=" + serviceClass);
         if ((isValidCommandInterfaceCFAction(commandInterfaceCFAction)) &&
                 (isValidCommandInterfaceCFReason(commandInterfaceCFReason))) {
             Message resp;
@@ -768,6 +806,7 @@ public class ImsPhone extends ImsPhoneBase {
                 ut.updateCallForward(getActionFromCFAction(commandInterfaceCFAction),
                         getConditionFromCFReason(commandInterfaceCFReason),
                         dialingNumber,
+                        serviceClass,
                         timerSeconds,
                         onComplete);
              } catch (ImsException e) {
@@ -826,13 +865,17 @@ public class ImsPhone extends ImsPhoneBase {
 
     @Override
     public void setCallWaiting(boolean enable, Message onComplete) {
+        setCallWaiting(enable, CommandsInterface.SERVICE_CLASS_VOICE, onComplete);
+    }
+
+    public void setCallWaiting(boolean enable, int serviceClass, Message onComplete) {
         if (DBG) Rlog.d(LOG_TAG, "setCallWaiting enable=" + enable);
         Message resp;
         resp = obtainMessage(EVENT_SET_CALL_WAITING_DONE, onComplete);
 
         try {
             ImsUtInterface ut = mCT.getUtInterface();
-            ut.updateCallWaiting(enable, resp);
+            ut.updateCallWaiting(enable, serviceClass, resp);
         } catch (ImsException e) {
             sendErrorResponse(onComplete, e);
         }
@@ -1104,6 +1147,12 @@ public class ImsPhone extends ImsPhoneBase {
     }
 
     @Override
+    public String getSubscriberId() {
+        IccRecords r = getIccRecords();
+        return (r != null) ? r.getIMSI() : null;
+    }
+
+    @Override
     public int getPhoneId() {
         return mDefaultPhone.getPhoneId();
     }
@@ -1253,6 +1302,12 @@ public class ImsPhone extends ImsPhoneBase {
              case EVENT_SET_CALL_BARRING_DONE:
              case EVENT_SET_CALL_WAITING_DONE:
                 sendResponse((Message) ar.userObj, null, ar.exception);
+                break;
+
+            case EVENT_GET_CALLFORWARDING_STATUS:
+                boolean cfEnabled = getCallForwardingPreference();
+                if (DBG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
+                notifyCallForwardingIndicator();
                 break;
 
              default:

@@ -782,10 +782,10 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
                 throw new CallStateException(ImsPhone.CS_FALLBACK);
             } else if (isServiceCodeCallForwarding(mSc)) {
                 Rlog.d(LOG_TAG, "is CF");
-                // service group is not supported
 
                 String dialingNumber = mSia;
                 int reason = scToCallForwardReason(mSc);
+                int serviceClass = siToServiceClass(mSib);
                 int time = siToTime(mSic);
 
                 if (isInterrogate()) {
@@ -806,7 +806,7 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
 
                     Rlog.d(LOG_TAG, "is CF setCallForward");
                     mPhone.setCallForwardingOption(cfAction, reason,
-                            dialingNumber, time, obtainMessage(
+                            dialingNumber, serviceClass, time, obtainMessage(
                                     EVENT_SET_CFF_COMPLETE,
                                     isSettingUnconditional,
                                     isEnableDesired, this));
@@ -1007,9 +1007,10 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
                 }
             } else if (mSc != null && mSc.equals(SC_WAIT)) {
                 // sia = basic service group
-                // service group is not supported
+                int serviceClass = siToServiceClass(mSib);
+
                 if (isActivate() || isDeactivate()) {
-                    mPhone.setCallWaiting(isActivate(),
+                    mPhone.setCallWaiting(isActivate(), serviceClass,
                             obtainMessage(EVENT_SET_COMPLETE, this));
                 } else if (isInterrogate()) {
                     mPhone.getCallWaiting(obtainMessage(EVENT_QUERY_COMPLETE, this));
@@ -1110,10 +1111,12 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
                     boolean cffEnabled = (msg.arg2 == 1);
                     if (mIccRecords != null) {
                         mIccRecords.setVoiceCallForwardingFlag(1, cffEnabled, mDialingNumber);
+                        mPhone.setCallForwardingPreference(cffEnabled);
                     }
                 }
 
                 onSetComplete(msg, ar);
+                mPhone.updateCallForwardStatus();
                 break;
 
             case EVENT_SET_CFF_TIMER_COMPLETE:
@@ -1373,6 +1376,8 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
             boolean cffEnabled = (info.status == 1);
             if (mIccRecords != null) {
                 mIccRecords.setVoiceCallForwardingFlag(1, cffEnabled, info.number);
+                Rlog.d(LOG_TAG, "makeCFQueryResultMessage cffEnabled  = "+cffEnabled);
+                mPhone.setCallForwardingPreference(cffEnabled);
             }
         }
 
@@ -1410,6 +1415,7 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
 
                 // Set unconditional CFF in SIM to false
                 if (mIccRecords != null) {
+                    mPhone.setCallForwardingPreference(false);
                     mIccRecords.setVoiceCallForwardingFlag(1, false, null);
                 }
             } else {
