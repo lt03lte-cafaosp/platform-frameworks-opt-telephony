@@ -84,6 +84,7 @@ public final class CallManager {
     private static final int EVENT_SERVICE_STATE_CHANGED = 118;
     private static final int EVENT_POST_DIAL_CHARACTER = 119;
     private static final int EVENT_ONHOLD_TONE = 120;
+    private static final int EVENT_SUPP_SERVICE_NOTIFY = 121;
 
     // Singleton instance
     private static final CallManager INSTANCE = new CallManager();
@@ -183,6 +184,9 @@ public final class CallManager {
     = new RegistrantList();
 
     protected final RegistrantList mActiveSubChangeRegistrants
+    = new RegistrantList();
+
+    protected final RegistrantList mSuppServiceNotificationRegistrants
     = new RegistrantList();
 
     private CallManager() {
@@ -523,6 +527,7 @@ public final class CallManager {
         // using the same Handler to register with the RIL. When time permits, we should consider
         // moving the handler (or the reference ot the handler) into the Phone object.
         // See b/17414427.
+        int phoneId = phone.getPhoneId();
         CallManagerHandler handler = mHandlerMap.get(phone);
         if (handler != null) {
             Rlog.d(LOG_TAG, "This phone has already been registered.");
@@ -549,6 +554,10 @@ public final class CallManager {
         phone.registerForMmiComplete(handler, EVENT_MMI_COMPLETE, null);
         phone.registerForSuppServiceFailed(handler, EVENT_SUPP_SERVICE_FAILED, null);
         phone.registerForServiceStateChanged(handler, EVENT_SERVICE_STATE_CHANGED, null);
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ||
+                phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
+            phone.registerForSuppServiceNotification(handler, EVENT_SUPP_SERVICE_NOTIFY, phoneId);
+        }
 
         // for events supported only by GSM, CDMA and IMS phone
         if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ||
@@ -596,6 +605,10 @@ public final class CallManager {
         phone.unregisterForMmiComplete(handler);
         phone.unregisterForSuppServiceFailed(handler);
         phone.unregisterForServiceStateChanged(handler);
+        if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ||
+                phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
+            phone.unregisterForSuppServiceNotification(handler);
+        }
 
         // for events supported only by GSM, CDMA and IMS phone
         if (phone.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ||
@@ -1533,6 +1546,27 @@ public final class CallManager {
     }
 
     /**
+     * Register for supplementary service notifications.
+     * Message.obj will contain an AsyncResult.
+     *
+     * @param h Handler that receives the notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    public void registerForSuppServiceNotification(Handler h, int what, Object obj){
+        mSuppServiceNotificationRegistrants.addUnique(h, what, obj);
+    }
+
+    /**
+     * Unregister for supplementary service notifications.
+     *
+     * @param h Handler to be removed from the registrant list.
+     */
+    public void unregisterForSuppServiceNotification(Handler h){
+        mSuppServiceNotificationRegistrants.remove(h);
+    }
+
+    /**
      * Register for notifications when a sInCall VoicePrivacy is disabled
      *
      * @param h Handler that receives the notification message.
@@ -2276,6 +2310,11 @@ public final class CallManager {
                 case EVENT_ONHOLD_TONE:
                     if (VDBG) Rlog.d(LOG_TAG, " handleMessage (EVENT_ONHOLD_TONE)");
                     mOnHoldToneRegistrants.notifyRegistrants((AsyncResult) msg.obj);
+                    break;
+                case EVENT_SUPP_SERVICE_NOTIFY:
+                    if (VDBG) Rlog.d(LOG_TAG, " handleMessage (EVENT_SUPP_SERVICE_NOTIFICATION)");
+                    AsyncResult ar = new AsyncResult(null, msg.obj, null);
+                    mSuppServiceNotificationRegistrants.notifyRegistrants(ar);
                     break;
             }
         }
