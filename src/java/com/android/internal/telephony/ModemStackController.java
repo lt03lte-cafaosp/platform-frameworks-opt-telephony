@@ -124,6 +124,7 @@ public class ModemStackController extends Handler {
     private  static final int EVENT_SUB_DEACTIVATED = 8;
     private static final int EVENT_RADIO_AVAILABLE = 9;
     private static final int EVENT_MODEM_CAPABILITY_CHANGED = 10;
+    private static final int EVENT_RADIO_NOT_AVAILABLE = 11;
 
     //*****States
     private static final int STATE_UNKNOWN = 1;
@@ -252,6 +253,7 @@ public class ModemStackController extends Handler {
         for (int i = 0; i < mCi.length; i++) {
             mCi[i].registerForAvailable(this, EVENT_RADIO_AVAILABLE, new Integer(i));
             mCi[i].registerForModemCapEvent(this, EVENT_MODEM_CAPABILITY_CHANGED, null);
+            mCi[i].registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, new Integer(i));
         }
 
         for (int i = 0; i < mNumPhones; i++) {
@@ -343,6 +345,13 @@ public class ModemStackController extends Handler {
                 onSetPrefNwModeDone(ar, phoneId);
                 break;
 
+            case EVENT_RADIO_NOT_AVAILABLE:
+                ar = (AsyncResult)msg.obj;
+                phoneId = (Integer)ar.userObj;
+                logd("EVENT_RADIO_NOT_AVAILABLE, phoneId = " + phoneId);
+                processRadioNotAvailable(ar, phoneId);
+                break;
+
             default:
                 break;
         }
@@ -358,6 +367,16 @@ public class ModemStackController extends Handler {
 
             mCi[phoneId].getModemCapability(getModemCapsMsg);
 
+        } else {
+            loge("Invalid Index!!!");
+        }
+    }
+
+    // RADIO state moved to UNAVAILABLE, reset cached modem cap info
+    private void processRadioNotAvailable(AsyncResult ar, int phoneId) {
+        logd("processRadioNotAvailable on phoneId = " + phoneId);
+        if (phoneId >= 0 && phoneId < mNumPhones) {
+            mModemCapInfo[mCurrentStackId[phoneId]] = null;
         } else {
             loge("Invalid Index!!!");
         }
@@ -381,7 +400,7 @@ public class ModemStackController extends Handler {
             parseGetModemCapabilityResponse(result, phoneId);
 
             //Wait till we get Modem Capabilities on all subs
-            if (areAllSubsinSameState(STATE_GOT_MODEM_CAPS)) {
+            if (areAllModemCapInfoReceived()) {
                 notifyModemRatCapabilitiesAvailable();
             }
         } else {
@@ -551,6 +570,13 @@ public class ModemStackController extends Handler {
         for (int subState : mSubState) {
             logd("areAllSubsinSameState state= "+state + " substate="+subState);
             if (subState != state) return false;
+        }
+        return true;
+    }
+
+    private boolean areAllModemCapInfoReceived() {
+        for (int i = 0; i < mNumPhones; i++) {
+            if (mModemCapInfo[mCurrentStackId[i]] == null) return false;
         }
         return true;
     }
@@ -738,6 +764,7 @@ public class ModemStackController extends Handler {
                 mUpdateStackMsg = null;
             }
             notifyStackReady(false);
+            return;
         }
         for (SubInfoRecord subInfo : subInfoList) {
             int subStatus = subCtrlr.getSubState(subInfo.subId);
