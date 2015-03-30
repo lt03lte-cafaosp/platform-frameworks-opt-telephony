@@ -35,6 +35,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 public abstract class Connection {
     public interface PostDialListener {
         void onPostDialWait();
+        void onPostDialChar(char c);
     }
 
     /**
@@ -177,6 +178,10 @@ public abstract class Connection {
      */
     public long getConnectTime() {
         return mConnectTime;
+    }
+
+    public void setConnectTime(long oldConnectTime) {
+        mConnectTime = oldConnectTime;
     }
 
     /**
@@ -390,6 +395,12 @@ public abstract class Connection {
         }
     }
 
+    protected final void notifyPostDialListenersNextChar(char c) {
+        for (PostDialListener listener : new ArrayList<>(mPostDialListeners)) {
+            //listener.onPostDialChar(c);
+        }
+    }
+
     public abstract PostDialState getPostDialState();
 
     /**
@@ -425,6 +436,13 @@ public abstract class Connection {
      * @return UUSInfo containing the UUS userdata.
      */
     public abstract UUSInfo getUUSInfo();
+
+    /**
+     * @return indication whether this connection is allowed to be merged into conference
+     */
+    public boolean isMergeAllowed() {
+        return true;
+    };
 
     /**
      * Returns the CallFail reason provided by the RIL with the result of

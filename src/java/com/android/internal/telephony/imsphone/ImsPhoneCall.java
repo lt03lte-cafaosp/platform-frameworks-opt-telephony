@@ -256,11 +256,19 @@ public class ImsPhoneCall extends Call {
     }
 
     /* package */ void
-    merge(ImsPhoneCall that, State state) {
+    merge(ImsPhoneCall that, State state, long oldConnectTime) {
+        if (getFirstConnection() != null) {
+           getFirstConnection().setConnectTime(oldConnectTime);
+        }
         ImsPhoneConnection[] cc = that.mConnections.toArray(
                 new ImsPhoneConnection[that.mConnections.size()]);
         for (ImsPhoneConnection c : cc) {
-            c.update(null, state);
+            // Scenario - A calls B,A calls C,B-Hold, C-Active, Merge
+            // Merge success but only C is added to conference
+            // B is on Hold
+            // UI should display both calls.i.e.Conf call & held call
+            // Avoid overwritting conference call state to held call
+            if (DBG) Rlog.d(LOG_TAG, "merge: " + that + "state = " + state);
         }
     }
 
