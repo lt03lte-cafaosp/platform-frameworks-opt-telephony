@@ -76,7 +76,6 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneNotifier;
-import com.android.internal.telephony.Subscription;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.cdma.CDMAPhone;
@@ -138,6 +137,7 @@ public class ImsPhone extends ImsPhoneBase {
     // this information is getting lost.
     private boolean mIsVideoCapable = false;
 
+    private boolean mImsRegistered = false;
     // A runnable which is used to automatically exit from Ecm after a period of time.
     private Runnable mExitEcmRunnable = new Runnable() {
         @Override
@@ -249,6 +249,34 @@ public class ImsPhone extends ImsPhoneBase {
     @Override
     public CallTracker getCallTracker() {
         return mCT;
+    }
+
+    public boolean getCallForwardingIndicator() {
+        boolean cf = false;
+        IccRecords r = getIccRecords();
+        if (r != null && r.isCallForwardStatusStored()) {
+            cf = r.getVoiceCallForwardingFlag();
+        } else {
+            cf = getCallForwardingPreference();
+        }
+        return cf;
+    }
+
+    /**
+     * Used to check if Call Forwarding status is present on sim card. If not, a message is
+     * sent so we can check if the CF status is stored as a Shared Preference.
+     */
+    public void updateCallForwardStatus() {
+        Rlog.d(LOG_TAG, "updateCallForwardStatus");
+        IccRecords r = getIccRecords();
+        if (r != null && r.isCallForwardStatusStored()) {
+            // The Sim card has the CF info
+            Rlog.d(LOG_TAG, "Callforwarding info is present on sim");
+            notifyCallForwardingIndicator();
+        } else {
+            Message msg = obtainMessage(EVENT_GET_CALLFORWARDING_STATUS);
+            sendMessage(msg);
+        }
     }
 
     @Override
@@ -596,7 +624,7 @@ public class ImsPhone extends ImsPhoneBase {
                     "sendDtmf called with invalid character '" + c + "'");
         } else {
             if (mCT.mState ==  PhoneConstants.State.OFFHOOK) {
-                mCT.sendDtmf(c);
+                mCT.sendDtmf(c, null);
             }
         }
     }
@@ -1136,19 +1164,19 @@ public class ImsPhone extends ImsPhoneBase {
         mSsnRegistrants.remove(h);
     }
 
-    @Override
-    public long getSubId() {
+    public int getSubId() {
         return mDefaultPhone.getSubId();
+    }
+
+    @Override
+    public String getSubscriberId() {
+        IccRecords r = getIccRecords();
+        return (r != null) ? r.getIMSI() : null;
     }
 
     @Override
     public int getPhoneId() {
         return mDefaultPhone.getPhoneId();
-    }
-
-    @Override
-    public Subscription getSubscriptionInfo() {
-        return mDefaultPhone.getSubscriptionInfo();
     }
 
     public IccRecords getIccRecords() {
@@ -1303,6 +1331,12 @@ public class ImsPhone extends ImsPhoneBase {
                 sendResponse((Message) ar.userObj, null, ar.exception);
                 break;
 
+            case EVENT_GET_CALLFORWARDING_STATUS:
+                boolean cfEnabled = getCallForwardingPreference();
+                if (DBG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
+                notifyCallForwardingIndicator();
+                break;
+
              case EVENT_DEFAULT_PHONE_DATA_STATE_CHANGED:
                  if (DBG) Rlog.d(LOG_TAG, "EVENT_DEFAULT_PHONE_DATA_STATE_CHANGED");
                  updateDataServiceState();
@@ -1455,5 +1489,12 @@ public class ImsPhone extends ImsPhoneBase {
 
     public boolean isUtEnabled() {
         return mCT.isUtEnabled();
+    }
+
+    public boolean isImsRegistered() {
+        return mImsRegistered;
+    }
+    public void setImsRegistered(boolean value) {
+        mImsRegistered = value;
     }
 }

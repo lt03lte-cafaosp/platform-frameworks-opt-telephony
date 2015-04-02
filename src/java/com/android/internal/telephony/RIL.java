@@ -53,6 +53,7 @@ import android.telephony.Rlog;
 import android.telephony.SignalStrength;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
+import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.SparseArray;
 import android.view.Display;
@@ -65,6 +66,7 @@ import com.android.internal.telephony.uicc.IccCardStatus;
 import com.android.internal.telephony.uicc.IccIoResult;
 import com.android.internal.telephony.uicc.IccRefreshResponse;
 import com.android.internal.telephony.uicc.IccUtils;
+import com.android.internal.telephony.uicc.SpnOverride;
 import com.android.internal.telephony.cdma.CdmaCallWaitingNotification;
 import com.android.internal.telephony.cdma.CdmaInformationRecords;
 import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
@@ -545,7 +547,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                             "Couldn't find '" + rilSocket
                             + "' socket after " + retryCount
                             + " times, continuing to retry silently");
-                    } else if (retryCount > 0 && retryCount < 8) {
+                    } else if (retryCount >= 0 && retryCount < 8) {
                         Rlog.i (RILJ_LOG_TAG,
                             "Couldn't find '" + rilSocket
                             + "' socket; retrying after timeout");
@@ -563,7 +565,8 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 retryCount = 0;
 
                 mSocket = s;
-                Rlog.i(RILJ_LOG_TAG, "Connected to '" + rilSocket + "' socket");
+                Rlog.i(RILJ_LOG_TAG, "(" + mInstanceId + ") Connected to '"
+                        + rilSocket + "' socket");
 
                 int length = 0;
                 try {
@@ -596,7 +599,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                         "Exception:" + tr.toString());
                 }
 
-                Rlog.i(RILJ_LOG_TAG, "Disconnected from '" + rilSocket
+                Rlog.i(RILJ_LOG_TAG, "(" + mInstanceId + ") Disconnected from '" + rilSocket
                       + "' socket");
 
                 setRadioState (RadioState.RADIO_UNAVAILABLE);
@@ -649,7 +652,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 DEFAULT_WAKE_LOCK_TIMEOUT);
         mWakeLockCount = 0;
 
-        mSenderThread = new HandlerThread("RILSender");
+        mSenderThread = new HandlerThread("RILSender" + mInstanceId);
         mSenderThread.start();
 
         Looper looper = mSenderThread.getLooper();
@@ -660,9 +663,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         if (cm.isNetworkSupported(ConnectivityManager.TYPE_MOBILE) == false) {
             riljLog("Not starting RILReceiver: wifi-only");
         } else {
-            riljLog("Starting RILReceiver");
+            riljLog("Starting RILReceiver" + mInstanceId);
             mReceiver = new RILReceiver();
-            mReceiverThread = new Thread(mReceiver, "RILReceiver");
+            mReceiverThread = new Thread(mReceiver, "RILReceiver" + mInstanceId);
             mReceiverThread.start();
 
             DisplayManager dm = (DisplayManager)context.getSystemService(
@@ -705,7 +708,6 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             mNITZTimeRegistrant
                 .notifyRegistrant(
                     new AsyncResult (null, mLastNITZTimeInfo, null));
-            mLastNITZTimeInfo = null;
         }
     }
 
@@ -3056,10 +3058,10 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
                         mNITZTimeRegistrant
                             .notifyRegistrant(new AsyncResult (null, result, null));
-                    } else {
-                        // in case NITZ time registrant isnt registered yet
-                        mLastNITZTimeInfo = result;
                     }
+                    // in case NITZ time registrant isn't registered yet, or a new registrant
+                    // registers later
+                    mLastNITZTimeInfo = result;
                 }
             break;
 
@@ -3178,7 +3180,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 break;
 
             case RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS:
-                if (RILJ_LOGD) unsljLog(response);
+                if (RILJ_LOGD) unsljLogvRet(response, IccUtils.bytesToHexString((byte[])ret));
 
                 if (mGsmBroadcastSmsRegistrant != null) {
                     mGsmBroadcastSmsRegistrant
@@ -3932,6 +3934,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         String strings[] = (String [])responseStrings(p);
         ArrayList<OperatorInfo> ret;
 
+        // FIXME: What is this really doing
+        SpnOverride spnOverride = new SpnOverride();
+
         if (strings.length % 4 != 0) {
             throw new RuntimeException(
                 "RIL_REQUEST_QUERY_AVAILABLE_NETWORKS: invalid response. Got "
@@ -3941,9 +3946,15 @@ public final class RIL extends BaseCommands implements CommandsInterface {
         ret = new ArrayList<OperatorInfo>(strings.length / 4);
 
         for (int i = 0 ; i < strings.length ; i += 4) {
+            String strOperatorLong = null;
+            if (spnOverride.containsCarrier(strings[i+2])) {
+                strOperatorLong = spnOverride.getSpn(strings[i+2]);
+            } else {
+                strOperatorLong = strings[i+0];
+            }
             ret.add (
                 new OperatorInfo(
-                    strings[i+0],
+                    strOperatorLong,
                     strings[i+1],
                     strings[i+2],
                     strings[i+3]));

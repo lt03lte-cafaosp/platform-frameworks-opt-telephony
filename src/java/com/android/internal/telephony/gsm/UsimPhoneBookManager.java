@@ -230,6 +230,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     return;
                 }
                 mFh.loadEFLinearFixedAll(fileIds.get(USIM_EFEMAIL_TAG),
+                        getPBPath(fileIds.get(USIM_EFEMAIL_TAG)),
                         obtainMessage(EVENT_EMAIL_LOAD_DONE, recNum));
 
                 log("readEmailFileAndWait email efid is : " + fileIds.get(USIM_EFEMAIL_TAG));
@@ -242,7 +243,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             } else {
                 // Read all Email files per Record
                 for (int efid: mPbrFile.mEmailFileIds.get(recNum)) {
-                    mFh.loadEFLinearFixedPart(efid, getValidRecordNums(recNum),
+                    mFh.loadEFLinearFixedPart(efid, getPBPath(efid), getValidRecordNums(recNum),
                         obtainMessage(EVENT_EMAIL_LOAD_DONE, recNum));
 
                     log("readEmailFileAndWait email efid is : " + efid + " recNum:" + recNum);
@@ -254,15 +255,16 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 }
             }
 
+            if (!hasRecordIn(mEmailFileRecord, recNum)) {
+                Rlog.e(LOG_TAG, "Error: Email file is empty");
+                return;
+            }
+
             for (int m = 0; m < mEmailFileRecord.get(recNum).size(); m++) {
                 mEmailFlagsRecord[recNum].add(0);
             }
             mEmailFlags.put(recNum, mEmailFlagsRecord[recNum]);
 
-            if (!hasRecordIn(mEmailFileRecord, recNum)) {
-                Rlog.e(LOG_TAG, "Error: Email file is empty");
-                return;
-            }
             updatePhoneAdnRecordWithEmail(recNum);
         }
 
@@ -286,6 +288,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     return;
                 }
                 mFh.loadEFLinearFixedAll(fileIds.get(USIM_EFANR_TAG),
+                        getPBPath(fileIds.get(USIM_EFANR_TAG)),
                         obtainMessage(EVENT_ANR_LOAD_DONE, recNum));
                 log("readAnrFileAndWait anr efid is : " + fileIds.get(USIM_EFANR_TAG));
                 try {
@@ -296,7 +299,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             } else {
                 // Read all Anr files for each Adn Record
                 for (int efid: mPbrFile.mAnrFileIds.get(recNum)) {
-                    mFh.loadEFLinearFixedPart(efid, getValidRecordNums(recNum),
+                    mFh.loadEFLinearFixedPart(efid, getPBPath(efid), getValidRecordNums(recNum),
                         obtainMessage(EVENT_ANR_LOAD_DONE, recNum));
                     log("readAnrFileAndWait anr efid is : " + efid + " recNum:" + recNum);
                     try {
@@ -307,22 +310,23 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 }
             }
 
+            if (!hasRecordIn(mAnrFileRecord, recNum)) {
+                Rlog.e(LOG_TAG, "Error: Anr file is empty");
+                return;
+            }
+
             for (int m = 0; m < mAnrFileRecord.get(recNum).size(); m++) {
                 mAnrFlagsRecord[recNum].add(0);
             }
             mAnrFlags.put(recNum, mAnrFlagsRecord[recNum]);
 
-            if (!hasRecordIn(mAnrFileRecord, recNum)) {
-                Rlog.e(LOG_TAG, "Error: Anr file is empty");
-                return;
-            }
             updatePhoneAdnRecordWithAnr(recNum);
         }
     }
 
     private void readIapFileAndWait(int efid, int recNum) {
         log("pbrIndex is " + recNum + ",iap efid is : " + efid);
-        mFh.loadEFLinearFixedPart(efid, getValidRecordNums(recNum),
+        mFh.loadEFLinearFixedPart(efid, getPBPath(efid), getValidRecordNums(recNum),
                 obtainMessage(EVENT_IAP_LOAD_DONE, recNum));
         try {
             mLock.wait();
@@ -359,7 +363,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         }
         if (mSuccess) {
             synchronized (mLock) {
-                mFh.getEFLinearRecordSize(efid,
+                mFh.getEFLinearRecordSize(efid, getPBPath(efid),
                         obtainMessage(EVENT_EF_EMAIL_RECORD_SIZE_DONE, adnRecNum, efid, emails));
                 try {
                     mLock.wait();
@@ -400,7 +404,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             mSuccess = true;
         }
         synchronized (mLock) {
-            mFh.getEFLinearRecordSize(efid,
+            mFh.getEFLinearRecordSize(efid, getPBPath(efid),
                     obtainMessage(EVENT_EF_ANR_RECORD_SIZE_DONE, adnRecNum, efid, anrs));
             try {
                 mLock.wait();
@@ -437,7 +441,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         log("updateIapFile  efid=" + efid + ", recordNumber= " + recordNumber + ", adnRecNum="
                 + adnRecNum);
         synchronized (mLock) {
-            mFh.getEFLinearRecordSize(efid,
+            mFh.getEFLinearRecordSize(efid, getPBPath(efid),
                     obtainMessage(EVENT_EF_IAP_RECORD_SIZE_DONE, adnRecNum, recordNumber, tag));
             try {
                 mLock.wait();
@@ -493,12 +497,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     private boolean hasRecordIn(Map<Integer, ArrayList<byte[]>> record, int pbrIndex) {
-        if (record == null)
-            return false;
-        try {
-            record.get(pbrIndex);
-        } catch (IndexOutOfBoundsException e) {
-            Rlog.e(LOG_TAG, "record is empty in pbrIndex" + pbrIndex);
+        if (record == null || record.isEmpty() || record.get(pbrIndex) == null) {
+            Rlog.e(LOG_TAG, "record [" + record + "] is empty in pbrIndex" + pbrIndex);
             return false;
         }
         return true;
@@ -584,6 +584,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     if (rec != null && (!TextUtils.isEmpty(anrs[0]))) {
                         rec.setAdditionalNumbers(anrs);
                         mPhoneBookRecords.set(adnRecIndex, rec);
+                        mAnrFlags.get(pbrIndex).set(recNum - 1, 1);
                     }
 
                 }
@@ -641,8 +642,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             if (rec != null) {
                 String[] emails = new String[emailList.size()];
                 System.arraycopy(emailList.toArray(), 0, emails, 0, emailList.size());
-                rec.setAdditionalNumbers(emails);
-                mPhoneBookRecords.set(i, rec);
+                rec.setEmails(emails);
+                mPhoneBookRecords.set(i+adnInitIndex, rec);
             }
         }
     }
@@ -683,7 +684,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 String[] anrs = new String[anrList.size()];
                 System.arraycopy(anrList.toArray(), 0, anrs, 0, anrList.size());
                 rec.setAdditionalNumbers(anrs);
-                mPhoneBookRecords.set(i, rec);
+                mPhoneBookRecords.set(i+adnInitIndex, rec);
             }
         }
     }
@@ -735,6 +736,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         }
         log("readAdnFileAndWait adn efid is : " + fileIds.get(USIM_EFADN_TAG));
         mAdnCache.requestLoadAllAdnLike(fileIds.get(USIM_EFADN_TAG), extEf,
+                getPBPath(fileIds.get(USIM_EFADN_TAG)),
                 obtainMessage(EVENT_USIM_ADN_LOAD_DONE, recNum));
         try {
             mLock.wait();
@@ -836,15 +838,20 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             return data; // return the empty record (for delete)
         }
         byte[] byteEmail = GsmAlphabet.stringToGsm8BitPacked(email);
-        if (byteEmail.length > length) {
+
+        // 3gpp 31.102 4.4.2.13, Record in non-type1 EF_EMAIL file
+        // should exclude last two bytes
+        int tmpLen = mEmailPresentInIap == true ? length - 2 : length;
+
+        if (byteEmail.length > tmpLen) {
             log("[buildEmailData] wrong email length");
             return null;
         }
 
         System.arraycopy(byteEmail, 0, data, 0, byteEmail.length);
-        int pbrIndex = getPbrIndexBy(adnRecIndex);
-        int recordIndex = adnRecIndex - getInitIndexBy(pbrIndex);
         if (mEmailPresentInIap) {
+            int pbrIndex = getPbrIndexBy(adnRecIndex);
+            int recordIndex = adnRecIndex - getInitIndexBy(pbrIndex);
             data[length - 1] = (byte) (recordIndex + 1);
         }
         log("buildEmailData: data is" + IccUtils.bytesToHexString(data));
@@ -1069,6 +1076,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
 
                 mFh.updateEFLinearFixed(
                         efid,
+                        getPBPath(efid),
                         recordNumber,
                         data,
                         null,
@@ -1131,6 +1139,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
 
                 mFh.updateEFLinearFixed(
                         efid,
+                        getPBPath(efid),
                         recordNumber,
                         data,
                         null,
@@ -1241,6 +1250,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                             + " with value= " + IccUtils.bytesToHexString(record_data));
                     mFh.updateEFLinearFixed(
                             efid,
+                            getPBPath(efid),
                             recordIndex + 1,
                             record_data,
                             null,
@@ -1521,5 +1531,10 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         } else {
             return 0;
         }
+    }
+
+    public String getPBPath(int efid) {
+        //Only support global PB
+        return MF_SIM + DF_TELECOM + DF_PHONEBOOK;
     }
 }

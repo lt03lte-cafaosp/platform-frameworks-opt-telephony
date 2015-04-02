@@ -46,8 +46,10 @@ import android.telephony.TelephonyManager;
 
 import com.android.ims.ImsManager;
 import com.android.internal.telephony.CallTracker;
+
 import android.text.TextUtils;
 import android.telephony.Rlog;
+import android.util.Log;
 
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_DISABLE;
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_ENABLE;
@@ -71,6 +73,7 @@ import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.Connection;
 import com.android.internal.telephony.IccPhoneBookInterfaceManager;
 import com.android.internal.telephony.MmiCode;
+import com.android.internal.telephony.OperatorInfo;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
@@ -79,7 +82,6 @@ import com.android.internal.telephony.PhoneNotifier;
 import com.android.internal.telephony.PhoneProxy;
 import com.android.internal.telephony.PhoneSubInfo;
 import com.android.internal.telephony.SubscriptionController;
-
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.UUSInfo;
@@ -94,14 +96,11 @@ import com.android.internal.telephony.ServiceStateTracker;
 import com.android.internal.telephony.uicc.IsimRecords;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
 
-
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.android.internal.telephony.PhoneConstants.EVENT_SUBSCRIPTION_ACTIVATED;
-import static com.android.internal.telephony.PhoneConstants.EVENT_SUBSCRIPTION_DEACTIVATED;
 
 /**
  * {@hide}
@@ -118,13 +117,6 @@ public class GSMPhone extends PhoneBase {
     public static final String CIPHERING_KEY = "ciphering_key";
     // Key used to read/write voice mail number
     public static final String VM_NUMBER = "vm_number_key";
-    // Key used to read/write the SIM IMSI used for storing the imsi
-    public static final String SIM_IMSI = "sim_imsi_key";
-    // Key used to read/write if Call Forwarding is enabled
-    public static final String CF_ENABLED = "cf_enabled_key";
-
-    // Event constant for checking if Call Forwarding is enabled
-    private static final int CHECK_CALLFORWARDING_STATUS = 75;
 
     private static final int CALL_FORWARD_NOTIFICATION = 4;
     private static final int NOTIFICATION_ID_OFFSET = 50;
@@ -151,7 +143,7 @@ public class GSMPhone extends PhoneBase {
 
     private IsimUiccRecords mIsimUiccRecords;
 
-    // Create Cfu (Call forward unconditional) so that dialling number &
+    // Create Cfu (Call forward unconditional) so that dialing number &
     // mOnComplete (Message object passed by client) can be packed &
     // given as a single Cfu object as user data to RIL.
     private static class Cfu {
@@ -170,7 +162,7 @@ public class GSMPhone extends PhoneBase {
             if (TelephonyIntents.ACTION_SUBSCRIPTION_SET_UICC_RESULT.
                     equals(intent.getAction())) {
                 long subId = intent.getLongExtra(PhoneConstants.SUBSCRIPTION_KEY,
-                        SubscriptionManager.INVALID_SUB_ID);
+                        SubscriptionManager.INVALID_SUBSCRIPTION_ID);
                 int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
                         PhoneConstants.PHONE_ID1);
                 int status = intent.getIntExtra(TelephonyIntents.EXTRA_RESULT,
@@ -189,12 +181,7 @@ public class GSMPhone extends PhoneBase {
     // Constructors
 
     public
-    GSMPhone (Context context, CommandsInterface ci, PhoneNotifier notifier) {
-        this(context,ci,notifier, false);
-    }
-
-    public
-    GSMPhone (Context context, CommandsInterface ci, PhoneNotifier notifier, boolean unitTestMode) {
+    GSMPhone(Context context, CommandsInterface ci, PhoneNotifier notifier, boolean unitTestMode) {
         super("GSM", notifier, context, ci, unitTestMode);
 
         if (ci instanceof SimulatedRadioControl) {
@@ -223,12 +210,12 @@ public class GSMPhone extends PhoneBase {
     }
 
     public
-    GSMPhone (Context context, CommandsInterface ci, PhoneNotifier notifier, int phoneId) {
+    GSMPhone(Context context, CommandsInterface ci, PhoneNotifier notifier, int phoneId) {
         this(context, ci, notifier, false, phoneId);
     }
 
     public
-    GSMPhone (Context context, CommandsInterface ci,
+    GSMPhone(Context context, CommandsInterface ci,
             PhoneNotifier notifier, boolean unitTestMode, int phoneId) {
         super("GSM", notifier, context, ci, unitTestMode, phoneId);
 
@@ -267,8 +254,8 @@ public class GSMPhone extends PhoneBase {
     }
 
     protected void setProperties() {
-        TelephonyManager.setTelephonyProperty(TelephonyProperties.CURRENT_ACTIVE_PHONE,
-                getSubId(), new Integer(PhoneConstants.PHONE_TYPE_GSM).toString());
+        TelephonyManager.setTelephonyProperty(mPhoneId, TelephonyProperties.CURRENT_ACTIVE_PHONE,
+                new Integer(PhoneConstants.PHONE_TYPE_GSM).toString());
     }
 
     @Override
@@ -314,36 +301,14 @@ public class GSMPhone extends PhoneBase {
         if(LOCAL_DEBUG) Rlog.d(LOG_TAG, "GSMPhone finalized");
     }
 
-
-    private void onSubscriptionActivated() {
-        //mSubscriptionData = SubscriptionManager.getCurrentSubscription(mSubscription);
-
-        log("SUBSCRIPTION ACTIVATED : slotId : " + mSubscriptionData.slotId
-                + " appid : " + mSubscriptionData.m3gppIndex
-                + " subId : " + mSubscriptionData.subId
-                + " subStatus : " + mSubscriptionData.subStatus);
-
-        // Make sure properties are set for proper subscription.
-        setProperties();
-
-        onUpdateIccAvailability();
-        mSST.sendMessage(mSST.obtainMessage(ServiceStateTracker.EVENT_ICC_CHANGED));
-        ((DcTracker)mDcTracker).updateRecords();
-    }
-
-    private void onSubscriptionDeactivated() {
-        log("SUBSCRIPTION DEACTIVATED");
-        mSubscriptionData = null;
-        resetSubSpecifics();
-    }
-
     @Override
     public ServiceState
     getServiceState() {
         if (mSST == null || mSST.mSS.getState() != ServiceState.STATE_IN_SERVICE) {
-            if (mImsPhone != null &&
-                    mImsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE) {
-                return mImsPhone.getServiceState();
+            if (mImsPhone != null) {
+                return ServiceState.mergeServiceStates(
+                        (mSST == null) ? new ServiceState() : mSST.mSS,
+                        mImsPhone.getServiceState());
             }
         }
 
@@ -362,6 +327,13 @@ public class GSMPhone extends PhoneBase {
 
     @Override
     public PhoneConstants.State getState() {
+        if (mImsPhone != null) {
+            PhoneConstants.State imsState = mImsPhone.getState();
+            if (imsState != PhoneConstants.State.IDLE) {
+                return imsState;
+            }
+        }
+
         return mCT.mState;
     }
 
@@ -388,7 +360,7 @@ public class GSMPhone extends PhoneBase {
             // get voice mail count from SIM
             countVoiceMessages = r.getVoiceMessageCount();
         }
-        if (countVoiceMessages == -1) {
+        if (countVoiceMessages == IccRecords.DEFAULT_VOICE_MESSAGE_COUNT) {
             countVoiceMessages = getStoredVoiceMessageCount();
         }
         Rlog.d(LOG_TAG, "updateVoiceMail countVoiceMessages = " + countVoiceMessages
@@ -558,7 +530,7 @@ public class GSMPhone extends PhoneBase {
     @Override
     public void
     setSystemProperty(String property, String value) {
-        TelephonyManager.setTelephonyProperty(property, getSubId(), value);
+        TelephonyManager.setTelephonyProperty(mPhoneId, property, value);
     }
 
     @Override
@@ -911,13 +883,14 @@ public class GSMPhone extends PhoneBase {
         ImsPhone imsPhone = mImsPhone;
 
         boolean imsUseEnabled =
-                ImsManager.isEnhanced4gLteModeSettingEnabledByPlatform(mContext) &&
-                ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext);
+                ImsManager.isVolteEnabledByPlatform(mContext) &&
+                ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext) &&
+                ImsManager.isNonTtyOrTtyOnVolteEnabled(mContext);
         if (!imsUseEnabled) {
             Rlog.w(LOG_TAG, "IMS is disabled: forced to CS");
         }
 
-        if (imsUseEnabled && imsPhone != null
+        if (imsUseEnabled && imsPhone != null && imsPhone.isVolteEnabled()
                 && ((imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE
                 && !PhoneNumberUtils.isEmergencyNumber(dialString))
                 || (PhoneNumberUtils.isEmergencyNumber(dialString)
@@ -927,7 +900,22 @@ public class GSMPhone extends PhoneBase {
                 if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Trying IMS PS call");
                 return imsPhone.dial(dialString, videoState, extras);
             } catch (CallStateException e) {
-                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "IMS PS call exception " + e);
+                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "IMS PS call exception " + e +
+                        "imsUseEnabled =" + imsUseEnabled + ", imsPhone =" + imsPhone);
+                if (!ImsPhone.CS_FALLBACK.equals(e.getMessage())) {
+                    CallStateException ce = new CallStateException(e.getMessage());
+                    ce.setStackTrace(e.getStackTrace());
+                    throw ce;
+                }
+            }
+        }
+
+        if (imsPhone != null && imsPhone.isUtEnabled() && dialString.endsWith("#")) {
+            try {
+                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Trying IMS call with UT enabled");
+                return imsPhone.dial(dialString, videoState, extras);
+            } catch (CallStateException e) {
+                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "IMS call UT enabled exception " + e);
                 if (!ImsPhone.CS_FALLBACK.equals(e.getMessage())) {
                     CallStateException ce = new CallStateException(e.getMessage());
                     ce.setStackTrace(e.getStackTrace());
@@ -992,12 +980,15 @@ public class GSMPhone extends PhoneBase {
     public void addParticipant(String dialString) throws CallStateException {
         ImsPhone imsPhone = mImsPhone;
         boolean imsUseEnabled =
-                ImsManager.isEnhanced4gLteModeSettingEnabledByPlatform(mContext) &&
+                ImsManager.isVolteEnabledByPlatform(mContext) &&
                 ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext);
+        if (!imsUseEnabled) {
+            Rlog.w(LOG_TAG, "IMS is disabled: forced to CS");
+        }
 
-        if (imsUseEnabled && imsPhone != null
-                && imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE
-                ) {
+        if (imsUseEnabled && imsPhone != null && imsPhone.isVolteEnabled()
+                && (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE
+                )) {
             try {
                 if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Trying to add participant in IMS call");
                 imsPhone.addParticipant(dialString);
@@ -1087,6 +1078,25 @@ public class GSMPhone extends PhoneBase {
         String number = (r != null) ? r.getVoiceMailNumber() : "";
         if (TextUtils.isEmpty(number)) {
             SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+            if (TelephonyManager.getDefault().isMultiSimEnabled()) {
+                // Migrate KK setting for Msim
+                if (!sp.contains(VM_NUMBER + getSubId()) && sp.contains(VM_NUMBER + mPhoneId)) {
+                    number = sp.getString(VM_NUMBER + mPhoneId, null);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.remove(VM_NUMBER + mPhoneId);
+                    editor.putString(VM_NUMBER + getSubId(), number);
+                    editor.commit();
+                }
+            } else {
+                // Migrate KK setting for single sim
+                if (!sp.contains(VM_NUMBER + getSubId()) && sp.contains(VM_NUMBER)) {
+                    number = sp.getString(VM_NUMBER, null);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.remove(VM_NUMBER);
+                    editor.putString(VM_NUMBER + getSubId(), number);
+                    editor.commit();
+                }
+            }
             number = sp.getString(VM_NUMBER + getSubId(), null);
         }
 
@@ -1112,18 +1122,6 @@ public class GSMPhone extends PhoneBase {
             }
         }
         return number;
-    }
-
-    private String getSimImsi() {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
-        return sp.getString(SIM_IMSI + getSubId(), null);
-    }
-
-    private void setSimImsi(String imsi) {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putString(SIM_IMSI + getSubId(), imsi);
-        editor.apply();
     }
 
     @Override
@@ -1171,6 +1169,15 @@ public class GSMPhone extends PhoneBase {
     public String getMeid() {
         Rlog.e(LOG_TAG, "[GSMPhone] getMeid() is a CDMA method");
         return "0";
+    }
+
+    @Override
+    public String getNai() {
+        IccRecords r = mUiccController.getIccRecords(mPhoneId, UiccController.APP_FAM_3GPP2);
+        if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
+            Rlog.v(LOG_TAG, "IccRecords is " + r);
+        }
+        return (r != null) ? r.getNAI() : null;
     }
 
     @Override
@@ -1243,7 +1250,7 @@ public class GSMPhone extends PhoneBase {
         if(getUnitTestMode()) {
             return null;
         }
-        return TelephonyManager.getTelephonyProperty(property, getSubId(), defValue);
+        return TelephonyManager.getTelephonyProperty(mPhoneId, property, defValue);
     }
 
     private boolean isValidCommandInterfaceCFAction (int commandInterfaceCFAction) {
@@ -1510,29 +1517,6 @@ public class GSMPhone extends PhoneBase {
     }
 
     /**
-     * This method stores the CF_ENABLED flag in preferences
-     * @param enabled
-     */
-    protected void setCallForwardingPreference(boolean enabled) {
-        if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Set callforwarding info to perferences");
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
-        SharedPreferences.Editor edit = sp.edit();
-        edit.putBoolean(CF_ENABLED + getSubId(), enabled);
-        edit.commit();
-
-        // set the sim imsi to be able to track when the sim card is changed.
-        setSimImsi(getSubscriberId());
-    }
-
-    protected boolean getCallForwardingPreference() {
-        if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Get callforwarding info from perferences");
-
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
-        boolean cf = sp.getBoolean(CF_ENABLED + getSubId(), false);
-        return cf;
-    }
-
-    /**
      * Used to check if Call Forwarding status is present on sim card. If not, a message is
      * sent so we can check if the CF status is stored as a Shared Preference.
      */
@@ -1544,7 +1528,7 @@ public class GSMPhone extends PhoneBase {
             if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Callforwarding info is present on sim");
             notifyCallForwardingIndicator();
         } else {
-            Message msg = obtainMessage(CHECK_CALLFORWARDING_STATUS);
+            Message msg = obtainMessage(EVENT_GET_CALLFORWARDING_STATUS);
             sendMessage(msg);
         }
     }
@@ -1561,6 +1545,7 @@ public class GSMPhone extends PhoneBase {
     onIncomingUSSD (int ussdMode, String ussdMessage) {
         boolean isUssdError;
         boolean isUssdRequest;
+        boolean isUssdRelease;
 
         isUssdRequest
             = (ussdMode == CommandsInterface.USSD_MODE_REQUEST);
@@ -1568,6 +1553,8 @@ public class GSMPhone extends PhoneBase {
         isUssdError
             = (ussdMode != CommandsInterface.USSD_MODE_NOTIFY
                 && ussdMode != CommandsInterface.USSD_MODE_REQUEST);
+
+        isUssdRelease = (ussdMode == CommandsInterface.USSD_MODE_NW_RELEASE);
 
         // See comments in GsmMmiCode.java
         // USSD requests aren't finished until one
@@ -1583,7 +1570,9 @@ public class GSMPhone extends PhoneBase {
         if (found != null) {
             // Complete pending USSD
 
-            if (isUssdError) {
+            if (isUssdRelease) {
+                found.onUssdRelease();
+            } else if (isUssdError) {
                 found.onUssdFinishedError();
             } else {
                 found.onUssdFinished(ussdMessage, isUssdRequest);
@@ -1619,6 +1608,17 @@ public class GSMPhone extends PhoneBase {
     public void handleMessage (Message msg) {
         AsyncResult ar;
         Message onComplete;
+
+        // messages to be handled whether or not the phone is being destroyed
+        // should only include messages which are being re-directed and do not use
+        // resources of the phone being destroyed
+        switch (msg.what) {
+            // handle the select network completion callbacks.
+            case EVENT_SET_NETWORK_MANUAL_COMPLETE:
+            case EVENT_SET_NETWORK_AUTOMATIC_COMPLETE:
+                super.handleMessage(msg);
+                return;
+        }
 
         if (!mIsTheCurrentActivePhone) {
             Rlog.e(LOG_TAG, "Received message " + msg +
@@ -1674,7 +1674,12 @@ public class GSMPhone extends PhoneBase {
                 }
 
                 if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Baseband version: " + ar.result);
-                setSystemProperty(PROPERTY_BASEBAND_VERSION, (String)ar.result);
+
+                if (SubscriptionManager.isValidPhoneId(mPhoneId)) {
+                    String prop = PROPERTY_BASEBAND_VERSION +
+                            ((mPhoneId == 0 ) ? "" : Integer.toString(mPhoneId));
+                    SystemProperties.set(prop, (String)ar.result);
+                }
             break;
 
             case EVENT_GET_IMEI_DONE:
@@ -1721,6 +1726,11 @@ public class GSMPhone extends PhoneBase {
                         mPendingMMIs.get(i).onUssdFinishedError();
                     }
                 }
+                ImsPhone imsPhone = mImsPhone;
+                if (imsPhone != null) {
+                    imsPhone.getServiceState().setStateOff();
+                }
+                mRadioOffOrNotAvailableRegistrants.notifyRegistrants();
                 break;
             }
 
@@ -1799,16 +1809,6 @@ public class GSMPhone extends PhoneBase {
                 }
                 break;
 
-            case EVENT_SUBSCRIPTION_ACTIVATED:
-                log("EVENT_SUBSCRIPTION_ACTIVATED");
-                onSubscriptionActivated();
-                break;
-
-            case EVENT_SUBSCRIPTION_DEACTIVATED:
-                log("EVENT_SUBSCRIPTION_DEACTIVATED");
-                onSubscriptionDeactivated();
-                break;
-
             case EVENT_SS:
                 ar = (AsyncResult)msg.obj;
                 Rlog.d(LOG_TAG, "Event EVENT_SS received");
@@ -1818,7 +1818,7 @@ public class GSMPhone extends PhoneBase {
                 GsmMmiCode mmi = new GsmMmiCode(this, mUiccApplication.get());
                 mmi.processSsData(ar);
 
-            case CHECK_CALLFORWARDING_STATUS:
+            case EVENT_GET_CALLFORWARDING_STATUS:
                 boolean cfEnabled = getCallForwardingPreference();
                 if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
                 if (cfEnabled) {
@@ -2090,7 +2090,7 @@ public class GSMPhone extends PhoneBase {
             return false;
         }
 
-        UiccCard card = mUiccController.getUiccCard();
+        UiccCard card = mUiccController.getUiccCard(getPhoneId());
         if (card == null) {
             return false;
         }
