@@ -36,6 +36,7 @@ import android.os.RegistrantList;
 import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.provider.Settings;
+import android.widget.Toast;
 import android.preference.PreferenceManager;
 import android.telecom.ConferenceParticipant;
 import android.telecom.VideoProfile;
@@ -70,6 +71,8 @@ import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.gsm.SuppServiceNotification;
+
+import android.widget.Toast;
 
 /**
  * {@hide}
@@ -1412,6 +1415,29 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onCallSessionTtyModeReceived(ImsCall call, int mode) {
             mPhone.onTtyModeReceived(mode);
         }
+
+        @Override
+        public void onCallHandover(ImsCall imsCall, int srcAccessTech, int targetAccessTech,
+            ImsReasonInfo reasonInfo) {
+            if (DBG) {
+                log("onCallHandover ::  srcAccessTech=" + srcAccessTech + ", targetAccessTech=" +
+                    targetAccessTech + ", reasonInfo=" + reasonInfo);
+            }
+        }
+
+        @Override
+        public void onCallHandoverFailed(ImsCall imsCall, int srcAccessTech, int targetAccessTech,
+            ImsReasonInfo reasonInfo) {
+            if (DBG) {
+                log("onCallHandoverFailed :: srcAccessTech=" + srcAccessTech +
+                    ", targetAccessTech=" + targetAccessTech + ", reasonInfo=" + reasonInfo);
+            }
+
+            String msg = reasonInfo.getExtraMessage();
+            if (mPhone != null && msg != null) {
+                Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
+            }
+        }
     };
 
     /**
@@ -1492,8 +1518,14 @@ public final class ImsPhoneCallTracker extends CallTracker {
         }
 
         @Override
-        public void onImsDisconnected() {
-            if (DBG) log("onImsDisconnected");
+        public void onImsDisconnected(ImsReasonInfo imsReasonInfo) {
+            if (DBG) log("onImsDisconnected imsReasonInfo=" + imsReasonInfo);
+            mPhone.setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
+        }
+
+        @Override
+        public void onImsProgressing() {
+            if (DBG) log("onImsProgressing");
             mPhone.setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
             mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
                 VoLteServiceState.IMS_UNREGISTERED));
