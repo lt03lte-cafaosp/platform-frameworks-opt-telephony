@@ -326,8 +326,12 @@ public class SubInfoRecordUpdater extends Handler {
             }
             queryIccId(slotId);
         } else if (oldState.isCardPresent() && newState.isCardPresent() &&
-                (!subHelper.isApmSIMNotPwdn()) && (sIccId[slotId] == null)) {
+                (((!subHelper.isApmSIMNotPwdn()) && (sIccId[slotId] == null)) ||
+                (sIccId[slotId] != null && sIccId[slotId].equals(ICCID_STRING_FOR_NO_SIM)))) {
+            // If old and new card state is present and ICCID is "", query the ICCID again
+            // to process SET_UICC request
             logd("SIM" + (slotId + 1) + " powered up from APM ");
+            sIccId[slotId] = null;
             sFh[slotId] = null;
             sNeedUpdate = true;
             queryIccId(slotId);
