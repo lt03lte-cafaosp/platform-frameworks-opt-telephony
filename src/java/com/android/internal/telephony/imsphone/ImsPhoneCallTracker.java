@@ -874,6 +874,10 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
     /*package*/ void
     hangup (ImsPhoneConnection conn) throws CallStateException {
+        hangupWithReason(conn, DisconnectCause.LOCAL);
+    }
+
+    void hangupWithReason (ImsPhoneConnection conn, int disconnectCause) throws CallStateException {
         if (DBG) log("hangup connection");
 
         if (conn.getOwner() != this) {
@@ -881,13 +885,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     + "does not belong to ImsPhoneCallTracker " + this);
         }
 
-        hangup(conn.getCall());
+        hangupWithReason(conn.getCall(), disconnectCause);
     }
 
     //***** Called from ImsPhoneCall
 
     /* package */ void
     hangup (ImsPhoneCall call) throws CallStateException {
+        hangupWithReason(call, DisconnectCause.NORMAL);
+    }
+
+    void hangupWithReason(ImsPhoneCall call, int disconnectCause)  throws CallStateException {
         if (DBG) log("hangup call");
 
         if (call.getConnections().size() == 0) {
@@ -924,8 +932,8 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
         try {
             if (imsCall != null) {
-                if (rejectCall) imsCall.reject(ImsReasonInfo.CODE_USER_DECLINE);
-                else imsCall.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+                if (rejectCall) imsCall.reject(toImsReasonCode(disconnectCause));
+                else imsCall.terminate(toImsReasonCode(disconnectCause));
             } else if (mPendingMO != null && call == mForegroundCall) {
                 // is holding a foreground call
                 mPendingMO.update(null, ImsPhoneCall.State.DISCONNECTED);
@@ -1775,5 +1783,19 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
     public boolean isUtEnabled() {
         return mIsUtEnabled;
+    }
+
+    private int toImsReasonCode(int telephonyDisconnectCause) {
+        int imsReasonCode = ImsReasonInfo.CODE_USER_TERMINATED;
+        switch  (telephonyDisconnectCause) {
+            case DisconnectCause.LOW_BATTERY:
+                return ImsReasonInfo.CODE_LOW_BATTERY;
+            case DisconnectCause.LOCAL:
+                return ImsReasonInfo.CODE_USER_TERMINATED;
+            case DisconnectCause.INCOMING_REJECTED:
+                return ImsReasonInfo.CODE_USER_DECLINE;
+            default:
+        }
+        return imsReasonCode;
     }
 }
