@@ -2024,13 +2024,6 @@ public class DcTracker extends DcTrackerBase {
 
         if(DBG) log("onDisconnectDone: EVENT_DISCONNECT_DONE apnContext=" + apnContext);
 
-        // If apncontext is in CONNECTING state, the DISCONNECT event could be due to a previous
-        // disconnect arriving at DCT delayed. In connecting state we expect DATA_SETUP_COMPLETE.
-        if (apnContext.getState() == DctConstants.State.CONNECTING) {
-            log("onDisconnectDone: apncontext in CONNECTING state. Ignore disconnect.");
-            return;
-        }
-
         apnContext.setState(DctConstants.State.IDLE);
 
         mPhone.notifyDataConnection(apnContext.getReason(), apnContext.getDataProfileType());
