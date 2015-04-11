@@ -90,6 +90,12 @@ public abstract class Call {
     public abstract boolean isMultiparty();
     public abstract void hangup() throws CallStateException;
 
+    /**
+     * hangupWithReason
+     *
+     * @param disconnectCause to send the reason for disconnect
+     */
+    public abstract void hangupWithReason(int disconnectCause) throws CallStateException;
 
     /**
      * hasConnection
