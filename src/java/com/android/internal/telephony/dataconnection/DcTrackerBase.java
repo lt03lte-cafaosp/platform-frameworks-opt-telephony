@@ -396,9 +396,12 @@ public abstract class DcTrackerBase extends Handler {
         }
 
         public void register() {
+            String key = Settings.Global.DATA_ROAMING;
+            if (TelephonyManager.getDefault().isMultiSimEnabled()) {
+                key = key + mPhone.getPhoneId();
+            }
             mResolver.registerContentObserver(
-                    Settings.Global.getUriFor(Settings.Global.DATA_ROAMING +
-                    mPhone.getPhoneId()), false, this);
+                    Settings.Global.getUriFor(key), false, this);
         }
 
         public void unregister() {
@@ -698,6 +701,12 @@ public abstract class DcTrackerBase extends Handler {
     public void setDataOnRoamingEnabled(boolean enabled) {
         if (getDataOnRoamingEnabled() != enabled) {
             final ContentResolver resolver = mPhone.getContext().getContentResolver();
+            if (!TelephonyManager.getDefault().isMultiSimEnabled()) {
+                // For single sim mode, update data_roaming and data_roaming0 for
+                // backward compatibility.
+                Settings.Global.putInt(resolver,
+                        Settings.Global.DATA_ROAMING, enabled ? 1 : 0);
+            }
             Settings.Global.putInt(resolver,
                     Settings.Global.DATA_ROAMING + mPhone.getPhoneId(), enabled ? 1 : 0);
             // will trigger handleDataOnRoamingChange() through observer
@@ -710,8 +719,11 @@ public abstract class DcTrackerBase extends Handler {
     public boolean getDataOnRoamingEnabled() {
         try {
             final ContentResolver resolver = mPhone.getContext().getContentResolver();
-            return Settings.Global.getInt(resolver,
-                    Settings.Global.DATA_ROAMING + mPhone.getPhoneId()) != 0;
+            String key = Settings.Global.DATA_ROAMING;
+            if (TelephonyManager.getDefault().isMultiSimEnabled()) {
+                key = key + mPhone.getPhoneId();
+            }
+            return Settings.Global.getInt(resolver, key) != 0;
         } catch (SettingNotFoundException snfe) {
             try {
                 final ContentResolver resolver = mPhone.getContext().getContentResolver();
