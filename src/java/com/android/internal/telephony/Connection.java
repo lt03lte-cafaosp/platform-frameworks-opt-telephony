@@ -403,7 +403,7 @@ public abstract class Connection {
 
     protected final void notifyPostDialListenersNextChar(char c) {
         for (PostDialListener listener : new ArrayList<>(mPostDialListeners)) {
-            //listener.onPostDialChar(c);
+            listener.onPostDialChar(c);
         }
     }
 
