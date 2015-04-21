@@ -326,8 +326,12 @@ public class SubInfoRecordUpdater extends Handler {
             }
             queryIccId(slotId);
         } else if (oldState.isCardPresent() && newState.isCardPresent() &&
-                (!subHelper.isApmSIMNotPwdn()) && (sIccId[slotId] == null)) {
+                (((!subHelper.isApmSIMNotPwdn()) && (sIccId[slotId] == null)) ||
+                (sIccId[slotId] != null && sIccId[slotId].equals(ICCID_STRING_FOR_NO_SIM)))) {
+            // If old and new card state is present and ICCID is "", query the ICCID again
+            // to process SET_UICC request
             logd("SIM" + (slotId + 1) + " powered up from APM ");
+            sIccId[slotId] = null;
             sFh[slotId] = null;
             sNeedUpdate = true;
             queryIccId(slotId);
@@ -457,6 +461,9 @@ public class SubInfoRecordUpdater extends Handler {
         for (int i = 0; i < PROJECT_SIM_NUM; i++) {
             if (sInsertSimState[i] == SIM_NOT_INSERT) {
                 logd("No SIM inserted in slot " + i + " this time");
+                if (PROJECT_SIM_NUM == 1) {
+                    SubscriptionController.getInstance().updateUserPrefs(false);
+                }
             } else {
                 if (sInsertSimState[i] > 0) {
                     //some special SIMs may have the same IccIds, add suffix to distinguish them
