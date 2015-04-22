@@ -1199,7 +1199,6 @@ public class DctController extends Handler {
             // when requestedSpecifier is same as current factory's subId
             if (requestedSpecifier != subId) {
                 log("requestedSpecifier is not same as mysubId. Bail out.");
-                mPendingReq.put(networkRequest.requestId, networkRequest);
                 return;
             }
 
