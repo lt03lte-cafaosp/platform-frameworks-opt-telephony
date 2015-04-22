@@ -1260,6 +1260,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     }
                 }
             }
+            mPhone.notifySuppServiceFailed(Phone.SuppService.SWITCH);
         }
 
         @Override
@@ -1272,7 +1273,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
         @Override
         public void onCallResumeFailed(ImsCall imsCall, ImsReasonInfo reasonInfo) {
-            // TODO : What should be done?
+            mPhone.notifySuppServiceFailed(Phone.SuppService.SWITCH);
         }
 
         @Override
