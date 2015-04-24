@@ -130,15 +130,6 @@ public abstract class Call {
     }
 
     /**
-    * getExtras
-    * @return Call Extras. Subclasses of Call that support call extras need
-    *         to override this method to return the extras.
-    */
-    public Bundle getExtras() {
-        return null;
-    }
-
-    /**
      * getConferenceParticipants
      * @return List of conference participants. Expected to be overwritten
      *         by subclasses.
