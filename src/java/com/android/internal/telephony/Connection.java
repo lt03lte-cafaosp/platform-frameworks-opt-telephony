@@ -278,23 +278,6 @@ public abstract class Connection {
     }
 
     /**
-     * Get the extras for the connection's call.
-     *
-     * Returns getCall().getExtras()
-     */
-    public Bundle getExtras() {
-        Call c;
-
-        c = getCall();
-
-        if (c == null) {
-            return null;
-        } else {
-            return c.getExtras();
-        }
-    }
-
-    /**
      * Get the details of conference participants. Expected to be
      * overwritten by the Connection subclasses.
      */
@@ -500,6 +483,15 @@ public abstract class Connection {
      */
     public int getVideoState() {
         return mVideoState;
+    }
+
+   /**
+    * getExtras returns the extras associated with a connection
+    * @return null. Subclasses of Connection that support call extras need
+    *         to override this method to return the extras.
+    */
+    public Bundle getExtras() {
+        return null;
     }
 
     /**
