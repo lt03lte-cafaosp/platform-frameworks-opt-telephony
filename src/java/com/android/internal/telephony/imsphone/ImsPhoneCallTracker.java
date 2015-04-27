@@ -950,6 +950,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
         mPhone.notifyPreciseCallStateChanged();
     }
 
+    private void switchAfterConferenceSuccess() {
+        if (DBG) log("switchAfterConferenceSuccess fg =" + mForegroundCall.getState() +
+                ", bg = " + mBackgroundCall.getState());
+
+        // Checks if fg call is idle & then puts bg call to fg
+        if (!(mForegroundCall.getState().isAlive()) &&
+               mBackgroundCall.getState() == ImsPhoneCall.State.HOLDING) {
+            mForegroundCall.switchWith(mBackgroundCall);
+        }
+    }
+
     /* package */
     void resumeWaitingOrHolding() throws CallStateException {
         if (DBG) log("resumeWaitingOrHolding");
@@ -1134,6 +1145,18 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
             case ImsReasonInfo.CODE_FDN_BLOCKED:
                 return DisconnectCause.FDN_BLOCKED;
+
+            /* If CS retry is required, then is it silent redial or user constent? */
+            case ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED:
+                if (mImsManager.isCsRetrySettingEnabledByPlatform(mPhone.getContext())) {
+                    if (mImsManager.isCsRetrySettingEnabledByUser(mPhone.getContext())) {
+                        cause = DisconnectCause.CALL_RETRY_BY_SILENT_REDIAL;
+                    } else {
+                        cause = DisconnectCause.CALL_RETRY_BY_USER_CONSENT;
+                    }
+                }
+                break;
+
             default:
         }
 
@@ -1297,19 +1320,21 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     }
                 }
             }
+            mPhone.notifySuppServiceFailed(Phone.SuppService.SWITCH);
         }
 
         @Override
         public void onCallResumed(ImsCall imsCall) {
             if (DBG) log("onCallResumed");
 
+            switchAfterConferenceSuccess();
             processCallStateChange(imsCall, ImsPhoneCall.State.ACTIVE,
                     DisconnectCause.NOT_DISCONNECTED);
         }
 
         @Override
         public void onCallResumeFailed(ImsCall imsCall, ImsReasonInfo reasonInfo) {
-            // TODO : What should be done?
+            mPhone.notifySuppServiceFailed(Phone.SuppService.SWITCH);
         }
 
         @Override
@@ -1529,6 +1554,9 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onImsDisconnected(ImsReasonInfo imsReasonInfo) {
             if (DBG) log("onImsDisconnected imsReasonInfo=" + imsReasonInfo);
             mPhone.setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
+            mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
+                VoLteServiceState.IMS_UNREGISTERED));
+            mPhone.setImsRegistered(false);
         }
 
         @Override
@@ -1670,6 +1698,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
             // Make mIsSrvccCompleted flag to true after SRVCC complete.
             // After SRVCC complete sometimes SRV_STATUS_UPDATE come late.
             mIsSrvccCompleted = true;
+            mState = PhoneConstants.State.IDLE;
         }
     }
 

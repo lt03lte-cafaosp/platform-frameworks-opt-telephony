@@ -29,6 +29,7 @@ import android.net.NetworkCapabilities;
 import android.net.wifi.WifiManager;
 import android.os.AsyncResult;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -2092,6 +2093,11 @@ public abstract class PhoneBase extends Handler implements Phone {
     }
 
     @Override
+    public boolean isUtEnabled() {
+        return false;
+    }
+
+    @Override
     public ImsPhone relinquishOwnershipOfImsPhone() {
         synchronized (mImsLock) {
             if (mImsPhone == null)
@@ -2327,6 +2333,13 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void addParticipant(String dialString) throws CallStateException {
         throw new CallStateException("addParticipant is not supported in this phone "
                 + this);
+    }
+
+    /* Validate the given extras if the call is for CS domain or not */
+
+    protected boolean shallDialOnCircuitSwitch(Bundle extras) {
+        return (extras != null) &&
+                extras.getBoolean(TelephonyProperties.EXTRA_CALL_DOMAIN, false);
     }
 
     @Override
