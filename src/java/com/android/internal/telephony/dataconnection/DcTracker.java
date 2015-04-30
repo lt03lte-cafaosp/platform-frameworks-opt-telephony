@@ -493,6 +493,11 @@ public final class DcTracker extends DcTrackerBase {
                 return;
             }
 
+            if (!SubscriptionManager.isValidSubId(currentDds)) {
+                log("Can't handle any network request now, currentDds not ready.");
+                return;
+            }
+
             // For clients that do not send subId in NetworkCapabilities,
             // Connectivity will send to all network factories. Accept only
             // when requestedSpecifier is same as current factory's subId
