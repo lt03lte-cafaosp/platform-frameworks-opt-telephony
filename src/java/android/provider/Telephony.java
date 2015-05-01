@@ -240,6 +240,14 @@ public final class Telephony {
         public static final String LOCKED = "locked";
 
         /**
+         * The subscription to which the message belongs to. Its value will be
+         * < 0 if the sub id cannot be determined.
+         * <p>Type: INTEGER (long) </p>
+         * @hide
+         */
+        public static final String SUB_ID = "sub_id";
+
+        /**
          * The phone id to which the message belongs to
          * <p>Type: INTEGER (long) </p>
          * @hide
@@ -436,10 +444,11 @@ public final class Telephony {
                 Uri uri, String address, String body, String subject,
                 Long date, boolean read, boolean deliveryReport, long threadId,
                 int priority) {
-            ContentValues values = new ContentValues(8);
+            ContentValues values = new ContentValues(9);
             Rlog.v(TAG,"Telephony addMessageToUri sub id: " + subId);
 
             int phoneId = SubscriptionManager.getPhoneId(subId);
+            values.put(SUB_ID, subId);
             values.put(PHONE_ID, phoneId);
             values.put(ADDRESS, address);
             if (date != null) {
@@ -1746,6 +1755,13 @@ public final class Telephony {
         public static final String LOCKED = "locked";
 
         /**
+         * The sub id to which message belongs to
+         * <p>Type: INTEGER</p>
+         * @hide
+         */
+        public static final String SUB_ID = "sub_id";
+
+        /**
          * The phone id to which message belongs to
          * <p>Type: INTEGER</p>
          * @hide
@@ -2592,6 +2608,14 @@ public final class Telephony {
              * <P>Type: INTEGER (long)</P>
              */
             public static final String LAST_TRY = "last_try";
+
+            /**
+             * The subscription to which the message belongs to. Its value will be
+             * < 0 if the sub id cannot be determined.
+             * <p>Type: INTEGER (long) </p>
+             * @hide
+             */
+            public static final String SUB_ID = "pending_sub_id";
 
             /**
              * The phone id to which the pending message belongs to
