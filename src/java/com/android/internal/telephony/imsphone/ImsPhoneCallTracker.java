@@ -1143,6 +1143,9 @@ public final class ImsPhoneCallTracker extends CallTracker {
             case ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE:
                 return DisconnectCause.EMERGENCY_PERM_FAILURE;
 
+            case ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE:
+                return DisconnectCause.HO_NOT_FEASIBLE;
+
             case ImsReasonInfo.CODE_FDN_BLOCKED:
                 return DisconnectCause.FDN_BLOCKED;
             default:
