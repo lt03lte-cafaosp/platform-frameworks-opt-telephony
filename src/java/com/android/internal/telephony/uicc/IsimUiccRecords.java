@@ -60,6 +60,7 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
     private String mIsimIst;             // IMS Service Table
     private String[] mIsimPcscf;             // IMS Proxy Call Session Control Function
     private String auth_rsp;
+    private IsimServiceTable mIsimServiceTable;
 
     private final Object mLock = new Object();
 
@@ -231,6 +232,18 @@ public final class IsimUiccRecords extends IccRecords implements IsimRecords {
             byte[] data = (byte[]) ar.result;
             mIsimIst = IccUtils.bytesToHexString(data);
             if (DUMP_RECORDS) log("EF_IST=" + mIsimIst);
+
+            if (mContext.getResources().getBoolean(
+                    com.android.internal.R.bool.config_regional_uicc_capability_check)) {
+                mIsimServiceTable = new IsimServiceTable(data);
+                boolean isGBASupport = mIsimServiceTable.isAvailable(
+                        IsimServiceTable.IsimService.GBA);
+                log("GBA support is " + isGBASupport);
+
+                if (!isGBASupport) {
+                    IsimUiccRecords.this.notifyCapNoSupport();
+                }
+            }
         }
     }
     private class EfIsimPcscfLoaded implements IccRecords.IccRecordLoaded {

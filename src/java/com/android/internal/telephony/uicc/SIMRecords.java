@@ -1054,6 +1054,17 @@ public class SIMRecords extends IccRecords {
 
                 mUsimServiceTable = new UsimServiceTable(data);
                 if (DBG) log("SST: " + mUsimServiceTable);
+
+                if (mContext.getResources().getBoolean(
+                        com.android.internal.R.bool.config_regional_uicc_capability_check)) {
+                    boolean isLteSupport = mUsimServiceTable.isAvailable(
+                            UsimServiceTable.UsimService.EPS_MOBILITY_MANAGEMENT_INFO);
+                    log("LTE support is " + isLteSupport);
+
+                    if (!isLteSupport) {
+                        notifyCapNoSupport();
+                    }
+                }
                 break;
 
             case EVENT_GET_INFO_CPHS_DONE:

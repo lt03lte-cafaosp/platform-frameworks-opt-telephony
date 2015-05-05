@@ -38,11 +38,26 @@ import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import android.view.WindowManager;
+import android.view.View;
+import android.view.LayoutInflater;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.content.res.Resources;
+import android.content.SharedPreferences;
+import android.content.DialogInterface;
+import android.preference.PreferenceManager;
+import android.app.AlertDialog;
+import com.android.internal.R;
+
 /**
  * {@hide}
  */
 public abstract class IccRecords extends Handler implements IccConstants {
     protected static final boolean DBG = true;
+
+    private static boolean capDialogShowed = false;
 
     // ***** Instance Variables
     protected AtomicBoolean mDestroyed = new AtomicBoolean(false);
@@ -815,6 +830,66 @@ public abstract class IccRecords extends Handler implements IccConstants {
     public int getSmsCapacityOnIcc() {
         if (DBG) log("getSmsCapacityOnIcc: " + mSmsCountOnIcc);
         return mSmsCountOnIcc;
+    }
+
+    protected void notifyCapNoSupport(){
+        if (capDialogShowed) {
+            return;
+        }
+
+        final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+
+        //set notify_enabled to true when insert a new uicc
+        String oldIccId = sp.getString("IccId", "");
+        boolean isNewUicc = !oldIccId.equals(mIccId);
+        if (isNewUicc) {
+            SharedPreferences.Editor edit = sp.edit();
+            edit.putString("IccId", mIccId);
+            edit.putBoolean("notify_enabled", true);
+            edit.commit();
+        }
+
+        //don't show dialog
+        boolean notifyEnabled = sp.getBoolean("notify_enabled", true);
+        if (!notifyEnabled) {
+            return;
+        }
+
+        //inflate checkbox
+        LayoutInflater inflater = LayoutInflater.from(mContext);
+        View checkBoxView = inflater.inflate(R.layout.uicc_cap_checkbox, null);
+        CheckBox checkBox = (CheckBox) checkBoxView.findViewById(R.id.uicc_cap_checkbox);
+        checkBox.setChecked(notifyEnabled);
+        checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferences.Editor edit = sp.edit();
+                edit.putBoolean("notify_enabled", isChecked);
+                edit.commit();
+            }
+        });
+
+        Resources r = Resources.getSystem();
+        String title = r.getString(R.string.uicc_cap_title);
+        String message = r.getString(R.string.uicc_cap_msg);
+        String button = r.getString(R.string.uicc_cap_button);
+
+        //create dialog
+        AlertDialog dialog = new AlertDialog.Builder(mContext)
+        .setTitle(title)
+        .setMessage(message)
+        .setView(checkBoxView)
+        .setNeutralButton(button, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //do something
+            }
+        })
+        .create();
+
+        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        dialog.show();
+        capDialogShowed = true;
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
