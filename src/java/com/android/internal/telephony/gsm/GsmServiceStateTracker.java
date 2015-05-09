@@ -1043,6 +1043,13 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
     }
 
     private void pollStateDone() {
+        if (Build.IS_DEBUGGABLE && SystemProperties.getBoolean(PROP_FORCE_ROAMING, false)) {
+            mNewSS.setVoiceRoaming(true);
+            mNewSS.setDataRoaming(true);
+        }
+        useDataRegStateForDataOnlyDevices();
+        resetServiceStateInIwlanMode();
+
         if (DBG) {
             log("Poll ServiceState done: " +
                 " oldSS=[" + mSS + "] newSS=[" + mNewSS + "]" +
@@ -1051,13 +1058,6 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                 " oldReasonDataDenied=" + mReasonDataDenied +
                 " mNewReasonDataDenied=" + mNewReasonDataDenied);
         }
-
-        if (Build.IS_DEBUGGABLE && SystemProperties.getBoolean(PROP_FORCE_ROAMING, false)) {
-            mNewSS.setVoiceRoaming(true);
-            mNewSS.setDataRoaming(true);
-        }
-
-        useDataRegStateForDataOnlyDevices();
 
         boolean hasRegistered =
             mSS.getVoiceRegState() != ServiceState.STATE_IN_SERVICE
@@ -1100,8 +1100,6 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         boolean hasLocationChanged = !mNewCellLoc.equals(mCellLoc);
 
         boolean needNotifyData = (mSS.getCssIndicator() != mNewSS.getCssIndicator());
-
-        resetServiceStateInIwlanMode();
 
         // Add an event log when connection state changes
         if (hasVoiceRegStateChanged || hasDataRegStateChanged) {
