@@ -882,10 +882,7 @@ public class GSMPhone extends PhoneBase {
             throws CallStateException {
         ImsPhone imsPhone = mImsPhone;
 
-        boolean imsUseEnabled =
-                ImsManager.isVolteEnabledByPlatform(mContext) &&
-                ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext) &&
-                ImsManager.isNonTtyOrTtyOnVolteEnabled(mContext);
+        boolean imsUseEnabled = true;
         if (!imsUseEnabled) {
             Rlog.w(LOG_TAG, "IMS is disabled: forced to CS");
         }
