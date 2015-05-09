@@ -1067,13 +1067,13 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
     }
 
     protected void pollStateDone() {
-        if (DBG) log("pollStateDone: cdma oldSS=[" + mSS + "] newSS=[" + mNewSS + "]");
-
         if (Build.IS_DEBUGGABLE && SystemProperties.getBoolean(PROP_FORCE_ROAMING, false)) {
             mNewSS.setRoaming(true);
         }
 
         useDataRegStateForDataOnlyDevices();
+        resetServiceStateInIwlanMode();
+        if (DBG) log("pollStateDone: cdma oldSS=[" + mSS + "] newSS=[" + mNewSS + "]");
 
         boolean hasRegistered =
             mSS.getVoiceRegState() != ServiceState.STATE_IN_SERVICE
@@ -1107,8 +1107,6 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
         boolean hasRoamingOff = mSS.getRoaming() && !mNewSS.getRoaming();
 
         boolean hasLocationChanged = !mNewCellLoc.equals(mCellLoc);
-
-        resetServiceStateInIwlanMode();
 
         // Add an event log when connection state changes
         if (mSS.getVoiceRegState() != mNewSS.getVoiceRegState() ||
