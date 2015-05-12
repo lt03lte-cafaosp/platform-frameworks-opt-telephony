@@ -917,10 +917,10 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
             } else if (mPhone.isMccMncMarkedAsRoaming(mNewSS.getOperatorNumeric())&&mShowRoamingMessage) {
                 ShowRoamingWarning();
                 mShowRoamingMessage = false;
+            }
                 mNewSS.setRoaming(roaming);
                 mNewSS.setEmergencyOnly(mEmergencyOnly);
                 pollStateDone();
-            }
         }
     }
 
