@@ -44,6 +44,7 @@ import android.telephony.PhoneNumberUtils;
 import android.telephony.Rlog;
 import android.telephony.ServiceState;
 import android.telephony.VoLteServiceState;
+import android.widget.Toast;
 
 import com.android.ims.ImsCall;
 import com.android.ims.ImsCallProfile;
@@ -1352,6 +1353,19 @@ public final class ImsPhoneCallTracker extends CallTracker {
             ImsPhoneConnection conn = findConnection(call);
             if (conn != null) {
                 conn.updateConferenceParticipants(participants);
+            }
+        }
+
+        @Override
+        public void onCallRetryErrorReceived(ImsCall imsCall, ImsReasonInfo reasonInfo) {
+            if (DBG) {
+                log("onCallRetryErrorReceived ::  reasonInfo=" + reasonInfo);
+            }
+
+            if (mPhone != null) {
+                String msg = "LTE HD voice is unavailable. 3G voice call will be connected." +
+                        "Server Error code: " + reasonInfo.getCode();
+                Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
             }
         }
     };
