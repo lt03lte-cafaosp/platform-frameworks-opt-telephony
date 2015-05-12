@@ -918,10 +918,11 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                        && mShowRoamingMessage) {
                 ShowRoamingWarning();
                 mShowRoamingMessage = false;
-                mNewSS.setRoaming(roaming);
-                mNewSS.setEmergencyOnly(mEmergencyOnly);
-                pollStateDone();
             }
+
+            mNewSS.setRoaming(roaming);
+            mNewSS.setEmergencyOnly(mEmergencyOnly);
+            pollStateDone();
         }
     }
 
