@@ -3117,8 +3117,8 @@ public final class DcTracker extends DcTrackerBase {
     public void registerForAllDataDisconnected(Handler h, int what, Object obj) {
         mAllDataDisconnectedRegistrants.addUnique(h, what, obj);
 
-        if (isDisconnected()) {
-            log("notify All Data Disconnected");
+        if (!isConnected()) {
+            log("No Apncontext is connected, notify All Data Disconnected");
             notifyAllDataDisconnected();
         }
     }

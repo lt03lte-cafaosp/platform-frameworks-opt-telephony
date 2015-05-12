@@ -228,6 +228,34 @@ public class ImsPhone extends ImsPhoneBase {
         return mCT;
     }
 
+    public boolean getCallForwardingIndicator() {
+        boolean cf = false;
+        IccRecords r = getIccRecords();
+        if (r != null && r.isCallForwardStatusStored()) {
+            cf = r.getVoiceCallForwardingFlag();
+        } else {
+            cf = getCallForwardingPreference();
+        }
+        return cf;
+    }
+
+    /**
+     * Used to check if Call Forwarding status is present on sim card. If not, a message is
+     * sent so we can check if the CF status is stored as a Shared Preference.
+     */
+    public void updateCallForwardStatus() {
+        Rlog.d(LOG_TAG, "updateCallForwardStatus");
+        IccRecords r = getIccRecords();
+        if (r != null && r.isCallForwardStatusStored()) {
+            // The Sim card has the CF info
+            Rlog.d(LOG_TAG, "Callforwarding info is present on sim");
+            notifyCallForwardingIndicator();
+        } else {
+            Message msg = obtainMessage(EVENT_GET_CALLFORWARDING_STATUS);
+            sendMessage(msg);
+        }
+    }
+
     @Override
     public List<? extends ImsPhoneMmiCode>
     getPendingMmiCodes() {
@@ -1118,6 +1146,12 @@ public class ImsPhone extends ImsPhoneBase {
     }
 
     @Override
+    public String getSubscriberId() {
+        IccRecords r = getIccRecords();
+        return (r != null) ? r.getIMSI() : null;
+    }
+
+    @Override
     public int getPhoneId() {
         return mDefaultPhone.getPhoneId();
     }
@@ -1159,6 +1193,7 @@ public class ImsPhone extends ImsPhoneBase {
             for (int i = 0, s = infos.length; i < s; i++) {
                 if (infos[i].mCondition == ImsUtInterface.CDIV_CF_UNCONDITIONAL) {
                     if (r != null) {
+                        setCallForwardingPreference(infos[i].mStatus == 1);
                         r.setVoiceCallForwardingFlag(1, (infos[i].mStatus == 1),
                             infos[i].mNumber);
                     }
@@ -1218,9 +1253,11 @@ public class ImsPhone extends ImsPhoneBase {
                 IccRecords r = getIccRecords();
                 Cf cf = (Cf) ar.userObj;
                 if (cf.mIsCfu && ar.exception == null && r != null) {
+                    setCallForwardingPreference(msg.arg1 == 1);
                     r.setVoiceCallForwardingFlag(1, msg.arg1 == 1, cf.mSetCfNumber);
                 }
                 sendResponse(cf.mOnComplete, null, ar.exception);
+                updateCallForwardStatus();
                 break;
 
             case EVENT_GET_CALL_FORWARD_DONE:
@@ -1229,6 +1266,7 @@ public class ImsPhone extends ImsPhoneBase {
                     cfInfos = handleCfQueryResult((ImsCallForwardInfo[])ar.result);
                 }
                 sendResponse((Message) ar.userObj, cfInfos, ar.exception);
+                updateCallForwardStatus();
                 break;
 
              case EVENT_SET_CALL_FORWARD_TIMER_DONE:
@@ -1262,6 +1300,12 @@ public class ImsPhone extends ImsPhoneBase {
              case EVENT_SET_CALL_BARRING_DONE:
              case EVENT_SET_CALL_WAITING_DONE:
                 sendResponse((Message) ar.userObj, null, ar.exception);
+                break;
+
+             case EVENT_GET_CALLFORWARDING_STATUS:
+                boolean cfEnabled = getCallForwardingPreference();
+                if (DBG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
+                notifyCallForwardingIndicator();
                 break;
 
              default:

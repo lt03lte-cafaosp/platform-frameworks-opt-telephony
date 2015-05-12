@@ -914,6 +914,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
         mPhone.notifyPreciseCallStateChanged();
     }
 
+    private void switchAfterConferenceSuccess() {
+        if (DBG) log("switchAfterConferenceSuccess fg =" + mForegroundCall.getState() +
+                ", bg = " + mBackgroundCall.getState());
+
+        // Checks if fg call is idle & then puts bg call to fg
+        if (!(mForegroundCall.getState().isAlive()) &&
+               mBackgroundCall.getState() == ImsPhoneCall.State.HOLDING) {
+            mForegroundCall.switchWith(mBackgroundCall);
+        }
+    }
+
     /* package */
     void resumeWaitingOrHolding() throws CallStateException {
         if (DBG) log("resumeWaitingOrHolding");
@@ -1267,6 +1278,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onCallResumed(ImsCall imsCall) {
             if (DBG) log("onCallResumed");
 
+            switchAfterConferenceSuccess();
             processCallStateChange(imsCall, ImsPhoneCall.State.ACTIVE,
                     DisconnectCause.NOT_DISCONNECTED);
         }
@@ -1586,6 +1598,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
             // Make mIsSrvccCompleted flag to true after SRVCC complete.
             // After SRVCC complete sometimes SRV_STATUS_UPDATE come late.
             mIsSrvccCompleted = true;
+            mState = PhoneConstants.State.IDLE;
         }
     }
 
