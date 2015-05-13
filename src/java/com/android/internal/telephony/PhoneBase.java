@@ -455,19 +455,15 @@ public abstract class PhoneBase extends Handler implements Phone {
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
 
-        // Monitor IMS service - but first poll to see if already up (could miss
-        // intent)
-        ImsManager imsManager = ImsManager.getInstance(mContext, getPhoneId());
-        if (imsManager != null && imsManager.isServiceAvailable()) {
-            mImsServiceReady = true;
-            updateImsPhone();
-        }
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
-        mContext.registerReceiver(mImsIntentReceiver, filter);
+        // Monitor IMS service
+        if (getPhoneType() != PhoneConstants.PHONE_TYPE_SIP) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
+            mContext.registerReceiver(mImsIntentReceiver, filter);
 
-        mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+            mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+        }
         mCi.setOnUnsolOemHookRaw(this, EVENT_UNSOL_OEM_HOOK_RAW, null);
         Rlog.d(LOG_TAG, "mOosIsDisconnect=" + mOosIsDisconnect);
     }
