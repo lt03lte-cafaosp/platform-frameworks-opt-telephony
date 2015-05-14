@@ -58,8 +58,7 @@ public class ImsPhoneConnection extends Connection {
 
     private String mPostDialString;      // outgoing calls only
     private boolean mDisconnected;
-
-    private Bundle mCallExtras = null;
+    private Bundle mDialExtras = null;
 
     private boolean mMptyState = false;
 
@@ -226,7 +225,7 @@ public class ImsPhoneConnection extends Connection {
         mCreateTime = System.currentTimeMillis();
 
         if (extras != null) {
-            mCallExtras = extras;
+            mDialExtras = extras;
         }
 
         mParent = parent;
@@ -792,8 +791,8 @@ public class ImsPhoneConnection extends Connection {
         return 0;
     }
 
-    public Bundle getCallExtras() {
-        return mCallExtras;
+    public Bundle getDialExtras() {
+        return mDialExtras;
     }
 
     /**
@@ -815,6 +814,24 @@ public class ImsPhoneConnection extends Connection {
             Rlog.e(LOG_TAG, "onDisconnectConferenceParticipant: no session in place. "+
                     "Failed to disconnect endpoint = " + endpoint);
         }
+    }
+
+    @Override
+    public Bundle getExtras() {
+        Bundle extras = null;
+        final ImsCall call = getImsCall();
+
+        if (call != null) {
+            final ImsCallProfile callProfile = call.getCallProfile();
+            if (callProfile != null) {
+                extras = callProfile.mCallExtras;
+            }
+        }
+        if (extras == null) {
+            if (DBG) Rlog.d(LOG_TAG, "Call profile extras are null.");
+            return null;
+        }
+        return extras;
     }
 
     /**
