@@ -1734,14 +1734,14 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 break;
             case EVENT_DIAL_PENDINGMO:
                 dialInternal(mPendingMO, mClirMode, mPendingCallVideoState,
-                    mPendingMO.getCallExtras());
+                    mPendingMO.getDialExtras());
                 break;
 
             case EVENT_EXIT_ECM_RESPONSE_CDMA:
                 // no matter the result, we still do the same here
                 if (pendingCallInEcm) {
                     dialInternal(mPendingMO, pendingCallClirMode,
-                            mPendingCallVideoState, mPendingMO.getCallExtras());
+                            mPendingCallVideoState, mPendingMO.getDialExtras());
                     pendingCallInEcm = false;
                 }
                 mPhone.unsetOnEcbModeExitResponse(this);

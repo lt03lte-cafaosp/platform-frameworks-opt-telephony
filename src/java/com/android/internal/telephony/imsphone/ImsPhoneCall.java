@@ -117,24 +117,6 @@ public class ImsPhoneCall extends Call {
     }
 
     @Override
-    public Bundle getExtras() {
-        Bundle imsCallExtras = null;
-        ImsCall call = getImsCall();
-        ImsCallProfile callProfile;
-
-        if (call != null) {
-            callProfile = call.getCallProfile();
-            if (callProfile != null) {
-                imsCallExtras = callProfile.mCallExtras;
-            }
-        }
-        if (imsCallExtras == null) {
-            if (DBG) Rlog.d(LOG_TAG, "ImsCall extras are null.");
-        }
-        return imsCallExtras;
-    }
-
-    @Override
     public List<ConferenceParticipant> getConferenceParticipants() {
          ImsCall call = getImsCall();
          if (call == null) {
