@@ -54,6 +54,7 @@ import com.android.ims.ImsException;
 import com.android.ims.ImsManager;
 import com.android.ims.ImsReasonInfo;
 import com.android.ims.ImsServiceClass;
+import com.android.ims.ImsSuppServiceNotification;
 import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.CallGroup;
 import com.android.ims.internal.IImsVideoCallProvider;
@@ -914,6 +915,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
         mPhone.notifyPreciseCallStateChanged();
     }
 
+    private void switchAfterConferenceSuccess() {
+        if (DBG) log("switchAfterConferenceSuccess fg =" + mForegroundCall.getState() +
+                ", bg = " + mBackgroundCall.getState());
+
+        // Checks if fg call is idle & then puts bg call to fg
+        if (!(mForegroundCall.getState().isAlive()) &&
+               mBackgroundCall.getState() == ImsPhoneCall.State.HOLDING) {
+            mForegroundCall.switchWith(mBackgroundCall);
+        }
+    }
+
     /* package */
     void resumeWaitingOrHolding() throws CallStateException {
         if (DBG) log("resumeWaitingOrHolding");
@@ -1267,6 +1279,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onCallResumed(ImsCall imsCall) {
             if (DBG) log("onCallResumed");
 
+            switchAfterConferenceSuccess();
             processCallStateChange(imsCall, ImsPhoneCall.State.ACTIVE,
                     DisconnectCause.NOT_DISCONNECTED);
         }
@@ -1284,13 +1297,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 mPhone.stopOnHoldTone();
                 mOnHoldToneStarted = false;
             }
-
-            SuppServiceNotification supp = new SuppServiceNotification();
-            // Type of notification: 0 = MO; 1 = MT
-            // Refer SuppServiceNotification class documentation.
-            supp.notificationType = 1;
-            supp.code = SuppServiceNotification.MT_CODE_CALL_RETRIEVED;
-            mPhone.notifySuppSvcNotification(supp);
         }
 
         @Override
@@ -1304,12 +1310,20 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     mOnHoldToneStarted = true;
                 }
             }
+        }
+
+        @Override
+        public void onCallSuppServiceReceived(ImsCall call,
+                ImsSuppServiceNotification suppServiceInfo) {
+            if (DBG) log("onCallSuppServiceReceived: suppServiceInfo=" + suppServiceInfo);
 
             SuppServiceNotification supp = new SuppServiceNotification();
-            // Type of notification: 0 = MO; 1 = MT
-            // Refer SuppServiceNotification class documentation.
-            supp.notificationType = 1;
-            supp.code = SuppServiceNotification.MT_CODE_CALL_ON_HOLD;
+            supp.notificationType = suppServiceInfo.notificationType ;
+            supp.code = suppServiceInfo.code;
+            supp.index = suppServiceInfo.index;
+            supp.number = suppServiceInfo.number;
+            supp.history = suppServiceInfo.history;
+
             mPhone.notifySuppSvcNotification(supp);
         }
 
