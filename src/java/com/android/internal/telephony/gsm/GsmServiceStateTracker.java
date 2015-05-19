@@ -916,8 +916,11 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                 roaming = false;
             } else if (mPhone.isMccMncMarkedAsRoaming(mNewSS.getOperatorNumeric())) {
                 roaming = true;
-            } else if (mPhone.isMccMncMarkedAsRoaming(mNewSS.getOperatorNumeric())
-                       && mShowRoamingMessage) {
+            }
+
+            if (roaming == true && mShowRoamingMessage
+                 && mPhoneBase.getContext().getResources().getBoolean(
+                   com.android.internal.R.bool.config_regional_mcc_mnc_roaming_setting)) {
                 ShowRoamingWarning();
                 mShowRoamingMessage = false;
             }
