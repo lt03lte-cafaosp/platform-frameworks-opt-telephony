@@ -55,6 +55,7 @@ import com.android.ims.ImsException;
 import com.android.ims.ImsManager;
 import com.android.ims.ImsReasonInfo;
 import com.android.ims.ImsServiceClass;
+import com.android.ims.ImsSuppServiceNotification;
 import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.CallGroup;
 import com.android.ims.internal.IImsVideoCallProvider;
@@ -1143,6 +1144,9 @@ public final class ImsPhoneCallTracker extends CallTracker {
             case ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE:
                 return DisconnectCause.EMERGENCY_PERM_FAILURE;
 
+            case ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE:
+                return DisconnectCause.HO_NOT_FEASIBLE;
+
             case ImsReasonInfo.CODE_FDN_BLOCKED:
                 return DisconnectCause.FDN_BLOCKED;
 
@@ -1345,13 +1349,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 mPhone.stopOnHoldTone();
                 mOnHoldToneStarted = false;
             }
-
-            SuppServiceNotification supp = new SuppServiceNotification();
-            // Type of notification: 0 = MO; 1 = MT
-            // Refer SuppServiceNotification class documentation.
-            supp.notificationType = 1;
-            supp.code = SuppServiceNotification.MT_CODE_CALL_RETRIEVED;
-            mPhone.notifySuppSvcNotification(supp);
         }
 
         @Override
@@ -1365,12 +1362,20 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     mOnHoldToneStarted = true;
                 }
             }
+        }
+
+        @Override
+        public void onCallSuppServiceReceived(ImsCall call,
+                ImsSuppServiceNotification suppServiceInfo) {
+            if (DBG) log("onCallSuppServiceReceived: suppServiceInfo=" + suppServiceInfo);
 
             SuppServiceNotification supp = new SuppServiceNotification();
-            // Type of notification: 0 = MO; 1 = MT
-            // Refer SuppServiceNotification class documentation.
-            supp.notificationType = 1;
-            supp.code = SuppServiceNotification.MT_CODE_CALL_ON_HOLD;
+            supp.notificationType = suppServiceInfo.notificationType ;
+            supp.code = suppServiceInfo.code;
+            supp.index = suppServiceInfo.index;
+            supp.number = suppServiceInfo.number;
+            supp.history = suppServiceInfo.history;
+
             mPhone.notifySuppSvcNotification(supp);
         }
 
@@ -1468,6 +1473,19 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
             String msg = reasonInfo.getExtraMessage();
             if (mPhone != null && msg != null) {
+                Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        @Override
+        public void onCallRetryErrorReceived(ImsCall imsCall, ImsReasonInfo reasonInfo) {
+            if (DBG) {
+                log("onCallRetryErrorReceived ::  reasonInfo=" + reasonInfo);
+            }
+
+            if (mPhone != null) {
+                String msg = "LTE HD voice is unavailable. 3G voice call will be connected." +
+                        "Server Error code: " + reasonInfo.getCode();
                 Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
             }
         }
@@ -1732,14 +1750,14 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 break;
             case EVENT_DIAL_PENDINGMO:
                 dialInternal(mPendingMO, mClirMode, mPendingCallVideoState,
-                    mPendingMO.getCallExtras());
+                    mPendingMO.getDialExtras());
                 break;
 
             case EVENT_EXIT_ECM_RESPONSE_CDMA:
                 // no matter the result, we still do the same here
                 if (pendingCallInEcm) {
                     dialInternal(mPendingMO, pendingCallClirMode,
-                            mPendingCallVideoState, mPendingMO.getCallExtras());
+                            mPendingCallVideoState, mPendingMO.getDialExtras());
                     pendingCallInEcm = false;
                 }
                 mPhone.unsetOnEcbModeExitResponse(this);
