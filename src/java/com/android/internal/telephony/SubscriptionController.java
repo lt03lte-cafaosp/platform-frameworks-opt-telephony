@@ -213,10 +213,6 @@ public class SubscriptionController extends ISub.Stub {
         mContext = c;
         mCM = CallManager.getInstance();
 
-        if(ServiceManager.getService("isub") == null) {
-                ServiceManager.addService("isub", this);
-        }
-
         logdl("[SubscriptionController] init by Context");
         mDataConnectionHandler = new DataConnectionHandler();
 
@@ -225,6 +221,9 @@ public class SubscriptionController extends ISub.Stub {
         mSchedulerAc = new DdsSchedulerAc();
         mSchedulerAc.connect(mContext, mDataConnectionHandler, mScheduler.getHandler());
 
+        if (ServiceManager.getService("isub") == null) {
+            ServiceManager.addService("isub", this);
+        }
     }
 
     public long getSubIdFromNetworkRequest(NetworkRequest n) {
