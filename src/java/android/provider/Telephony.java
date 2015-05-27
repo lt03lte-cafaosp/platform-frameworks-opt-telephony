@@ -16,6 +16,8 @@
 
 package android.provider;
 
+import android.util.SeempApiEnum;
+import android.util.SeempLog;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.content.ComponentName;
@@ -315,6 +317,7 @@ public final class Telephony {
          * @hide
          */
         public static Cursor query(ContentResolver cr, String[] projection) {
+            SeempLog.record(SeempApiEnum.SEEMP_API_Telephony__query, "");
             return cr.query(CONTENT_URI, projection, null, null, DEFAULT_SORT_ORDER);
         }
 
@@ -324,6 +327,9 @@ public final class Telephony {
          */
         public static Cursor query(ContentResolver cr, String[] projection,
                 String where, String orderBy) {
+            SeempLog.record(SeempApiEnum.SEEMP_API_Telephony__query, "where, " +
+                    ((where == null) ? "null":where) + "orderBy, " +
+                    ((orderBy == null) ? "null":orderBy));
             return cr.query(CONTENT_URI, projection, where,
                     null, orderBy == null ? DEFAULT_SORT_ORDER : orderBy);
         }
@@ -2044,6 +2050,7 @@ public final class Telephony {
          */
         public static Cursor query(
                 ContentResolver cr, String[] projection) {
+            SeempLog.record(SeempApiEnum.SEEMP_API_Telephony__query, "");
             return cr.query(CONTENT_URI, projection, null, null, DEFAULT_SORT_ORDER);
         }
 
@@ -2054,6 +2061,9 @@ public final class Telephony {
         public static Cursor query(
                 ContentResolver cr, String[] projection,
                 String where, String orderBy) {
+            SeempLog.record(SeempApiEnum.SEEMP_API_Telephony__query, "where, " +
+                    ((where == null) ? "null":where) + "orderBy, " +
+                    ((orderBy == null) ? "null":orderBy));
             return cr.query(CONTENT_URI, projection,
                     where, null, orderBy == null ? DEFAULT_SORT_ORDER : orderBy);
         }

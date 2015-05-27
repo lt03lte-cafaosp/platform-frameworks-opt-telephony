@@ -16,6 +16,8 @@
 
 package android.telephony;
 
+import android.util.SeempApiEnum;
+import android.util.SeempLog;
 import android.app.ActivityThread;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
@@ -257,6 +259,11 @@ public final class SmsManager {
     public void sendTextMessage(
             String destinationAddress, String scAddress, String text,
             PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__sendTextMessage,
+                "destinationAddress, " + ((destinationAddress == null) ?
+                "null":destinationAddress) + "scAddress, " + ((scAddress == null) ?
+                "null":scAddress) + "text, " + ((text == null) ? "null":text));
         if (TextUtils.isEmpty(destinationAddress)) {
             throw new IllegalArgumentException("Invalid destinationAddress");
         }
@@ -322,6 +329,11 @@ public final class SmsManager {
     public void sendTextMessage(String destinationAddress, String scAddress, String text,
             PendingIntent sentIntent, PendingIntent deliveryIntent, int priority,
             boolean isExpectMore, int validityPeriod) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__sendTextMessage,
+                "destinationAddress, " + ((destinationAddress == null) ?
+                "null":destinationAddress) + "scAddress, " + ((scAddress == null) ?
+                "null":scAddress) + "text, " + ((text == null) ? "null":text));
         if (TextUtils.isEmpty(destinationAddress)) {
             throw new IllegalArgumentException("Invalid destinationAddress");
         }
@@ -443,6 +455,11 @@ public final class SmsManager {
     public void sendMultipartTextMessage(
             String destinationAddress, String scAddress, ArrayList<String> parts,
             ArrayList<PendingIntent> sentIntents, ArrayList<PendingIntent> deliveryIntents) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_SmsManager__sendMultipartTextMessage,
+                "destinationAddress, " + ((destinationAddress == null) ?
+                "null":destinationAddress) + "scAddress, " +
+                ((scAddress == null) ? "null":scAddress));
         if (TextUtils.isEmpty(destinationAddress)) {
             throw new IllegalArgumentException("Invalid destinationAddress");
         }
@@ -539,6 +556,10 @@ public final class SmsManager {
             String destinationAddress, String scAddress, ArrayList<String> parts,
             ArrayList<PendingIntent> sentIntents, ArrayList<PendingIntent> deliveryIntents,
             int priority, boolean isExpectMore, int validityPeriod) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_SmsManager__sendMultipartTextMessage,
+                "destinationAddress, " + ((destinationAddress == null) ? "null":destinationAddress)
+                + "scAddress, " + ((scAddress == null) ? "null":scAddress));
         if (TextUtils.isEmpty(destinationAddress)) {
             throw new IllegalArgumentException("Invalid destinationAddress");
         }
@@ -605,6 +626,11 @@ public final class SmsManager {
     public void sendDataMessage(
             String destinationAddress, String scAddress, short destinationPort,
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__sendDataMessage,
+                "destinationAddress, " + ((destinationAddress == null) ?
+                "null":destinationAddress) + "scAddress, " +
+                ((scAddress == null) ? "null":scAddress));
         if (TextUtils.isEmpty(destinationAddress)) {
             throw new IllegalArgumentException("Invalid destinationAddress");
         }
@@ -659,6 +685,10 @@ public final class SmsManager {
             String destinationAddress, String scAddress, short destinationPort,
             short originatorPort, byte[] data, PendingIntent sentIntent,
             PendingIntent deliveryIntent) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__sendDataMessage,
+                "destinationAddress, " + ((destinationAddress == null) ? "null":destinationAddress)
+                + "scAddress, " + ((scAddress == null) ? "null":scAddress));
         if (TextUtils.isEmpty(destinationAddress)) {
             throw new IllegalArgumentException("Invalid destinationAddress");
         }
@@ -790,6 +820,7 @@ public final class SmsManager {
      * {@hide}
      */
     public boolean copyMessageToIcc(byte[] smsc, byte[] pdu,int status) {
+        SeempLog.record(SeempApiEnum.SEEMP_API_android_telephony_SmsManager__copyMessageToIcc, "");
         boolean success = false;
 
         if (null == pdu) {
@@ -821,6 +852,8 @@ public final class SmsManager {
      */
     public boolean
     deleteMessageFromIcc(int messageIndex) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_SmsManager__deleteMessageFromIcc, "");
         boolean success = false;
         byte[] pdu = new byte[IccConstants.SMS_RECORD_LENGTH-1];
         Arrays.fill(pdu, (byte)0xff);
@@ -854,6 +887,8 @@ public final class SmsManager {
      * {@hide}
      */
     public boolean updateMessageOnIcc(int messageIndex, int newStatus, byte[] pdu) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_SmsManager__updateMessageOnIcc, "");
         boolean success = false;
 
         try {

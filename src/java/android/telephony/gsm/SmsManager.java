@@ -16,6 +16,8 @@
 
 package android.telephony.gsm;
 
+import android.util.SeempApiEnum;
+import android.util.SeempLog;
 import android.app.PendingIntent;
 
 import java.util.ArrayList;
@@ -76,6 +78,10 @@ import java.util.ArrayList;
     public final void sendTextMessage(
             String destinationAddress, String scAddress, String text,
             PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SeempLog.record(SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__sendTextMessage,
+                "destinationAddress, " + ((destinationAddress == null) ? "null":destinationAddress)
+                + "scAddress, " + ((scAddress == null) ? "null":scAddress) + "text, " +
+                ((text == null) ? "null":text));
         mSmsMgrProxy.sendTextMessage(destinationAddress, scAddress, text,
                 sentIntent, deliveryIntent);
     }
@@ -128,6 +134,11 @@ import java.util.ArrayList;
     public final void sendMultipartTextMessage(
             String destinationAddress, String scAddress, ArrayList<String> parts,
             ArrayList<PendingIntent> sentIntents, ArrayList<PendingIntent> deliveryIntents) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_SmsManager__sendMultipartTextMessage,
+                "destinationAddress, " + ((destinationAddress == null) ?
+                "null":destinationAddress) + "scAddress, " +
+                ((scAddress == null) ? "null":scAddress));
         mSmsMgrProxy.sendMultipartTextMessage(destinationAddress, scAddress, parts,
                 sentIntents, deliveryIntents);
     }
@@ -161,6 +172,10 @@ import java.util.ArrayList;
     public final void sendDataMessage(
             String destinationAddress, String scAddress, short destinationPort,
             byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__sendDataMessage,
+                "destinationAddress, " + ((destinationAddress == null) ? "null":destinationAddress)
+                + "scAddress, " + ((scAddress == null) ? "null":scAddress));
         mSmsMgrProxy.sendDataMessage(destinationAddress, scAddress, destinationPort,
                 data, sentIntent, deliveryIntent);
     }
@@ -178,6 +193,8 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final boolean copyMessageToSim(byte[] smsc, byte[] pdu, int status) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__copyMessageToSim, "");
         return mSmsMgrProxy.copyMessageToIcc(smsc, pdu, status);
     }
 
@@ -191,6 +208,8 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final boolean deleteMessageFromSim(int messageIndex) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__deleteMessageFromSim, "");
         return mSmsMgrProxy.deleteMessageFromIcc(messageIndex);
     }
 
@@ -208,6 +227,8 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final boolean updateMessageOnSim(int messageIndex, int newStatus, byte[] pdu) {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__updateMessageOnSim, "");
         return mSmsMgrProxy.updateMessageOnIcc(messageIndex, newStatus, pdu);
     }
 
@@ -219,6 +240,8 @@ import java.util.ArrayList;
      */
     @Deprecated
     public final ArrayList<android.telephony.SmsMessage> getAllMessagesFromSim() {
+        SeempLog.record(
+                SeempApiEnum.SEEMP_API_android_telephony_gsm_SmsManager__getAllMessagesFromSim, "");
         return android.telephony.SmsManager.getDefault().getAllMessagesFromIcc();
     }
 
