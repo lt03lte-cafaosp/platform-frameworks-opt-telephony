@@ -936,4 +936,16 @@ public abstract class ServiceStateTracker extends Handler {
             }
         }
     }
+
+    /**
+     * {@hide}
+     */
+    public boolean isRatLte(int rat) {
+        if ((rat == ServiceState.RIL_RADIO_TECHNOLOGY_LTE)
+                || (rat == ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
