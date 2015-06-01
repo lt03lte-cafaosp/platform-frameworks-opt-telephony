@@ -1502,6 +1502,11 @@ public class PhoneProxy extends Handler implements Phone {
     }
 
     @Override
+    public boolean isUtEnabled() {
+        return mActivePhone.isUtEnabled();
+    }
+
+    @Override
     public ImsPhone relinquishOwnershipOfImsPhone() { return null; }
 
     @Override

@@ -71,6 +71,12 @@ public final class CdmaCall extends Call {
     }
 
     @Override
+    public void hangupWithReason(int disconnectCause) throws CallStateException {
+        //TODO not passing disconnect cause in CS.
+        hangup();
+    }
+
+    @Override
     public String
     toString() {
         return mState.toString();

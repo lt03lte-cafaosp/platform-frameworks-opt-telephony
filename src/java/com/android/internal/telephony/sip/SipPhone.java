@@ -496,6 +496,12 @@ public class SipPhone extends SipPhoneBase {
         }
 
         @Override
+        public void hangupWithReason(int disconnectCause) throws CallStateException {
+            //TODO not passing disconnect cause in CS.
+            hangup();
+        }
+
+        @Override
         public void hangup() throws CallStateException {
             synchronized (SipPhone.class) {
                 if (mState.isAlive()) {
@@ -926,6 +932,12 @@ public class SipPhone extends SipPhoneBase {
         @Override
         protected Phone getPhone() {
             return mOwner.getPhone();
+        }
+
+        @Override
+        public void hangupWithReason(int disconnectCause) throws CallStateException {
+            //TODO not passing disconnect cause in CS.
+            hangup();
         }
 
         @Override

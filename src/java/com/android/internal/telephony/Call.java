@@ -90,6 +90,12 @@ public abstract class Call {
     public abstract boolean isMultiparty();
     public abstract void hangup() throws CallStateException;
 
+    /**
+     * hangupWithReason
+     *
+     * @param disconnectCause to send the reason for disconnect
+     */
+    public abstract void hangupWithReason(int disconnectCause) throws CallStateException;
 
     /**
      * hasConnection
@@ -121,15 +127,6 @@ public abstract class Call {
      */
     public State getState() {
         return mState;
-    }
-
-    /**
-    * getExtras
-    * @return Call Extras. Subclasses of Call that support call extras need
-    *         to override this method to return the extras.
-    */
-    public Bundle getExtras() {
-        return null;
     }
 
     /**

@@ -29,6 +29,7 @@ import android.net.NetworkCapabilities;
 import android.net.wifi.WifiManager;
 import android.os.AsyncResult;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -462,12 +463,14 @@ public abstract class PhoneBase extends Handler implements Phone {
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
 
         // Monitor IMS service
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
-        mContext.registerReceiver(mImsIntentReceiver, filter);
+        if (getPhoneType() != PhoneConstants.PHONE_TYPE_SIP) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
+            mContext.registerReceiver(mImsIntentReceiver, filter);
 
-        mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+            mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+        }
         mCi.setOnUnsolOemHookRaw(this, EVENT_UNSOL_OEM_HOOK_RAW, null);
         Rlog.d(LOG_TAG, "mOosIsDisconnect=" + mOosIsDisconnect);
     }
@@ -2092,6 +2095,11 @@ public abstract class PhoneBase extends Handler implements Phone {
     }
 
     @Override
+    public boolean isUtEnabled() {
+        return false;
+    }
+
+    @Override
     public ImsPhone relinquishOwnershipOfImsPhone() {
         synchronized (mImsLock) {
             if (mImsPhone == null)
@@ -2327,6 +2335,13 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void addParticipant(String dialString) throws CallStateException {
         throw new CallStateException("addParticipant is not supported in this phone "
                 + this);
+    }
+
+    /* Validate the given extras if the call is for CS domain or not */
+
+    protected boolean shallDialOnCircuitSwitch(Bundle extras) {
+        return (extras != null) &&
+                extras.getBoolean(TelephonyProperties.EXTRA_CALL_DOMAIN, false);
     }
 
     @Override

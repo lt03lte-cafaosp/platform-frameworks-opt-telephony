@@ -55,6 +55,7 @@ import com.android.ims.ImsException;
 import com.android.ims.ImsManager;
 import com.android.ims.ImsReasonInfo;
 import com.android.ims.ImsServiceClass;
+import com.android.ims.ImsSuppServiceNotification;
 import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.CallGroup;
 import com.android.ims.internal.IImsVideoCallProvider;
@@ -874,6 +875,10 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
     /*package*/ void
     hangup (ImsPhoneConnection conn) throws CallStateException {
+        hangupWithReason(conn, DisconnectCause.LOCAL);
+    }
+
+    void hangupWithReason (ImsPhoneConnection conn, int disconnectCause) throws CallStateException {
         if (DBG) log("hangup connection");
 
         if (conn.getOwner() != this) {
@@ -881,13 +886,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     + "does not belong to ImsPhoneCallTracker " + this);
         }
 
-        hangup(conn.getCall());
+        hangupWithReason(conn.getCall(), disconnectCause);
     }
 
     //***** Called from ImsPhoneCall
 
     /* package */ void
     hangup (ImsPhoneCall call) throws CallStateException {
+        hangupWithReason(call, DisconnectCause.NORMAL);
+    }
+
+    void hangupWithReason(ImsPhoneCall call, int disconnectCause)  throws CallStateException {
         if (DBG) log("hangup call");
 
         if (call.getConnections().size() == 0) {
@@ -924,8 +933,8 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
         try {
             if (imsCall != null) {
-                if (rejectCall) imsCall.reject(ImsReasonInfo.CODE_USER_DECLINE);
-                else imsCall.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+                if (rejectCall) imsCall.reject(toImsReasonCode(disconnectCause));
+                else imsCall.terminate(toImsReasonCode(disconnectCause));
             } else if (mPendingMO != null && call == mForegroundCall) {
                 // is holding a foreground call
                 mPendingMO.update(null, ImsPhoneCall.State.DISCONNECTED);
@@ -940,6 +949,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
         }
 
         mPhone.notifyPreciseCallStateChanged();
+    }
+
+    private void switchAfterConferenceSuccess() {
+        if (DBG) log("switchAfterConferenceSuccess fg =" + mForegroundCall.getState() +
+                ", bg = " + mBackgroundCall.getState());
+
+        // Checks if fg call is idle & then puts bg call to fg
+        if (!(mForegroundCall.getState().isAlive()) &&
+               mBackgroundCall.getState() == ImsPhoneCall.State.HOLDING) {
+            mForegroundCall.switchWith(mBackgroundCall);
+        }
     }
 
     /* package */
@@ -1124,8 +1144,23 @@ public final class ImsPhoneCallTracker extends CallTracker {
             case ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE:
                 return DisconnectCause.EMERGENCY_PERM_FAILURE;
 
+            case ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE:
+                return DisconnectCause.HO_NOT_FEASIBLE;
+
             case ImsReasonInfo.CODE_FDN_BLOCKED:
                 return DisconnectCause.FDN_BLOCKED;
+
+            /* If CS retry is required, then is it silent redial or user constent? */
+            case ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED:
+                if (mImsManager.isCsRetrySettingEnabledByPlatform(mPhone.getContext())) {
+                    if (mImsManager.isCsRetrySettingEnabledByUser(mPhone.getContext())) {
+                        cause = DisconnectCause.CALL_RETRY_BY_SILENT_REDIAL;
+                    } else {
+                        cause = DisconnectCause.CALL_RETRY_BY_USER_CONSENT;
+                    }
+                }
+                break;
+
             default:
         }
 
@@ -1295,6 +1330,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onCallResumed(ImsCall imsCall) {
             if (DBG) log("onCallResumed");
 
+            switchAfterConferenceSuccess();
             processCallStateChange(imsCall, ImsPhoneCall.State.ACTIVE,
                     DisconnectCause.NOT_DISCONNECTED);
         }
@@ -1312,13 +1348,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 mPhone.stopOnHoldTone();
                 mOnHoldToneStarted = false;
             }
-
-            SuppServiceNotification supp = new SuppServiceNotification();
-            // Type of notification: 0 = MO; 1 = MT
-            // Refer SuppServiceNotification class documentation.
-            supp.notificationType = 1;
-            supp.code = SuppServiceNotification.MT_CODE_CALL_RETRIEVED;
-            mPhone.notifySuppSvcNotification(supp);
         }
 
         @Override
@@ -1332,12 +1361,20 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     mOnHoldToneStarted = true;
                 }
             }
+        }
+
+        @Override
+        public void onCallSuppServiceReceived(ImsCall call,
+                ImsSuppServiceNotification suppServiceInfo) {
+            if (DBG) log("onCallSuppServiceReceived: suppServiceInfo=" + suppServiceInfo);
 
             SuppServiceNotification supp = new SuppServiceNotification();
-            // Type of notification: 0 = MO; 1 = MT
-            // Refer SuppServiceNotification class documentation.
-            supp.notificationType = 1;
-            supp.code = SuppServiceNotification.MT_CODE_CALL_ON_HOLD;
+            supp.notificationType = suppServiceInfo.notificationType ;
+            supp.code = suppServiceInfo.code;
+            supp.index = suppServiceInfo.index;
+            supp.number = suppServiceInfo.number;
+            supp.history = suppServiceInfo.history;
+
             mPhone.notifySuppSvcNotification(supp);
         }
 
@@ -1435,6 +1472,19 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
             String msg = reasonInfo.getExtraMessage();
             if (mPhone != null && msg != null) {
+                Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        @Override
+        public void onCallRetryErrorReceived(ImsCall imsCall, ImsReasonInfo reasonInfo) {
+            if (DBG) {
+                log("onCallRetryErrorReceived ::  reasonInfo=" + reasonInfo);
+            }
+
+            if (mPhone != null) {
+                String msg = "LTE HD voice is unavailable. 3G voice call will be connected." +
+                        "Server Error code: " + reasonInfo.getCode();
                 Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
             }
         }
@@ -1699,14 +1749,14 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 break;
             case EVENT_DIAL_PENDINGMO:
                 dialInternal(mPendingMO, mClirMode, mPendingCallVideoState,
-                    mPendingMO.getCallExtras());
+                    mPendingMO.getDialExtras());
                 break;
 
             case EVENT_EXIT_ECM_RESPONSE_CDMA:
                 // no matter the result, we still do the same here
                 if (pendingCallInEcm) {
                     dialInternal(mPendingMO, pendingCallClirMode,
-                            mPendingCallVideoState, mPendingMO.getCallExtras());
+                            mPendingCallVideoState, mPendingMO.getDialExtras());
                     pendingCallInEcm = false;
                 }
                 mPhone.unsetOnEcbModeExitResponse(this);
@@ -1779,5 +1829,19 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
     public boolean isUtEnabled() {
         return mIsUtEnabled;
+    }
+
+    private int toImsReasonCode(int telephonyDisconnectCause) {
+        int imsReasonCode = ImsReasonInfo.CODE_USER_TERMINATED;
+        switch  (telephonyDisconnectCause) {
+            case DisconnectCause.LOW_BATTERY:
+                return ImsReasonInfo.CODE_LOW_BATTERY;
+            case DisconnectCause.LOCAL:
+                return ImsReasonInfo.CODE_USER_TERMINATED;
+            case DisconnectCause.INCOMING_REJECTED:
+                return ImsReasonInfo.CODE_USER_DECLINE;
+            default:
+        }
+        return imsReasonCode;
     }
 }
