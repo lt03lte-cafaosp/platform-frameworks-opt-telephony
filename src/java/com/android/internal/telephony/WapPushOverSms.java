@@ -298,9 +298,10 @@ public class WapPushOverSms implements ServiceConnection {
                 if (DBG) Rlog.v(TAG, "Delivering MMS to: " + componentName.getPackageName() +
                         " " + componentName.getClassName());
             }
-            if (handler.isMmsBlockedByFirewall(intent, address)) {
+            if (handler.isMmsBlockedByFirewall(getPduAddress(phoneId, intentData))) {
                 // send firewall block sms intent
-                // handler.sendBlockRecordBroadcast(mContext, intent, false, receiver);
+                intent.putExtra("block_number", getPduAddress(phoneId, intentData));
+                handler.sendBlockRecordBroadcast(intent, false, receiver, permission, appOp);
             } else {
                 handler.dispatchIntent(intent, permission, appOp, receiver, UserHandle.OWNER);
             }
@@ -311,6 +312,15 @@ public class WapPushOverSms implements ServiceConnection {
             Rlog.e(TAG, "ignoring dispatchWapPdu() array index exception: " + aie);
             return Intents.RESULT_SMS_GENERIC_ERROR;
         }
+    }
+
+    private String getPduAddress(int subId, byte[] intentData) {
+        final GenericPdu pdu =
+                new PduParser(pushData, shouldParseContentDisposition(subId)).parse();
+        if (pdu == null || pdu.getFrom() == null) {
+            return null;
+        }
+        return pdu.getFrom().getString();
     }
 
     private static boolean shouldParseContentDisposition(int subId) {
