@@ -40,7 +40,6 @@ import android.provider.Settings.SettingNotFoundException;
 import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.Message;
-import android.os.UserHandle;
 import android.os.SystemProperties;
 import android.telephony.TelephonyManager;
 import android.telephony.SubscriptionManager;
@@ -305,11 +304,10 @@ class SubscriptionHelper extends Handler {
     private void broadcastSetUiccResult(int slotId, int newSubState, int result) {
         int[] subId = SubscriptionController.getInstance().getSubIdUsingSlotId(slotId);
         Intent intent = new Intent(TelephonyIntents.ACTION_SUBSCRIPTION_SET_UICC_RESULT);
-        intent.addFlags(Intent.FLAG_RECEIVER_REPLACE_PENDING);
         SubscriptionManager.putPhoneIdAndSubIdExtra(intent, slotId, subId[0]);
         intent.putExtra(TelephonyIntents.EXTRA_RESULT, result);
         intent.putExtra(TelephonyIntents.EXTRA_NEW_SUB_STATE, newSubState);
-        mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
+        mContext.sendBroadcast(intent);
     }
 
     private boolean isAllSubsAvailable() {
