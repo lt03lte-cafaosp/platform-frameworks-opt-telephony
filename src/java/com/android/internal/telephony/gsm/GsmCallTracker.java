@@ -497,6 +497,13 @@ public final class GsmCallTracker extends CallTracker {
                     if (hoConnection != null) {
                         // Single Radio Voice Call Continuity (SRVCC) completed
                         mConnections[i].migrateFrom(hoConnection);
+                        // Updating connect time for silent redial cases (ex: Calls are transferred
+                        // from DIALING/ALERTING/INCOMING/WAITING to ACTIVE)
+                        if (hoConnection.mPreHandoverState != GsmCall.State.ACTIVE &&
+                                hoConnection.mPreHandoverState != GsmCall.State.HOLDING) {
+                            mConnections[i].onConnectedInOrOut();
+                        }
+
                         mHandoverConnections.remove(hoConnection);
                         for (Iterator<Connection> it = mHandoverConnections.iterator();
                             it.hasNext();) {

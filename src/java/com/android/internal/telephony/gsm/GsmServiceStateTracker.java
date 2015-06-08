@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
  */
 
 package com.android.internal.telephony.gsm;
@@ -53,6 +55,10 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.EventLog;
 import android.util.TimeUtils;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.view.WindowManager;
 
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
@@ -147,6 +153,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
 
     /** Already sent the event-log for no gprs register. */
     private boolean mReportedGprsNoReg = false;
+    private boolean mShowRoamingMessage = true;
 
     /**
      * The Notification object given to the NotificationManager.
@@ -909,6 +916,13 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                 roaming = false;
             } else if (mPhone.isMccMncMarkedAsRoaming(mNewSS.getOperatorNumeric())) {
                 roaming = true;
+            }
+
+            if (roaming == true && mShowRoamingMessage
+                 && mPhoneBase.getContext().getResources().getBoolean(
+                   com.android.internal.R.bool.config_regional_mcc_mnc_roaming_setting)) {
+                ShowRoamingWarning();
+                mShowRoamingMessage = false;
             }
 
             mNewSS.setRoaming(roaming);
@@ -2178,4 +2192,58 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         }
         mImsRegistrationOnOff = registered;
     }
+    public void ShowRoamingWarning() {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(mPhone.getContext());
+        builder.setMessage(Resources.getSystem().
+                getText(com.android.internal.R.string.international_roaming_warning).toString());
+        builder.setTitle(Resources.getSystem().
+                getText(com.android.internal.R.string.dialog_alert_title).toString());
+        builder.setPositiveButton(com.android.internal.R.string.no, new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (dialog != null) {
+                    dialog.dismiss();
+                }
+                Settings.Global.putInt(mPhone.getContext().getContentResolver(),
+                Settings.Global.DATA_ROAMING + mPhone.getPhoneId(), 0);
+                AlertDialog.Builder alertbuilder=new AlertDialog.Builder(mPhone.getContext());
+                alertbuilder.setMessage(com.android.internal.R.string.turn_on_info);
+                AlertDialog alertDialog = alertbuilder.setTitle(Resources.getSystem().
+                        getText(com.android.internal.R.string.dialog_alert_title).toString())
+                       .setIconAttribute(android.R.attr.alertDialogIcon)
+                       .setPositiveButton(android.R.string.ok, null)
+                       .create();
+                alertDialog.getWindow().setType((WindowManager.LayoutParams.TYPE_SYSTEM_ALERT));
+                alertDialog.show();
+            }
+        });
+        builder.setNegativeButton(com.android.internal.R.string.yes, new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (dialog != null) {
+                    dialog.dismiss();
+                }
+                Settings.Global.putInt(mPhone.getContext().getContentResolver(),
+                Settings.Global.DATA_ROAMING + mPhone.getPhoneId(), 1);
+                AlertDialog.Builder alertbuilder=new AlertDialog.Builder(mPhone.getContext());
+                alertbuilder.setMessage(com.android.internal.R.string.turn_off_info);
+                AlertDialog alertDialog = alertbuilder
+                       .setTitle(com.android.internal.R.string.dialog_alert_title)
+                       .setIconAttribute(android.R.attr.alertDialogIcon)
+                       .setPositiveButton(android.R.string.ok, null)
+                       .create();
+                alertDialog.getWindow().setType((WindowManager.LayoutParams.TYPE_SYSTEM_ALERT));
+                alertDialog.show();
+            }
+        });
+        GsmServiceStateTracker.this.post(new Runnable() {
+            @Override
+            public void run() {
+                AlertDialog dialog = builder.create();
+                dialog.getWindow().setType((WindowManager.LayoutParams.TYPE_SYSTEM_ALERT));
+            dialog.show();
+        }
+        });
+    }
+
 }
