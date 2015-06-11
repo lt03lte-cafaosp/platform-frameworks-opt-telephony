@@ -353,9 +353,16 @@ class SubscriptionHelper extends Handler {
         }
 
 
-        // Seems SSR happenned or RILD crashed, do not handle SIM change events
-        if (!isRadioAvailable(slotId)) {
-            logi(" proceedToHandleIccEvent, radio not available, slotId = " + slotId);
+        // Seems SSR happenned or RILD crashed, do not handle SIM change events.
+        // During SSR, radio state will move to UNAVAILABLE and then OFF.
+        // Checking for only the radio state Unavailable for deciding if SubscriptionInfoUpdater
+        // needs to proceed with updating the sim states is not sufficient.
+        // We need to check for radio state off in addition for checking unavailable as there
+        // could be race condition where radio state could have moved to OFF from Unavailable
+        // before SubscriptionInfoUpdater receives the notification to update the sim states.
+        if (!isRadioAvailable(slotId) || ((apmState == 0) && !isRadioOn(slotId))) {
+            logi(" proceedToHandleIccEvent, ssr or rild crash, radio off/unavailable,"
+                    + "slotId = " + slotId);
             return false;
         }
         return true;
