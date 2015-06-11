@@ -485,16 +485,54 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         } // Otherwise, we're in the desired state
     }
 
+    /**
+     * Clean up existing voice and data connection then turn off radio power.
+     *
+     * Hang up the existing voice calls to decrease call drop rate.
+     */
+    @Override
+    public void powerOffRadioSafely(DcTrackerBase dcTracker) {
+        synchronized (this) {
+            if (!mPendingRadioPowerOffAfterDataOff) {
+                // To minimize race conditions we call cleanUpAllConnections on
+                // both if else paths instead of before this isDisconnected test.
+                if (dcTracker.isDisconnected()) {
+                    // To minimize race conditions we do this after isDisconnected
+                    dcTracker.cleanUpAllConnections(Phone.REASON_RADIO_TURNED_OFF);
+                    if (DBG) log("Data disconnected, turn off radio right away.");
+                    hangupAndPowerOff();
+                } else {
+                    hangupLiveCalls();
+                    dcTracker.cleanUpAllConnections(Phone.REASON_RADIO_TURNED_OFF);
+                    Message msg = Message.obtain(this);
+                    msg.what = EVENT_SET_RADIO_POWER_OFF;
+                    msg.arg1 = ++mPendingRadioPowerOffAfterDataOffTag;
+                    if (sendMessageDelayed(msg, 30000)) {
+                        if (DBG) log("Wait upto 30s for data to disconnect, then turn off radio.");
+                        mPendingRadioPowerOffAfterDataOff = true;
+                    } else {
+                        log("Cannot send delayed Msg, turn off radio right away.");
+                        hangupAndPowerOff();
+                        mPendingRadioPowerOffAfterDataOff = false;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     protected void hangupAndPowerOff() {
+        hangupLiveCalls();
+        mCi.setRadioPower(false, null);
+    }
+
+    protected void hangupLiveCalls() {
         // hang up all active voice calls
         if (mPhone.isInCall()) {
             mPhone.mCT.mRingingCall.hangupIfAlive();
             mPhone.mCT.mBackgroundCall.hangupIfAlive();
             mPhone.mCT.mForegroundCall.hangupIfAlive();
         }
-
-        mCi.setRadioPower(false, null);
     }
 
     @Override
