@@ -134,6 +134,7 @@ public class ModemStackController extends Handler {
     private  static final int EVENT_SUB_DEACTIVATED = 8;
     private static final int EVENT_RADIO_AVAILABLE = 9;
     private static final int EVENT_MODEM_CAPABILITY_CHANGED = 10;
+    private static final int EVENT_RADIO_NOT_AVAILABLE = 11;
 
     //*****States
     private static final int STATE_UNKNOWN = 1;
@@ -262,6 +263,7 @@ public class ModemStackController extends Handler {
         for (int i = 0; i < mCi.length; i++) {
             mCi[i].registerForAvailable(this, EVENT_RADIO_AVAILABLE, new Integer(i));
             mCi[i].registerForModemCapEvent(this, EVENT_MODEM_CAPABILITY_CHANGED, null);
+            mCi[i].registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, new Integer(i));
         }
 
         for (int i = 0; i < mNumPhones; i++) {
@@ -353,6 +355,13 @@ public class ModemStackController extends Handler {
                 onSetPrefNwModeDone(ar, phoneId);
                 break;
 
+            case EVENT_RADIO_NOT_AVAILABLE:
+                ar = (AsyncResult)msg.obj;
+                phoneId = (Integer)ar.userObj;
+                logd("EVENT_RADIO_NOT_AVAILABLE, phoneId = " + phoneId);
+                processRadioNotAvailable(ar, phoneId);
+                break;
+
             default:
                 break;
         }
@@ -373,14 +382,23 @@ public class ModemStackController extends Handler {
         }
     }
 
+    // RADIO state moved to UNAVAILABLE, reset cached modem cap info
+    private void processRadioNotAvailable(AsyncResult ar, int phoneId) {
+        logd("processRadioNotAvailable on phoneId = " + phoneId);
+        if (phoneId >= 0 && phoneId < mNumPhones) {
+            mModemCapInfo[mCurrentStackId[phoneId]] = null;
+        } else {
+            loge("Invalid Index!!!");
+        }
+    }
+
     private void onGetModemCapabilityDone(AsyncResult ar, byte[] result, int phoneId) {
 
         if (result == null && ar.exception instanceof CommandException) {
             loge("onGetModemCapabilityDone: EXIT!, result null or Exception =" + ar.exception);
             //On Modem Packages which do not support GetModemCaps RIl will return exception
             //On such Modem packages notify stack is ready so that SUB Activation can continue.
-            mIsStackReady = true;
-            mStackReadyRegistrants.notifyRegistrants();
+            notifyStackReady(false);
             return;
         }
 
@@ -392,7 +410,7 @@ public class ModemStackController extends Handler {
             parseGetModemCapabilityResponse(result, phoneId);
 
             //Wait till we get Modem Capabilities on all subs
-            if (areAllSubsinSameState(STATE_GOT_MODEM_CAPS)) {
+            if (areAllModemCapInfoReceived()) {
                 notifyModemRatCapabilitiesAvailable();
             }
         } else {
@@ -444,9 +462,7 @@ public class ModemStackController extends Handler {
                     sendResponseToTarget(mUpdateStackMsg, RILConstants.GENERIC_FAILURE);
                     mUpdateStackMsg = null;
                 }
-                mIsRecoveryInProgress = false;
-                mIsStackReady = true;
-                mStackReadyRegistrants.notifyRegistrants();
+                notifyStackReady(false);
             } else {
                 mDeactivationInProgress = false;
                 triggerUnBindingOnAllSubs();
@@ -522,7 +538,7 @@ public class ModemStackController extends Handler {
                 mUpdateStackMsg = null;
             }
             updateNetworkSelectionMode();
-            notifyStackReady();
+            notifyStackReady(true);
         }
     }
 
@@ -564,6 +580,13 @@ public class ModemStackController extends Handler {
         for (int subState : mSubState) {
             logd("areAllSubsinSameState state= "+state + " substate="+subState);
             if (subState != state) return false;
+        }
+        return true;
+    }
+
+    private boolean areAllModemCapInfoReceived() {
+        for (int i = 0; i < mNumPhones; i++) {
+            if (mModemCapInfo[mCurrentStackId[i]] == null) return false;
         }
         return true;
     }
@@ -734,7 +757,7 @@ public class ModemStackController extends Handler {
         } else {
             loge("updateStackBinding: FlexMap Disabled : " + isFlexmapDisabled);
             //incase of bootup if cross binding is not required send stack ready notification.
-            if (isBootUp) notifyStackReady();
+            if (isBootUp) notifyStackReady(false);
             return FAILURE;
         }
         return SUCCESS;
@@ -750,9 +773,8 @@ public class ModemStackController extends Handler {
                 sendResponseToTarget(mUpdateStackMsg, RILConstants.GENERIC_FAILURE);
                 mUpdateStackMsg = null;
             }
-            mIsRecoveryInProgress = false;
-            mIsStackReady = true;
-            mStackReadyRegistrants.notifyRegistrants();
+            notifyStackReady(false);
+            return;
         }
         for (SubscriptionInfo subInfo : subInfoList) {
             int subStatus = subCtrlr.getSubState(subInfo.getSubscriptionId());
@@ -771,17 +793,18 @@ public class ModemStackController extends Handler {
         }
     }
 
-    private void notifyStackReady() {
+    private void notifyStackReady(boolean isCrossMapDone) {
         logd("notifyStackReady: Stack is READY!!!");
         mIsRecoveryInProgress = false;
         mIsStackReady = true;
         resetSubStates();
 
-        for (int i = 0; i < mNumPhones; i++) {
-            //update the current stackIds
-            mCurrentStackId[i] = mPreferredStackId[i];
+        if (isCrossMapDone) {
+            for (int i = 0; i < mNumPhones; i++) {
+                //update the current stackIds
+                mCurrentStackId[i] = mPreferredStackId[i];
+            }
         }
-
         //notify binding completed to all StackReady registrants.
         //including subscriptionManager which activates available subs on binding complete.
         mStackReadyRegistrants.notifyRegistrants();
@@ -838,7 +861,7 @@ public class ModemStackController extends Handler {
             if(STATE_SET_PREF_MODE == mSubState[0]) {
                 //Already recovery in progress, got failure in SetPrefNwmode. We are bailing out.
                 //As Set Pref is failed, Binding is completed. so update and notify same.
-                notifyStackReady();
+                notifyStackReady(true);
             }
             return;
         }

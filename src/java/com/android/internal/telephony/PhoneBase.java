@@ -456,12 +456,14 @@ public abstract class PhoneBase extends Handler implements Phone {
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
 
         // Monitor IMS service
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
-        mContext.registerReceiver(mImsIntentReceiver, filter);
+        if (getPhoneType() != PhoneConstants.PHONE_TYPE_SIP) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
+            mContext.registerReceiver(mImsIntentReceiver, filter);
 
-        mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+            mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+        }
         mCi.setOnUnsolOemHookRaw(this, EVENT_UNSOL_OEM_HOOK_RAW, null);
         Rlog.d(LOG_TAG, "mOosIsDisconnect=" + mOosIsDisconnect);
     }
@@ -745,7 +747,22 @@ public abstract class PhoneBase extends Handler implements Phone {
     public void migrate(RegistrantList to, RegistrantList from) {
         from.removeCleared();
         for (int i = 0, n = from.size(); i < n; i++) {
-            to.add((Registrant) from.get(i));
+            Registrant r = (Registrant) from.get(i);
+            Message msg = r.messageForRegistrant();
+            // Since CallManager has already registered with both CS and IMS phones,
+            // the migrate should happen only for those registrants which are not
+            // registered with CallManager.Hence the below check is needed to add
+            // only those registrants to the registrant list which are not
+            // coming from the CallManager.
+            if (msg != null) {
+                if (msg.obj == CallManager.getInstance().getRegistrantIdentifier()) {
+                    continue;
+                } else {
+                    to.add((Registrant) from.get(i));
+                }
+            } else {
+                Rlog.d(LOG_TAG, "msg is null");
+            }
         }
     }
 

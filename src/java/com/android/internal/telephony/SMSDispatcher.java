@@ -1327,7 +1327,7 @@ public abstract class SMSDispatcher extends Handler {
         // or a multipart message that this part belongs to
         private String mFullMessageText;
 
-        private int mSubId;
+        private int mPhoneId;
 
         // If this is a text message (instead of data message)
         private boolean mIsText;
@@ -1336,7 +1336,7 @@ public abstract class SMSDispatcher extends Handler {
                 PendingIntent deliveryIntent, PackageInfo appInfo, String destAddr, String format,
                 AtomicInteger unsentPartCount, AtomicBoolean anyPartFailed, Uri messageUri,
                 SmsHeader smsHeader, boolean isExpectMore, String fullMessageText,
-                int subId, boolean isText, int validityPeriod) {
+                int phoneId, boolean isText, int validityPeriod) {
             mData = data;
             mSentIntent = sentIntent;
             mDeliveryIntent = deliveryIntent;
@@ -1353,7 +1353,7 @@ public abstract class SMSDispatcher extends Handler {
             mMessageUri = messageUri;
             mSmsHeader = smsHeader;
             mFullMessageText = fullMessageText;
-            mSubId = subId;
+            mPhoneId = phoneId;
             mIsText = isText;
         }
 
@@ -1422,7 +1422,7 @@ public abstract class SMSDispatcher extends Handler {
             Rlog.d(TAG, "Persist SMS into "
                     + (messageType == Sms.MESSAGE_TYPE_FAILED ? "FAILED" : "SENT"));
             final ContentValues values = new ContentValues();
-            values.put(Sms.SUBSCRIPTION_ID, mSubId);
+            values.put(Sms.PHONE_ID, mPhoneId);
             values.put(Sms.ADDRESS, mDestAddress);
             values.put(Sms.BODY, mFullMessageText);
             values.put(Sms.DATE, System.currentTimeMillis()); // milliseconds
@@ -1578,7 +1578,7 @@ public abstract class SMSDispatcher extends Handler {
         String destAddr = PhoneNumberUtils.extractNetworkPortion((String) data.get("destAddr"));
         return new SmsTracker(data, sentIntent, deliveryIntent, appInfo, destAddr, format,
                 unsentPartCount, anyPartFailed, messageUri, smsHeader, isExpectMore,
-                fullMessageText, getSubId(), isText, validityPeriod);
+                fullMessageText, mPhone.getPhoneId(), isText, validityPeriod);
     }
 
     protected SmsTracker getSmsTracker(HashMap<String, Object> data, PendingIntent sentIntent,
