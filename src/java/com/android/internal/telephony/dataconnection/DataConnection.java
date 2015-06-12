@@ -1467,6 +1467,7 @@ public final class DataConnection extends StateMachine {
                         + " transitionTo(mInactiveState)";
                     logAndAddLogRec(s);
                 }
+                notifyAllOfDisconnectDcRetrying(Phone.REASON_LOST_DATA_CONNECTION);
                 mInactiveState.setEnterNotificationParams(DcFailCause.LOST_CONNECTION);
                 transitionTo(mInactiveState);
             } else {
