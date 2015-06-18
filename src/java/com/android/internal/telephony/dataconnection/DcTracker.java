@@ -1180,7 +1180,8 @@ public final class DcTracker extends DcTrackerBase {
         if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())
                 && isDisconnected()
                 && !Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)) {
-            setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+            sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                    Phone.REASON_SINGLE_PDN_ARBITRATION));
         }
     }
 
@@ -2338,7 +2339,8 @@ public final class DcTracker extends DcTrackerBase {
             apnContext.setDataConnectionAc(null);
             if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())) {
                 if(DBG) log("onDisconnectDone: isOnlySigneDcAllowed true so setup single apn");
-                setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+                sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                    Phone.REASON_SINGLE_PDN_ARBITRATION));
             } else {
                 if(DBG) log("onDisconnectDone: not retrying");
             }
