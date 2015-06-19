@@ -1664,6 +1664,7 @@ public final class DcTracker extends DcTrackerBase {
         String apnType = apnContext.getApnType();
 
         Intent intent = new Intent(INTENT_RECONNECT_ALARM + "." + apnType);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_REASON, apnContext.getReason());
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_TYPE, apnType);
         intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
@@ -1687,6 +1688,7 @@ public final class DcTracker extends DcTrackerBase {
     private void startAlarmForRestartTrySetup(int delay, ApnContext apnContext) {
         String apnType = apnContext.getApnType();
         Intent intent = new Intent(INTENT_RESTART_TRYSETUP_ALARM + "." + apnType);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
         intent.putExtra(INTENT_RESTART_TRYSETUP_ALARM_EXTRA_TYPE, apnType);
         intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
 
