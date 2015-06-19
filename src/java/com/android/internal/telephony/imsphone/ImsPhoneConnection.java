@@ -138,25 +138,29 @@ public class ImsPhoneConnection extends Connection {
             ImsCallProfile imsCallProfile = imsCall.getCallProfile();
             if (imsCallProfile != null) {
                 setVideoState(ImsCallProfile.getVideoStateFromImsCallProfile(imsCallProfile));
-
-                ImsStreamMediaProfile mediaProfile = imsCallProfile.mMediaProfile;
-                if (mediaProfile != null) {
-                    setAudioQuality(getAudioQualityFromMediaProfile(mediaProfile));
-                }
             }
 
-            // Determine if the current call have video/voice/both capabilities.
+            // Determine if the current call have video capabilities.
             try {
-                int capabilities = getCallCapability();
                 ImsCallProfile localCallProfile = imsCall.getLocalCallProfile();
                 if (localCallProfile != null) {
-                    capabilities = applyLocalCallCapability(localCallProfile, capabilities);
+                    boolean isLocalVideoCapable = localCallProfile.mCallType
+                            == ImsCallProfile.CALL_TYPE_VT;
+
+                    setLocalVideoCapable(isLocalVideoCapable);
+
+                    ImsStreamMediaProfile mediaProfile = localCallProfile.mMediaProfile;
+                    if (mediaProfile != null) {
+                        setAudioQuality(getAudioQualityFromMediaProfile(mediaProfile));
+                    }
                 }
                 ImsCallProfile remoteCallProfile = imsCall.getRemoteCallProfile();
                 if (remoteCallProfile != null) {
-                    capabilities = applyRemoteCallCapability(remoteCallProfile, capabilities);
+                    boolean isRemoteVideoCapable = remoteCallProfile.mCallType
+                            == ImsCallProfile.CALL_TYPE_VT;
+
+                    setRemoteVideoCapable(isRemoteVideoCapable);
                 }
-                setCallCapability(capabilities);
             } catch (ImsException e) {
                 // No session, so cannot get local capabilities.
             }
@@ -234,48 +238,6 @@ public class ImsPhoneConnection extends Connection {
     static boolean
     equalsHandlesNulls (Object a, Object b) {
         return (a == null) ? (b == null) : a.equals (b);
-    }
-
-    private static int applyLocalCallCapability(ImsCallProfile localProfile, int capabilities) {
-        capabilities = removeCapability(capabilities, Connection.Capability.SUPPORTS_VT_LOCAL
-                | Connection.Capability.SUPPORTS_DOWNGRADE_TO_VOICE_LOCAL);
-
-        switch (localProfile.mCallType) {
-            case ImsCallProfile.CALL_TYPE_VOICE:
-                capabilities = addCapability(capabilities,
-                        Connection.Capability.SUPPORTS_DOWNGRADE_TO_VOICE_LOCAL);
-                break;
-            case ImsCallProfile.CALL_TYPE_VT:
-                capabilities = addCapability(capabilities,
-                        Connection.Capability.SUPPORTS_VT_LOCAL);
-                break;
-            case ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE:
-                capabilities = addCapability(capabilities, Connection.Capability.SUPPORTS_VT_LOCAL
-                        | Connection.Capability.SUPPORTS_DOWNGRADE_TO_VOICE_LOCAL);
-                break;
-        }
-        return capabilities;
-    }
-
-    private static int applyRemoteCallCapability(ImsCallProfile remoteProfile, int capabilities) {
-        capabilities = removeCapability(capabilities, Connection.Capability.SUPPORTS_VT_REMOTE
-                | Connection.Capability.SUPPORTS_DOWNGRADE_TO_VOICE_REMOTE);
-
-        switch (remoteProfile.mCallType) {
-            case ImsCallProfile.CALL_TYPE_VOICE:
-                capabilities = addCapability(capabilities,
-                        Connection.Capability.SUPPORTS_DOWNGRADE_TO_VOICE_REMOTE);
-                break;
-            case ImsCallProfile.CALL_TYPE_VT:
-                capabilities = addCapability(capabilities,
-                        Connection.Capability.SUPPORTS_VT_REMOTE);
-                break;
-            case ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE:
-                capabilities = addCapability(capabilities, Connection.Capability.SUPPORTS_VT_REMOTE
-                        | Connection.Capability.SUPPORTS_DOWNGRADE_TO_VOICE_REMOTE);
-                break;
-        }
-        return capabilities;
     }
 
     /**
@@ -709,27 +671,49 @@ public class ImsPhoneConnection extends Connection {
     update(ImsCall imsCall) {
         boolean changed = false;
         if (imsCall != null) {
-            // Check for a change in the capabilities for the call and update
+            // Check for a change in the video capabilities for the call and update the
             // {@link ImsPhoneConnection} with this information.
             try {
-                int capabilities = getCallCapability();
-                // Get the current local call capabilities which might be voice or video or both.
+                // Get the current local VT capabilities (i.e. even if currentCallType above is
+                // audio-only, the local capability could support bi-directional video).
                 ImsCallProfile localCallProfile = imsCall.getLocalCallProfile();
-                Rlog.d(LOG_TAG, "update localCallProfile=" + localCallProfile);
+                Rlog.d(LOG_TAG, " update localCallProfile=" + localCallProfile
+                        + "isLocalVideoCapable()= " + isLocalVideoCapable());
                 if (localCallProfile != null) {
-                    capabilities = applyLocalCallCapability(localCallProfile, capabilities);
+                    boolean newLocalVideoCapable = localCallProfile.mCallType
+                            == ImsCallProfile.CALL_TYPE_VT;
+
+                    if (isLocalVideoCapable() != newLocalVideoCapable) {
+                        setLocalVideoCapable(newLocalVideoCapable);
+                        changed = true;
+                    }
+
+                    ImsStreamMediaProfile mediaProfile = localCallProfile.mMediaProfile;
+                    if (mediaProfile != null) {
+                        int oldAudioQuality = getAudioQuality();
+                        int newAudioQuality = getAudioQualityFromMediaProfile(mediaProfile);
+                        if (oldAudioQuality != newAudioQuality) {
+                            Rlog.d(LOG_TAG, " update audio quality: old = " + oldAudioQuality +
+                                    " new = " + newAudioQuality);
+                            setAudioQuality(newAudioQuality);
+                            changed = true;
+                        }
+                    }
                 }
 
-                // Get the current remote call capabilities which might be voice or video or both.
                 ImsCallProfile remoteCallProfile = imsCall.getRemoteCallProfile();
-                Rlog.d(LOG_TAG, "update remoteCallProfile=" + remoteCallProfile);
+                Rlog.d(LOG_TAG, " update remoteCallProfile=" + remoteCallProfile
+                        + "isRemoteVideoCapable()= " + isRemoteVideoCapable());
                 if (remoteCallProfile != null) {
-                    capabilities = applyRemoteCallCapability(remoteCallProfile, capabilities);
+                    boolean newRemoteVideoCapable = remoteCallProfile.mCallType
+                            == ImsCallProfile.CALL_TYPE_VT;
+
+                    if (isRemoteVideoCapable() != newRemoteVideoCapable) {
+                        setRemoteVideoCapable(newRemoteVideoCapable);
+                        changed = true;
+                    }
                 }
-                if (getCallCapability() != capabilities) {
-                    setCallCapability(capabilities);
-                    changed = true;
-                }
+
                 // Check if call substate has changed. If so notify listeners of call state changed.
                 int callSubstate = getCallSubstate();
                 int newCallSubstate = imsCall.getCallSubstate();
@@ -791,17 +775,6 @@ public class ImsPhoneConnection extends Connection {
                 if (oldVideoState != newVideoState) {
                     setVideoState(newVideoState);
                     changed = true;
-                }
-
-                ImsStreamMediaProfile mediaProfile = callProfile.mMediaProfile;
-                if (mediaProfile != null) {
-                    int oldAudioQuality = getAudioQuality();
-                    int newAudioQuality = getAudioQualityFromMediaProfile(mediaProfile);
-
-                    if (oldAudioQuality != newAudioQuality) {
-                        setAudioQuality(newAudioQuality);
-                        changed = true;
-                    }
                 }
             }
 

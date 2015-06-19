@@ -599,7 +599,6 @@ public abstract class IccRecords extends Handler implements IccConstants {
                     //We will re-fetch the records when the app
                     // goes back to the ready state. Nothing to do here.
                 }
-                mRecordsRequested = false;
                 break;
             case IccRefreshResponse.REFRESH_RESULT_RESET:
                 if (DBG) log("handleRefresh with SIM_REFRESH_RESET");

@@ -1862,9 +1862,7 @@ public final class DcTracker extends DcTrackerBase {
                             break;
                         case DISCONNECTING:
                             // Update for DISCONNECTING only if there is no other potential match
-                            // and the apns are same.
-                            if (potentialDcac == null &&
-                                    apnSetting.equals(apnContext.getNextWaitingApn())) {
+                            if (potentialDcac == null) {
                                 potentialDcac = curDcac;
                                 potentialApnCtx = curApnCtx;
                             }
