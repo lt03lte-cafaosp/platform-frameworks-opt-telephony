@@ -316,7 +316,7 @@ public class WapPushOverSms implements ServiceConnection {
 
     private String getPduAddress(int subId, byte[] intentData) {
         final GenericPdu pdu =
-                new PduParser(pushData, shouldParseContentDisposition(subId)).parse();
+                new PduParser(intentData, shouldParseContentDisposition(subId)).parse();
         if (pdu == null || pdu.getFrom() == null) {
             return null;
         }
