@@ -317,6 +317,43 @@ class SubscriptionHelper extends Handler {
     }
 
     /**
+     * Called when Activate/Deactivate is triggered by UI.
+     * @param requestSentFromApps true if request is triggered by UI.
+     * @return
+     *    true if SusbcriptionHelper is ready to send request to RIL, that is, flex mapping is
+     *            currently Not in progress.
+     *    false if SusbcriptionHelper is not ready to send the request to RIL. SusbcriptionHelper
+     *            will be 'not ready' if flex mapping is in progress.
+     */
+    public boolean setUiccSubscription(int slotId, int subStatus, boolean requestSentFromApps) {
+       logd("setUiccSusbcription request received from apps");
+       if (requestSentFromApps && !isReadyForSetUicc()) {
+           return false;
+       } else {
+           setUiccSubscription(slotId, subStatus);
+           return true;
+       }
+    }
+
+    private boolean isReadyForSetUicc() {
+       boolean isStackReady = ModemStackController.getInstance().isStackReady();
+       boolean isResponseReceivedForAllSlots = true;
+       for (int i = 0; i < sNumPhones; i++) {
+          if(!mSetUiccTransaction[i].isResponseReceivedForAllApps()){
+              isResponseReceivedForAllSlots = false;
+              logd("isReadyForSerUicc: response not received for slot = " + i);
+              break;
+          }
+       }
+       logd("isReadyForSetUicc: isStackReady = " + isStackReady +
+               " isResponseReceivedForAllSlots = " + isResponseReceivedForAllSlots);
+       if (isStackReady && isResponseReceivedForAllSlots) {
+          return true;
+       }
+       return false;
+    }
+
+    /**
      * Handles the EVENT_SET_UICC_SUBSCRPTION_DONE.
      * @param ar
      */

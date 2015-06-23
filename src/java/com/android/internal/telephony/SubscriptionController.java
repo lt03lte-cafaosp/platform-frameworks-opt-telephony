@@ -1558,7 +1558,11 @@ public class SubscriptionController extends ISub.Stub {
         }
 
         int slotId = getSlotId(subId);
-        SubscriptionHelper.getInstance().setUiccSubscription(slotId, SubscriptionManager.ACTIVE);
+        boolean success = SubscriptionHelper.getInstance()
+                .setUiccSubscription(slotId, SubscriptionManager.ACTIVE, true);
+        if (!success) {
+            broadcastSetUiccFailure();
+        }
     }
 
     @Override
@@ -1569,7 +1573,16 @@ public class SubscriptionController extends ISub.Stub {
         }
 
         int slotId = getSlotId(subId);
-        SubscriptionHelper.getInstance().setUiccSubscription(slotId, SubscriptionManager.INACTIVE);
+        boolean success  = SubscriptionHelper.getInstance().
+                setUiccSubscription(slotId, SubscriptionManager.INACTIVE, true);
+        if (!success) {
+            broadcastSetUiccFailure();
+        }
+    }
+
+    private void broadcastSetUiccFailure() {
+        Intent intent = new Intent(SubscriptionManager.ACTION_SET_UICC_REQUEST_FAILED);
+        mContext.sendBroadcast(intent);
     }
 
     public void setNwMode(long subId, int nwMode) {
