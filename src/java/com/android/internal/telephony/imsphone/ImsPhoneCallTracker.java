@@ -1526,8 +1526,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onImsConnected() {
             if (DBG) log("onImsConnected");
             mPhone.setServiceState(ServiceState.STATE_IN_SERVICE);
-            mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
-                VoLteServiceState.IMS_REGISTERED));
             mPhone.setImsRegistered(true);
         }
 
@@ -1535,8 +1533,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onImsDisconnected(ImsReasonInfo imsReasonInfo) {
             if (DBG) log("onImsDisconnected imsReasonInfo=" + imsReasonInfo);
             mPhone.setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
-            mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
-                VoLteServiceState.IMS_UNREGISTERED));
             mPhone.setImsRegistered(false);
         }
 
@@ -1544,8 +1540,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onImsProgressing() {
             if (DBG) log("onImsProgressing");
             mPhone.setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
-            mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
-                VoLteServiceState.IMS_UNREGISTERED));
             mPhone.setImsRegistered(false);
         }
 
@@ -1553,17 +1547,12 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onImsResumed() {
             if (DBG) log("onImsResumed");
             mPhone.setServiceState(ServiceState.STATE_IN_SERVICE);
-            mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
-                VoLteServiceState.IMS_REGISTERED));
-
         }
 
         @Override
         public void onImsSuspended() {
             if (DBG) log("onImsSuspended");
             mPhone.setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
-            mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
-                VoLteServiceState.IMS_UNREGISTERED));
         }
 
         @Override
@@ -1571,6 +1560,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 int[] enabledFeatures, int[] disabledFeatures) {
             if (serviceClass == ImsServiceClass.MMTEL) {
                 boolean tmpIsVtEnabled = mIsVtEnabled;
+                boolean tmpIsVolteEnabled = mIsVolteEnabled;
 
                 if (disabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE] ==
                         ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE ||
@@ -1613,6 +1603,16 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
                 if (tmpIsVtEnabled != mIsVtEnabled) {
                     mPhone.notifyForVideoCapabilityChanged(mIsVtEnabled);
+                }
+
+                if (tmpIsVolteEnabled != mIsVolteEnabled || tmpIsVtEnabled != mIsVtEnabled) {
+                    if (mIsVolteEnabled || mIsVtEnabled) {
+                        mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
+                                VoLteServiceState.IMS_REGISTERED));
+                    } else {
+                        mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(
+                                VoLteServiceState.IMS_UNREGISTERED));
+                    }
                 }
             }
 
