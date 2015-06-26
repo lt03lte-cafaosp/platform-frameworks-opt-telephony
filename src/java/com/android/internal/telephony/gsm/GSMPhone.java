@@ -47,6 +47,7 @@ import android.telephony.TelephonyManager;
 
 import com.android.ims.ImsManager;
 import com.android.internal.telephony.CallTracker;
+import com.android.internal.telephony.uicc.IccCardStatus.CardState;
 
 import android.text.TextUtils;
 import android.telephony.Rlog;
@@ -173,7 +174,8 @@ public class GSMPhone extends PhoneBase {
                         SubscriptionManager.INACTIVE);
                 log("Received ACTION_SUBSCRIPTION_SET_UICC_RESULT on subId: " + subId
                         + "phoneId " + phoneId + " status: " + status);
-                if ((status == PhoneConstants.SUCCESS) && (state == SubscriptionManager.INACTIVE)) {
+                if ((status == PhoneConstants.SUCCESS) && (state == SubscriptionManager.INACTIVE) &&
+                        phoneId == getPhoneId()) {
                     resetSubSpecifics();
                 }
             }
@@ -1837,6 +1839,13 @@ public class GSMPhone extends PhoneBase {
             return;
         }
 
+        if ((mUiccController.getUiccCard(getPhoneId()) != null ) &&
+                mUiccController.getUiccCard(getPhoneId()).getCardState() ==
+                CardState.CARDSTATE_ABSENT) {
+            log("SIM not present");
+            resetSubSpecifics();
+        }
+
         // Get the latest info on the card and
         // send this to Phone Book
         setCardInPhoneBook();
@@ -2148,7 +2157,7 @@ public class GSMPhone extends PhoneBase {
     }
 
     public void resetSubSpecifics() {
-        log("resetSubSpecifics");
+        Rlog.d(LOG_TAG,"resetSubSpecifics: " + getCallForwardingIndicator());
         if (getCallForwardingIndicator()) {
             int notificationId = CALL_FORWARD_NOTIFICATION +
                     (getPhoneId() * NOTIFICATION_ID_OFFSET);
