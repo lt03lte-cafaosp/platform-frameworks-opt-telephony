@@ -285,10 +285,11 @@ public class SubInfoRecordUpdater extends Handler {
         logd("updateIccAvailability: Enter, slotId " + slotId);
         if (PROJECT_SIM_NUM > 1 && !subHelper.proceedToHandleIccEvent(slotId)) {
             logd("updateIccAvailability: radio is OFF/unavailable, ignore ");
-            if (!subHelper.isApmSIMNotPwdn()) {
+            if (!subHelper.isApmSIMNotPwdn() || !subHelper.isRadioAvailable(slotId)) {
                 // set the iccid to null so that once SIM card detected
                 //  ICCID will be read from the card again.
                 sIccId[slotId] = null;
+                sFh[slotId] = null;
             }
             return;
         }
@@ -340,6 +341,11 @@ public class SubInfoRecordUpdater extends Handler {
             logd("SIM" + (slotId + 1) + " refresh happened, need sub activation");
             if (isAllIccIdQueryDone()) {
                 updateSimInfoByIccId();
+            }
+            else
+            {
+                sNeedUpdate = true;
+                queryIccId(slotId);
             }
         }
     }
