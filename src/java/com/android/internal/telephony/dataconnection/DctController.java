@@ -119,13 +119,6 @@ public class DctController extends Handler {
         }
     };
 
-    private BroadcastReceiver subInfoBroadcastReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            logd("got ACTION_SUBINFO_RECORD_UPDATED");
-            updateSubIdAndCapability();
-        }
-    };
-
     private void updateSubIdAndCapability() {
         for (int i = 0; i < mPhoneNum; i++) {
            ((TelephonyNetworkFactory)mNetworkFactory[i]).updateNetworkCapability();
@@ -310,9 +303,6 @@ public class DctController extends Handler {
 
         mDdsSwitchSerializer = new DdsSwitchSerializerHandler(t.getLooper());
 
-        mContext.registerReceiver(subInfoBroadcastReceiver,
-                new IntentFilter(TelephonyIntents.ACTION_SUBINFO_RECORD_UPDATED));
-
         mContext.registerReceiver(defaultDdsBroadcastReceiver,
                 new IntentFilter(TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED));
 
@@ -337,7 +327,6 @@ public class DctController extends Handler {
         releaseAllNetworkRequests();
 
         mContext.unregisterReceiver(defaultDdsBroadcastReceiver);
-        mContext.unregisterReceiver(subInfoBroadcastReceiver);
 
         mSubMgr.removeOnSubscriptionsChangedListener(mOnSubscriptionsChangedListener);
         mContext.getContentResolver().unregisterContentObserver(mObserver);
@@ -1318,8 +1307,10 @@ public class DctController extends Handler {
         @Override
         protected void releaseNetworkFor(NetworkRequest networkRequest) {
             log("Cellular releasing Network for " + networkRequest);
-            if (!SubscriptionManager.isUsableSubIdValue(mPhone.getSubId())) {
-                log("Sub Info has not been ready, remove request.");
+            // If the request is in the pending list, it means it is not yet executed.
+            // So just remove it and return.
+            if (mPendingReq.get(networkRequest.requestId) != null) {
+                log("Remove the request from pending list.");
                 mPendingReq.remove(networkRequest.requestId);
                 return;
             }
