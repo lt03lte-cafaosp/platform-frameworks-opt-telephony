@@ -155,6 +155,7 @@ public class ModemBindingPolicyHandler extends Handler {
     //***** Events
     private static final int EVENT_MODEM_RAT_CAPS_AVAILABLE = 1;
     private static final int EVENT_UPDATE_BINDING_DONE = 2;
+    private static final int EVENT_RADIO_NOT_AVAILABLE = 3;
 
     //*****Constants
     private static final int SUCCESS = 1;
@@ -215,6 +216,10 @@ public class ModemBindingPolicyHandler extends Handler {
         mModemStackController.registerForModemRatCapsAvailable
                 (this, EVENT_MODEM_RAT_CAPS_AVAILABLE, null);
 
+        for (int i = 0; i < mCi.length; i++) {
+            mCi[i].registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, null);
+        }
+
         for (int i = 0; i < mNumPhones; i++) {
             mPreferredStackId[i] = i;
             mCurrentStackId[i] = i;
@@ -236,6 +241,11 @@ public class ModemBindingPolicyHandler extends Handler {
 
             case EVENT_MODEM_RAT_CAPS_AVAILABLE:
                 handleModemRatCapsAvailable();
+                break;
+
+            case EVENT_RADIO_NOT_AVAILABLE:
+                logd("EVENT_RADIO_NOT_AVAILABLE");
+                handleModemRatCapsUnAvailable();
                 break;
 
             default:
@@ -296,6 +306,12 @@ public class ModemBindingPolicyHandler extends Handler {
         mModemRatCapabilitiesAvailable = true;
         //Initialization sequence: Need to send Bind request always, so override is true.
         if (SUCCESS == updateStackBindingIfRequired(true)) mIsSetPrefNwModeInProgress = true;
+    }
+
+    private void handleModemRatCapsUnAvailable() {
+        if (mModemRatCapabilitiesAvailable) {
+            mModemRatCapabilitiesAvailable = false;
+        }
     }
 
     private void syncCurrentStackInfo() {
@@ -512,6 +528,11 @@ public class ModemBindingPolicyHandler extends Handler {
         int supportedRatMaskForNwMode = 0;
 
         logd("getNumOfRATsSupportedForNwMode: nwMode[" + nwMode +"] modemCaps = " + modemCaps);
+
+        if (modemCaps == null) {
+            loge("getNumOfRATsSupportedForNwMode: Modem Capabilites are null. Return!!");
+            return 0;
+        }
 
         //send result by ANDing corresponding NETWORK MASK and Modem Caps mask.
         switch (nwMode) {
