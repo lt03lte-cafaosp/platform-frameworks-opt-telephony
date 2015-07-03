@@ -91,7 +91,8 @@ public class ModemBindingPolicyHandler extends Handler {
             1 << ServiceState.RIL_RADIO_TECHNOLOGY_EVDO_B |
             1 << ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD;
     private static final int NETWORK_MASK_LTE_ONLY =
-            1 << ServiceState.RIL_RADIO_TECHNOLOGY_LTE;
+            1 << ServiceState.RIL_RADIO_TECHNOLOGY_LTE |
+            1 << ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA;
     private static final int NETWORK_MASK_TD_SCDMA_ONLY =
             1 << ServiceState.RIL_RADIO_TECHNOLOGY_TD_SCDMA;
 

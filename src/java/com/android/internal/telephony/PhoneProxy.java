@@ -178,6 +178,7 @@ public class PhoneProxy extends Handler implements Phone {
         if (mActivePhone != null) {
             // Check for a voice over lte replacement
             if ((newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_LTE) ||
+                    (newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA) ||
                     (newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN)) {
                 int volteReplacementRat = mActivePhone.getContext().getResources().getInteger(
                         com.android.internal.R.integer.config_volte_replacement_rat);
