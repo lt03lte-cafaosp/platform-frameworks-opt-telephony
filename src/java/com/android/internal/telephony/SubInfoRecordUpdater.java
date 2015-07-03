@@ -285,7 +285,7 @@ public class SubInfoRecordUpdater extends Handler {
         logd("updateIccAvailability: Enter, slotId " + slotId);
         if (PROJECT_SIM_NUM > 1 && !subHelper.proceedToHandleIccEvent(slotId)) {
             logd("updateIccAvailability: radio is OFF/unavailable, ignore ");
-            if (!subHelper.isApmSIMNotPwdn()) {
+            if (!subHelper.isApmSIMNotPwdn() && !ICCID_STRING_FOR_NO_SIM.equals(sIccId[slotId])) {
                 // set the iccid to null so that once SIM card detected
                 //  ICCID will be read from the card again.
                 sIccId[slotId] = null;
