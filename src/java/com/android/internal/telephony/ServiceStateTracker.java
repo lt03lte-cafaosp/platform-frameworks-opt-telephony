@@ -1095,10 +1095,24 @@ public abstract class ServiceStateTracker extends Handler {
     protected abstract void setRoamingType(ServiceState currentServiceState);
 
     protected String getHomeOperatorNumeric() {
-        return SystemProperties.get(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, "");
+        return ((TelephonyManager) mPhoneBase.getContext().
+                getSystemService(Context.TELEPHONY_SERVICE)).
+                getSimOperatorNumericForPhone(mPhoneBase.getPhoneId());
     }
 
     protected int getPhoneId() {
         return mPhoneBase.getPhoneId();
+    }
+
+    /**
+     * {@hide}
+     */
+    public boolean isRatLte(int rat) {
+        if ((rat == ServiceState.RIL_RADIO_TECHNOLOGY_LTE)
+                || (rat == ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
