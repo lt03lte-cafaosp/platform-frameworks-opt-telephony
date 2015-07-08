@@ -1121,6 +1121,7 @@ public final class DataConnection extends StateMachine {
             mDataRejectDialog = builder.create();
         }
         mDataRejectDialog.setMessage(message);
+        mDataRejectDialog.setCanceledOnTouchOutside(false);
         mDataRejectDialog.setTitle(title);
         mDataRejectDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
         mDataRejectDialog.show();
