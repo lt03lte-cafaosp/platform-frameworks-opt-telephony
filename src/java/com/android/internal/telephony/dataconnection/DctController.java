@@ -38,11 +38,9 @@ import android.provider.Settings;
 import android.telephony.Rlog;
 import android.telephony.SubscriptionManager;
 import android.telephony.SubscriptionManager.OnSubscriptionsChangedListener;
-import android.telephony.TelephonyManager;
 import android.util.SparseArray;
 
 import com.android.internal.os.SomeArgs;
-import com.android.internal.telephony.DctConstants;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
@@ -386,14 +384,14 @@ public class DctController extends Handler {
                 Message allowedDataDone = Message.obtain(this,
                         EVENT_SET_DATA_ALLOW_DONE, s);
                 Phone phone = mPhones[phoneId].getActivePhone();
-
                 if (!isOnDemandDdsSwitchInProgress) {
                     informDefaultDdsToPropServ(phoneId);
                 } else {
                     int defPhoneId = getDataConnectionFromSetting();
                     informDefaultDdsToPropServ(defPhoneId);
                     isOnDemandDdsSwitchInProgress = false;
-                }
+               }
+
                 DcTrackerBase dcTracker =((PhoneBase)phone).mDcTracker;
                 dcTracker.setDataAllowed(true, allowedDataDone);
 
@@ -450,8 +448,7 @@ public class DctController extends Handler {
                     Rlog.d(LOG_TAG, "Failed, switchInfo = " + s
                             + " attempt delayed retry");
                     s.incRetryCount();
-                    if (s.isRetryPossible() && isCurrentRequest(s) &&
-                            !registerForCallEndOnActiveCall(s)) {
+                    if (s.isRetryPossible() && isCurrentRequest(s)) {
                         SomeArgs args = SomeArgs.obtain();
                         args.arg1 = s;
                         args.arg2 = true;
@@ -461,7 +458,7 @@ public class DctController extends Handler {
                     } else {
                         Rlog.d(LOG_TAG, "Already did max retries, notify failure");
                         errorEx = new RuntimeException("PS ATTACH failed");
-                    }
+                   }
                 } else {
                     Rlog.d(LOG_TAG, "PS ATTACH success = " + s);
                 }
@@ -511,24 +508,8 @@ public class DctController extends Handler {
                    }
                 } else {
                     Rlog.d(LOG_TAG, "PS DETACH success = " + s);
+                    isOnDemandDdsSwitchInProgress = true;
                 }
-                break;
-            }
-
-            case DctConstants.EVENT_VOICE_CALL_ENDED: {
-                AsyncResult ar = (AsyncResult)msg.obj;
-                SwitchInfo s = (SwitchInfo)ar.userObj;
-
-                if (!isCurrentRequest(s)) {
-                    return;
-                }
-
-                int[] subId = mSubController.getSubId(s.mPhoneId);
-                logd("Voice Call is ended, set Dds on sub: " + subId[0]);
-                setDefaultDataSubId(subId[0]);
-                ((PhoneBase)mPhones[s.mPhoneId].getActivePhone()).getCallTracker().
-                        unregisterForVoiceCallEnded(this);
-
                 break;
             }
 
@@ -568,19 +549,6 @@ public class DctController extends Handler {
             default:
                 loge("Un-handled message [" + msg.what + "]");
         }
-    }
-
-    private boolean registerForCallEndOnActiveCall(SwitchInfo s) {
-        for (int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++ ) {
-            Phone phone = mPhones[i].getActivePhone(); ;
-            if (phone != null && phone.getState() != PhoneConstants.State.IDLE) {
-                logd("Voice call active on sub: " + i + " .Register for voice call end");
-                ((PhoneBase)phone).getCallTracker().registerForVoiceCallEnded(this,
-                        DctConstants.EVENT_VOICE_CALL_ENDED, s);
-                return true;
-            }
-        }
-        return false;
     }
 
     private int requestNetwork(NetworkRequest request, int priority) {
@@ -1038,7 +1006,6 @@ public class DctController extends Handler {
                     }
                     mPhones[prefPhoneId].registerForAllDataDisconnected(
                             sDctController, EVENT_ALL_DATA_DISCONNECTED, s);
-                    isOnDemandDdsSwitchInProgress = true;
                     break;
                 }
             }
