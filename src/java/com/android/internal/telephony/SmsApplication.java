@@ -58,6 +58,7 @@ public final class SmsApplication {
     private static final String PHONE_PACKAGE_NAME = "com.android.phone";
     private static final String BLUETOOTH_PACKAGE_NAME = "com.android.bluetooth";
     private static final String MMS_SERVICE_PACKAGE_NAME = "com.android.mms.service";
+    private static final String RCS_SERVICE_PACKAGE_NAME = "com.suntek.mway.rcs.app.service";
 
     private static final String SCHEME_SMS = "sms";
     private static final String SCHEME_SMSTO = "smsto";
@@ -414,6 +415,8 @@ public final class SmsApplication {
                     // No BT app on this device
                     Rlog.e(LOG_TAG, "Bluetooth package not found: " + BLUETOOTH_PACKAGE_NAME);
                 }
+                // RCS service should always have this permission to write the sms database.
+                setReadAndWriteSmsPermissionsForRcsService(appOps, packageManager);
 
                 try {
                     PackageInfo info = packageManager.getPackageInfo(MMS_SERVICE_PACKAGE_NAME, 0);
@@ -519,7 +522,8 @@ public final class SmsApplication {
                 // No BT app on this device
                 Rlog.e(LOG_TAG, "Bluetooth package not found: " + BLUETOOTH_PACKAGE_NAME);
             }
-
+            // RCS service should always have this permission to write the sms database.
+            setReadAndWriteSmsPermissionsForRcsService(appOps, packageManager);
             // MmsService needs to always have this permission to write to the sms database
             try {
                 PackageInfo info = packageManager.getPackageInfo(MMS_SERVICE_PACKAGE_NAME, 0);
@@ -747,12 +751,35 @@ public final class SmsApplication {
             defaultSmsPackage = component.getPackageName();
         }
 
-        if ((defaultSmsPackage == null || !defaultSmsPackage.equals(packageName)) &&
-                !packageName.equals(BLUETOOTH_PACKAGE_NAME)) {
+        if ((defaultSmsPackage == null || !defaultSmsPackage.equals(packageName))
+                && !packageName.equals(BLUETOOTH_PACKAGE_NAME)
+                && !packageName.equals(RCS_SERVICE_PACKAGE_NAME)) {
             // To write the message for someone other than the default SMS and BT app
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * set read and write sms provider permissions for rcs service.
+     */
+    private static void setReadAndWriteSmsPermissionsForRcsService(AppOpsManager appOps,
+            PackageManager packageManager) {
+        // RCS service should always have this permission to write the sms database.
+        try {
+            PackageInfo info = packageManager.getPackageInfo(RCS_SERVICE_PACKAGE_NAME, 0);
+            int mode = appOps.checkOp(AppOpsManager.OP_WRITE_SMS, info.applicationInfo.uid,
+                    RCS_SERVICE_PACKAGE_NAME);
+            appOps.setMode(AppOpsManager.OP_READ_SMS, info.applicationInfo.uid,
+                    RCS_SERVICE_PACKAGE_NAME, AppOpsManager.MODE_ALLOWED);
+            if (mode != AppOpsManager.MODE_ALLOWED) {
+                Rlog.e(LOG_TAG, RCS_SERVICE_PACKAGE_NAME + " lost OP_WRITE_SMS:  (fixing)");
+                appOps.setMode(AppOpsManager.OP_WRITE_SMS, info.applicationInfo.uid,
+                        RCS_SERVICE_PACKAGE_NAME, AppOpsManager.MODE_ALLOWED);
+            }
+        } catch (NameNotFoundException e) {
+            Rlog.e(LOG_TAG, "RCSService package not found: " + RCS_SERVICE_PACKAGE_NAME);
+        }
     }
 }
