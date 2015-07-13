@@ -314,7 +314,11 @@ public class WapPushOverSms implements ServiceConnection {
         }
     }
 
-    private String getPduAddress(int subId, byte[] intentData) {
+    private String getPduAddress(int phoneId, byte[] intentData) {
+        int [] subIds = SubscriptionManager.getSubId(phoneId);
+        int subId = (subIds != null) && (subIds.length > 0) ? subIds[0] :
+                 SmsManager.getDefaultSmsSubscriptionId();
+
         final GenericPdu pdu =
                 new PduParser(intentData, shouldParseContentDisposition(subId)).parse();
         if (pdu == null || pdu.getFrom() == null) {

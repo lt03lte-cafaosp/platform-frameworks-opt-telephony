@@ -38,6 +38,7 @@ import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.provider.Telephony;
 import android.telecom.VideoProfile;
+import android.telecom.VideoProfile.VideoState;
 import android.telephony.CellLocation;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
@@ -895,12 +896,13 @@ public class GSMPhone extends PhoneBase {
             throws CallStateException {
         ImsPhone imsPhone = mImsPhone;
 
+        final boolean isVideoCall = VideoState.isVideo(videoState);
         boolean imsUseEnabled =
                 ImsManager.isVolteEnabledByPlatform(mContext) &&
                 ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext) &&
                 ImsManager.isNonTtyOrTtyOnVolteEnabled(mContext) &&
                 imsPhone != null &&
-                imsPhone.isVolteEnabled() &&
+                (imsPhone.isVolteEnabled() || (imsPhone.isVtEnabled() && isVideoCall)) &&
                 (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE) &&
                 !shallDialOnCircuitSwitch(extras);
 
