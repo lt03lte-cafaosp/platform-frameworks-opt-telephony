@@ -35,6 +35,7 @@ import com.android.internal.util.StateMachine;
 
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.app.AlarmManager;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.LinkProperties;
@@ -1712,7 +1713,8 @@ public final class DataConnection extends StateMachine {
                                     && mPhone.getContext().getResources().getBoolean(com.android.
                                         internal.R.bool.config_pdp_retry_for_29_33_enabled)) {
                                 if (DBG) log("config is enabled retry count:" + mPdpRejectCount);
-                                boolean ishandled = handleDataReject(result);
+                                ApnContext apnContext = cp.mApnContext;
+                                boolean ishandled = handleDataReject(result, apnContext);
                                 if (ishandled) {
                                     break;
                                 }
@@ -1834,7 +1836,7 @@ public final class DataConnection extends StateMachine {
          * 1. USER_AUTHENTICATION
          * 2. SERVICE_OPTION_NOT_SUBSCRIBED
          */
-        private boolean handleDataReject(DataCallResponse.SetupResult result) {
+        private boolean handleDataReject(DataCallResponse.SetupResult result, ApnContext apnContext) {
             boolean handled = false;
             int delay = mPhone
                     .getContext()
@@ -1876,6 +1878,16 @@ public final class DataConnection extends StateMachine {
                 if (delay >= 0) {
                     if (DBG)
                         log("DcActivatingState: **ERR_RilError retry**");
+                    if (apnContext != null) {
+                        PendingIntent intent = apnContext.getReconnectIntent();
+                        if (intent != null) {
+                            AlarmManager am =
+                                (AlarmManager) mPhone.getContext().
+                                   getSystemService(Context.ALARM_SERVICE);
+                            am.cancel(intent);
+                            apnContext.setReconnectIntent(null);
+                        }
+                    }
                     mDcRetryAlarmController.startRetryAlarm(
                             EVENT_RETRY_CONNECTION, mTag, delay);
                     transitionTo(mRetryingState);
