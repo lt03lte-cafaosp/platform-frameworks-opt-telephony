@@ -38,6 +38,7 @@ import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.provider.Telephony;
 import android.telecom.VideoProfile;
+import android.telecom.VideoProfile.VideoState;
 import android.telephony.CellLocation;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
@@ -46,6 +47,7 @@ import android.telephony.TelephonyManager;
 
 import com.android.ims.ImsManager;
 import com.android.internal.telephony.CallTracker;
+import com.android.internal.telephony.uicc.IccCardStatus.CardState;
 
 import android.text.TextUtils;
 import android.telephony.Rlog;
@@ -172,7 +174,8 @@ public class GSMPhone extends PhoneBase {
                         SubscriptionManager.INACTIVE);
                 log("Received ACTION_SUBSCRIPTION_SET_UICC_RESULT on subId: " + subId
                         + "phoneId " + phoneId + " status: " + status);
-                if ((status == PhoneConstants.SUCCESS) && (state == SubscriptionManager.INACTIVE)) {
+                if ((status == PhoneConstants.SUCCESS) && (state == SubscriptionManager.INACTIVE) &&
+                        phoneId == getPhoneId()) {
                     resetSubSpecifics();
                 }
             }
@@ -208,6 +211,7 @@ public class GSMPhone extends PhoneBase {
         mSST.registerForNetworkAttached(this, EVENT_REGISTERED_TO_NETWORK, null);
         mCi.setOnSs(this, EVENT_SS, null);
         setProperties();
+        notifyPhoneStateChanged();
     }
 
     public
@@ -252,6 +256,7 @@ public class GSMPhone extends PhoneBase {
         log("GSMPhone: constructor: sub = " + mPhoneId);
 
         setProperties();
+        notifyPhoneStateChanged();
     }
 
     protected void setProperties() {
@@ -893,12 +898,13 @@ public class GSMPhone extends PhoneBase {
             throws CallStateException {
         ImsPhone imsPhone = mImsPhone;
 
+        final boolean isVideoCall = VideoState.isVideo(videoState);
         boolean imsUseEnabled =
                 ImsManager.isVolteEnabledByPlatform(mContext) &&
                 ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext) &&
                 ImsManager.isNonTtyOrTtyOnVolteEnabled(mContext) &&
                 imsPhone != null &&
-                imsPhone.isVolteEnabled() &&
+                (imsPhone.isVolteEnabled() || (imsPhone.isVtEnabled() && isVideoCall)) &&
                 (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE) &&
                 !shallDialOnCircuitSwitch(extras);
 
@@ -1833,6 +1839,13 @@ public class GSMPhone extends PhoneBase {
             return;
         }
 
+        if ((mUiccController.getUiccCard(getPhoneId()) != null ) &&
+                mUiccController.getUiccCard(getPhoneId()).getCardState() ==
+                CardState.CARDSTATE_ABSENT) {
+            log("SIM not present");
+            resetSubSpecifics();
+        }
+
         // Get the latest info on the card and
         // send this to Phone Book
         setCardInPhoneBook();
@@ -2144,7 +2157,7 @@ public class GSMPhone extends PhoneBase {
     }
 
     public void resetSubSpecifics() {
-        log("resetSubSpecifics");
+        Rlog.d(LOG_TAG,"resetSubSpecifics: " + getCallForwardingIndicator());
         if (getCallForwardingIndicator()) {
             int notificationId = CALL_FORWARD_NOTIFICATION +
                     (getPhoneId() * NOTIFICATION_ID_OFFSET);

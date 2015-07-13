@@ -70,6 +70,7 @@ public class SubscriptionInfoUpdater extends Handler {
     private static final int EVENT_SIM_READY_OR_LOCKED = 5;
     private static final int EVENT_ICC_CHANGED = 6;
     private static final int EVENT_STACK_READY = 7;
+    private static final int EVENT_SUBSCRIPTION_STATUS_CHANGED = 8;
     private static final String ICCID_STRING_FOR_NO_SIM = "";
     private static final String ICCID_STRING_FOR_NV = "DUMMY_NV_ID";
     /**
@@ -108,6 +109,7 @@ public class SubscriptionInfoUpdater extends Handler {
     // To prevent repeatedly update flow every time receiver SIM_STATE_CHANGE
     private static boolean mNeedUpdate = true;
     private boolean isNVSubAvailable = false;
+    private boolean[] mStackActivated;
 
 
     public SubscriptionInfoUpdater(Context context, Phone[] phoneProxy, CommandsInterface[] ci) {
@@ -121,8 +123,11 @@ public class SubscriptionInfoUpdater extends Handler {
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
         ModemStackController.getInstance().registerForStackReady(this, EVENT_STACK_READY, null);
+        mStackActivated = new boolean[PROJECT_SIM_NUM];
         for (int i = 0; i < PROJECT_SIM_NUM; i++) {
             sCardState[i] = CardState.CARDSTATE_ABSENT;
+            sCi[i].registerForSubscriptionStatusChanged(this,
+                    EVENT_SUBSCRIPTION_STATUS_CHANGED, new Integer(i));
         }
 
         IntentFilter intentFilter = new IntentFilter(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
@@ -274,6 +279,11 @@ public class SubscriptionInfoUpdater extends Handler {
 
             case EVENT_SIM_READY_OR_LOCKED:
                 handleSimReadyOrLocked(msg.arg1);
+                break;
+
+            case EVENT_SUBSCRIPTION_STATUS_CHANGED:
+                logd("EVENT_SUBSCRIPTION_STATUS_CHANGED");
+                processSubscriptionStatusChanged((AsyncResult)msg.obj);
                 break;
 
             default:
@@ -644,6 +654,19 @@ public class SubscriptionInfoUpdater extends Handler {
         logd("newSim = " + newSim);
 
         return newSim;
+    }
+
+    private void processSubscriptionStatusChanged(AsyncResult ar) {
+        Integer index = (Integer)ar.userObj;
+        int actStatus = ((int[])ar.result)[0];
+
+        logd("processSubscriptionStatusChanged index = " + index
+               + " actStatus = " + actStatus);
+        mStackActivated[index] = (actStatus == 1);
+    }
+
+    public boolean IsStackActivated(int slotId) {
+        return mStackActivated[slotId];
     }
 
     public void dispose() {

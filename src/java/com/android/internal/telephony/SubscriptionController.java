@@ -61,6 +61,7 @@ import java.lang.NumberFormatException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -152,6 +153,7 @@ public class SubscriptionController extends ISub.Stub {
     private boolean mCFUpdated = false;
 
     private int[] colorArr;
+    private AtomicBoolean mSetDdsInProgress = new AtomicBoolean(false);
 
     private static final int EVENT_SET_DEFAULT_DATA_DONE = 1;
     private DataConnectionHandler mDataConnectionHandler;
@@ -227,9 +229,6 @@ public class SubscriptionController extends ISub.Stub {
         mCM = CallManager.getInstance();
         mTelephonyManager = TelephonyManager.from(mContext);
 
-        if(ServiceManager.getService("isub") == null) {
-                ServiceManager.addService("isub", this);
-        }
         registerReceiverIfNeeded();
 
         if (DBG) logdl("[SubscriptionController] init by Context");
@@ -240,6 +239,9 @@ public class SubscriptionController extends ISub.Stub {
         mSchedulerAc = new DdsSchedulerAc();
         mSchedulerAc.connect(mContext, mDataConnectionHandler, mScheduler.getHandler());
 
+        if (ServiceManager.getService("isub") == null) {
+            ServiceManager.addService("isub", this);
+        }
     }
 
     public int getSubIdFromNetworkRequest(NetworkRequest n) {
@@ -1432,6 +1434,7 @@ public class SubscriptionController extends ISub.Stub {
             throw new RuntimeException("setDefaultDataSubId called with DEFAULT_SUB_ID");
         }
         if (DBG) logdl("[setDefaultDataSubId] subId=" + subId);
+        mSetDdsInProgress.set(true);
         if (mDctController == null) {
             mDctController = DctController.getInstance();
             mDctController.registerForDefaultDataSwitchInfo(mDataConnectionHandler,
@@ -1511,6 +1514,8 @@ public class SubscriptionController extends ISub.Stub {
                     AsyncResult ar = (AsyncResult) msg.obj;
                     logd("EVENT_SET_DEFAULT_DATA_DONE subId:" + (Integer)ar.result);
                     updateDataSubId(ar);
+                    mSetDdsInProgress.set(false);
+                    mSchedulerAc.notifySetDdsDone();
                     break;
                 }
             }
@@ -2008,4 +2013,9 @@ public class SubscriptionController extends ISub.Stub {
             Binder.restoreCallingIdentity(token);
         }
     }
+
+    public boolean isSetDdsInProgress() {
+        return mSetDdsInProgress.get();
+    }
+
 }

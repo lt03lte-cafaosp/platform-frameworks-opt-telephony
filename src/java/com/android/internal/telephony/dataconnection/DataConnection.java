@@ -935,6 +935,7 @@ public final class DataConnection extends StateMachine {
                     sizes = TCP_BUFFER_SIZES_HSPA;
                     break;
                 case ServiceState.RIL_RADIO_TECHNOLOGY_LTE:
+                case ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA:
                     sizes = TCP_BUFFER_SIZES_LTE;
                     break;
                 case ServiceState.RIL_RADIO_TECHNOLOGY_HSPAP:
@@ -1025,6 +1026,7 @@ public final class DataConnection extends StateMachine {
             case ServiceState.RIL_RADIO_TECHNOLOGY_HSPA: up = 5898; down = 14336; break;
             case ServiceState.RIL_RADIO_TECHNOLOGY_EVDO_B: up = 1843; down = 5017; break;
             case ServiceState.RIL_RADIO_TECHNOLOGY_LTE: up = 51200; down = 102400; break;
+            case ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA: up = 51200; down = 102400; break;
             case ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD: up = 153; down = 2516; break;
             case ServiceState.RIL_RADIO_TECHNOLOGY_HSPAP: up = 11264; down = 43008; break;
             default:
@@ -1467,6 +1469,7 @@ public final class DataConnection extends StateMachine {
                         + " transitionTo(mInactiveState)";
                     logAndAddLogRec(s);
                 }
+                notifyAllOfDisconnectDcRetrying(Phone.REASON_LOST_DATA_CONNECTION);
                 mInactiveState.setEnterNotificationParams(DcFailCause.LOST_CONNECTION);
                 transitionTo(mInactiveState);
             } else {
@@ -1500,12 +1503,13 @@ public final class DataConnection extends StateMachine {
                                     + " rat=" + rat + " ignoring");
                         }
                     } else {
-                        // have to retry connecting since no attach event will come
-                        if (mConnectionParams.mRetryWhenSSChange) {
-                            retVal = NOT_HANDLED;
-                            break;
-                        }
-                        if (drs != ServiceState.STATE_IN_SERVICE) {
+                        if (drs == ServiceState.STATE_IN_SERVICE) {
+                            // have to retry connecting since no attach event will come
+                            if (mConnectionParams.mRetryWhenSSChange) {
+                                retVal = NOT_HANDLED;
+                                break;
+                            }
+                        } else {
                             // We've lost the connection and we're retrying but DRS or RAT changed
                             // so we may never succeed, might as well give up.
                             mInactiveState.setEnterNotificationParams(DcFailCause.LOST_CONNECTION);

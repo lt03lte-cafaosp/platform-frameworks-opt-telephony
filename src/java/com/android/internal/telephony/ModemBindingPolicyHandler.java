@@ -91,7 +91,8 @@ public class ModemBindingPolicyHandler extends Handler {
             1 << ServiceState.RIL_RADIO_TECHNOLOGY_EVDO_B |
             1 << ServiceState.RIL_RADIO_TECHNOLOGY_EHRPD;
     private static final int NETWORK_MASK_LTE_ONLY =
-            1 << ServiceState.RIL_RADIO_TECHNOLOGY_LTE;
+            1 << ServiceState.RIL_RADIO_TECHNOLOGY_LTE |
+            1 << ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA;
     private static final int NETWORK_MASK_TD_SCDMA_ONLY =
             1 << ServiceState.RIL_RADIO_TECHNOLOGY_TD_SCDMA;
 
@@ -154,6 +155,7 @@ public class ModemBindingPolicyHandler extends Handler {
     private static final int EVENT_MODEM_RAT_CAPS_AVAILABLE = 1;
     private static final int EVENT_UPDATE_BINDING_DONE = 2;
     private static final int EVENT_SET_NW_MODE_DONE = 3;
+    private static final int EVENT_RADIO_NOT_AVAILABLE = 4;
 
     //*****Constants
     private static final int SUCCESS = 1;
@@ -210,6 +212,10 @@ public class ModemBindingPolicyHandler extends Handler {
         mModemStackController.registerForModemRatCapsAvailable
                 (this, EVENT_MODEM_RAT_CAPS_AVAILABLE, null);
 
+        for (int i = 0; i < mCi.length; i++) {
+            mCi[i].registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, null);
+        }
+
         for (int i = 0; i < mNumPhones; i++) {
             mPreferredStackId[i] = i;
             mCurrentStackId[i] = i;
@@ -240,6 +246,10 @@ public class ModemBindingPolicyHandler extends Handler {
                 handleSetPreferredNetwork(msg);
                 break;
 
+            case EVENT_RADIO_NOT_AVAILABLE:
+                logd("EVENT_RADIO_NOT_AVAILABLE");
+                handleModemRatCapsUnAvailable();
+                break;
             default:
                 break;
         }
@@ -330,6 +340,12 @@ public class ModemBindingPolicyHandler extends Handler {
         mModemRatCapabilitiesAvailable = true;
         //Initialization sequence: Need to send Bind request always, so override is true.
         if (SUCCESS == updateStackBindingIfRequired(true)) mIsSetPrefNwModeInProgress = true;
+    }
+
+    private void handleModemRatCapsUnAvailable() {
+        if (mModemRatCapabilitiesAvailable) {
+            mModemRatCapabilitiesAvailable = false;
+        }
     }
 
     private void syncCurrentStackInfo() {
@@ -507,6 +523,11 @@ public class ModemBindingPolicyHandler extends Handler {
         int supportedRatMaskForNwMode = 0;
 
         logd("getNumOfRATsSupportedForNwMode: nwMode[" + nwMode +"] modemCaps = " + modemCaps);
+
+        if (modemCaps == null) {
+            loge("getNumOfRATsSupportedForNwMode: Modem Capabilites are null. Return!!");
+            return 0;
+        }
 
         //send result by ANDing corresponding NETWORK MASK and Modem Caps mask.
         switch (nwMode) {

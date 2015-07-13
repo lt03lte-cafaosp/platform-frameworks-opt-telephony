@@ -37,6 +37,7 @@ public class SuppServiceNotification {
 
     static public final int NOTIFICATION_TYPE_MO = 0;
     static public final int NOTIFICATION_TYPE_MT = 1;
+
     /** List of forwarded numbers, if any */
     public String[] history;
 

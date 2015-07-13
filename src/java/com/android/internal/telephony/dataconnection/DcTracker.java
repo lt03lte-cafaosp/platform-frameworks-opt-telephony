@@ -1179,8 +1179,10 @@ public final class DcTracker extends DcTrackerBase {
         }
         if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())
                 && isDisconnected()
-                && !Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)) {
-            setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+                && !Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)
+                && !Phone.REASON_RADIO_TURNED_OFF.equals(reason)) {
+            sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                    Phone.REASON_SINGLE_PDN_ARBITRATION));
         }
     }
 
@@ -1862,7 +1864,9 @@ public final class DcTracker extends DcTrackerBase {
                             break;
                         case DISCONNECTING:
                             // Update for DISCONNECTING only if there is no other potential match
-                            if (potentialDcac == null) {
+                            // and the apns are same.
+                            if (potentialDcac == null &&
+                                    apnSetting.equals(apnContext.getNextWaitingApn())) {
                                 potentialDcac = curDcac;
                                 potentialApnCtx = curApnCtx;
                             }
@@ -2282,6 +2286,13 @@ public final class DcTracker extends DcTrackerBase {
             return;
         }
 
+        // If apncontext is in CONNECTING state, the DISCONNECT event could be due to a previous
+        // disconnect arriving at DCT delayed.
+        if (apnContext.getState() == DctConstants.State.CONNECTING) {
+            log("onDisconnectDone: apncontext in CONNECTING state. Ignore disconnect.");
+            return;
+        }
+
         if(DBG) log("onDisconnectDone: EVENT_DISCONNECT_DONE apnContext=" + apnContext);
         apnContext.setState(DctConstants.State.IDLE);
 
@@ -2327,9 +2338,11 @@ public final class DcTracker extends DcTrackerBase {
             }
             apnContext.setApnSetting(null);
             apnContext.setDataConnectionAc(null);
-            if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())) {
+            if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())
+                    && !Phone.REASON_RADIO_TURNED_OFF.equals(apnContext.getReason())) {
                 if(DBG) log("onDisconnectDone: isOnlySigneDcAllowed true so setup single apn");
-                setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
+                sendMessage(obtainMessage(DctConstants.EVENT_TRY_SETUP_DATA,
+                    Phone.REASON_SINGLE_PDN_ARBITRATION));
             } else {
                 if(DBG) log("onDisconnectDone: not retrying");
             }

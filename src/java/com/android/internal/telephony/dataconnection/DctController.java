@@ -38,9 +38,11 @@ import android.provider.Settings;
 import android.telephony.Rlog;
 import android.telephony.SubscriptionManager;
 import android.telephony.SubscriptionManager.OnSubscriptionsChangedListener;
+import android.telephony.TelephonyManager;
 import android.util.SparseArray;
 
 import com.android.internal.os.SomeArgs;
+import com.android.internal.telephony.DctConstants;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
@@ -117,13 +119,6 @@ public class DctController extends Handler {
             logd("got ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, new DDS = "
                     + intent.getIntExtra(PhoneConstants.SUBSCRIPTION_KEY,
                             SubscriptionManager.INVALID_SUBSCRIPTION_ID));
-            updateSubIdAndCapability();
-        }
-    };
-
-    private BroadcastReceiver subInfoBroadcastReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            logd("got ACTION_SUBINFO_RECORD_UPDATED");
             updateSubIdAndCapability();
         }
     };
@@ -312,9 +307,6 @@ public class DctController extends Handler {
 
         mDdsSwitchSerializer = new DdsSwitchSerializerHandler(t.getLooper());
 
-        mContext.registerReceiver(subInfoBroadcastReceiver,
-                new IntentFilter(TelephonyIntents.ACTION_SUBINFO_RECORD_UPDATED));
-
         mContext.registerReceiver(defaultDdsBroadcastReceiver,
                 new IntentFilter(TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED));
 
@@ -339,7 +331,6 @@ public class DctController extends Handler {
         releaseAllNetworkRequests();
 
         mContext.unregisterReceiver(defaultDdsBroadcastReceiver);
-        mContext.unregisterReceiver(subInfoBroadcastReceiver);
 
         mSubMgr.removeOnSubscriptionsChangedListener(mOnSubscriptionsChangedListener);
         mContext.getContentResolver().unregisterContentObserver(mObserver);
@@ -384,14 +375,14 @@ public class DctController extends Handler {
                 Message allowedDataDone = Message.obtain(this,
                         EVENT_SET_DATA_ALLOW_DONE, s);
                 Phone phone = mPhones[phoneId].getActivePhone();
+
                 if (!isOnDemandDdsSwitchInProgress) {
                     informDefaultDdsToPropServ(phoneId);
                 } else {
                     int defPhoneId = getDataConnectionFromSetting();
                     informDefaultDdsToPropServ(defPhoneId);
                     isOnDemandDdsSwitchInProgress = false;
-               }
-
+                }
                 DcTrackerBase dcTracker =((PhoneBase)phone).mDcTracker;
                 dcTracker.setDataAllowed(true, allowedDataDone);
 
@@ -448,7 +439,8 @@ public class DctController extends Handler {
                     Rlog.d(LOG_TAG, "Failed, switchInfo = " + s
                             + " attempt delayed retry");
                     s.incRetryCount();
-                    if (s.isRetryPossible() && isCurrentRequest(s)) {
+                    if (s.isRetryPossible() && isCurrentRequest(s) &&
+                            !registerForCallEndOnActiveCall(s)) {
                         SomeArgs args = SomeArgs.obtain();
                         args.arg1 = s;
                         args.arg2 = true;
@@ -458,7 +450,7 @@ public class DctController extends Handler {
                     } else {
                         Rlog.d(LOG_TAG, "Already did max retries, notify failure");
                         errorEx = new RuntimeException("PS ATTACH failed");
-                   }
+                    }
                 } else {
                     Rlog.d(LOG_TAG, "PS ATTACH success = " + s);
                 }
@@ -508,8 +500,24 @@ public class DctController extends Handler {
                    }
                 } else {
                     Rlog.d(LOG_TAG, "PS DETACH success = " + s);
-                    isOnDemandDdsSwitchInProgress = true;
                 }
+                break;
+            }
+
+            case DctConstants.EVENT_VOICE_CALL_ENDED: {
+                AsyncResult ar = (AsyncResult)msg.obj;
+                SwitchInfo s = (SwitchInfo)ar.userObj;
+
+                if (!isCurrentRequest(s)) {
+                    return;
+                }
+
+                int[] subId = mSubController.getSubId(s.mPhoneId);
+                logd("Voice Call is ended, set Dds on sub: " + subId[0]);
+                setDefaultDataSubId(subId[0]);
+                ((PhoneBase)mPhones[s.mPhoneId].getActivePhone()).getCallTracker().
+                        unregisterForVoiceCallEnded(this);
+
                 break;
             }
 
@@ -549,6 +557,19 @@ public class DctController extends Handler {
             default:
                 loge("Un-handled message [" + msg.what + "]");
         }
+    }
+
+    private boolean registerForCallEndOnActiveCall(SwitchInfo s) {
+        for (int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++ ) {
+            Phone phone = mPhones[i].getActivePhone(); ;
+            if (phone != null && phone.getState() != PhoneConstants.State.IDLE) {
+                logd("Voice call active on sub: " + i + " .Register for voice call end");
+                ((PhoneBase)phone).getCallTracker().registerForVoiceCallEnded(this,
+                        DctConstants.EVENT_VOICE_CALL_ENDED, s);
+                return true;
+            }
+        }
+        return false;
     }
 
     private int requestNetwork(NetworkRequest request, int priority) {
@@ -1006,6 +1027,7 @@ public class DctController extends Handler {
                     }
                     mPhones[prefPhoneId].registerForAllDataDisconnected(
                             sDctController, EVENT_ALL_DATA_DISCONNECTED, s);
+                    isOnDemandDdsSwitchInProgress = true;
                     break;
                 }
             }
@@ -1228,11 +1250,24 @@ public class DctController extends Handler {
             log("Requested networkSpecifier = " + requestedSpecifier);
             log("my networkSpecifier = " + mNetworkCapabilities.getNetworkSpecifier());
 
+
+            if (!SubscriptionManager.isValidSubscriptionId(currentDds)) {
+                log("Can't handle any network request now, currentDds not ready.");
+                return;
+            }
+
             // For clients that do not send subId in NetworkCapabilities,
             // Connectivity will send to all network factories. Accept only
             // when requestedSpecifier is same as current factory's subId
             if (requestedSpecifier != subId) {
                 log("requestedSpecifier is not same as mysubId. Bail out.");
+                mPendingReq.put(networkRequest.requestId, networkRequest);
+                return;
+            }
+
+            if (SubscriptionController.getInstance().isSetDdsInProgress() &&
+                    !isNetworkRequestForInternet(networkRequest)) {
+                log("Set DDS in progress. Cannot handle request now");
                 mPendingReq.put(networkRequest.requestId, networkRequest);
                 return;
             }
@@ -1327,8 +1362,10 @@ public class DctController extends Handler {
         @Override
         protected void releaseNetworkFor(NetworkRequest networkRequest) {
             log("Cellular releasing Network for " + networkRequest);
-            if (!SubscriptionManager.isUsableSubIdValue(mPhone.getSubId())) {
-                log("Sub Info has not been ready, remove request.");
+            // If the request is in the pending list, it means it is not yet executed.
+            // So just remove it and return.
+            if (mPendingReq.get(networkRequest.requestId) != null) {
+                log("Remove the request from pending list.");
                 mPendingReq.remove(networkRequest.requestId);
                 return;
             }
