@@ -682,6 +682,13 @@ public class ImsPhone extends ImsPhoneBase {
         return mCT.mState;
     }
 
+    public void setCsvtPhoneState(PhoneConstants.State state) {
+     /* Csvt Calls and Ims Calls donot co-exist.
+      * So, update Csvt phone state to that of Ims
+      */
+        mCT.mState = state;
+    }
+
     private boolean isValidCommandInterfaceCFReason (int commandInterfaceCFReason) {
         switch (commandInterfaceCFReason) {
         case CF_REASON_UNCONDITIONAL:
