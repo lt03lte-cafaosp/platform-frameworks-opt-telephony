@@ -19,8 +19,12 @@
 
 package com.android.internal.telephony.gsm;
 
+import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.SQLException;
 import android.net.Uri;
@@ -42,6 +46,7 @@ import android.telephony.TelephonyManager;
 
 import com.android.ims.ImsManager;
 import com.android.internal.telephony.CallTracker;
+import com.android.internal.telephony.uicc.IccCardStatus.CardState;
 
 import android.text.TextUtils;
 import android.telephony.Rlog;
@@ -78,6 +83,7 @@ import com.android.internal.telephony.PhoneNotifier;
 import com.android.internal.telephony.PhoneProxy;
 import com.android.internal.telephony.PhoneSubInfo;
 import com.android.internal.telephony.SubscriptionController;
+import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.UUSInfo;
 import com.android.internal.telephony.imsphone.ImsPhone;
@@ -113,6 +119,9 @@ public class GSMPhone extends PhoneBase {
     // Key used to read/write voice mail number
     public static final String VM_NUMBER = "vm_number_key";
 
+    private static final int CALL_FORWARD_NOTIFICATION = 4;
+    private static final int NOTIFICATION_ID_OFFSET = 50;
+
     // Instance Variables
     GsmCallTracker mCT;
     GsmServiceStateTracker mSST;
@@ -120,6 +129,7 @@ public class GSMPhone extends PhoneBase {
     protected SimPhoneBookInterfaceManager mSimPhoneBookIntManager;
     PhoneSubInfo mSubInfo;
 
+    NotificationManager mNotificationManager;
     Registrant mPostDialHandler;
 
     /** List of Registrants to receive Supplementary Service Notifications. */
@@ -146,6 +156,29 @@ public class GSMPhone extends PhoneBase {
             mOnComplete = onComplete;
         }
     }
+
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (TelephonyIntents.ACTION_SUBSCRIPTION_SET_UICC_RESULT.
+                    equals(intent.getAction())) {
+                int subId = intent.getIntExtra(PhoneConstants.SUBSCRIPTION_KEY,
+                        SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+                int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
+                        PhoneConstants.PHONE_ID1);
+                int status = intent.getIntExtra(TelephonyIntents.EXTRA_RESULT,
+                        PhoneConstants.FAILURE);
+                int state = intent.getIntExtra(TelephonyIntents.EXTRA_NEW_SUB_STATE,
+                        SubscriptionManager.INACTIVE);
+                log("Received ACTION_SUBSCRIPTION_SET_UICC_RESULT on subId: " + subId
+                        + "phoneId " + phoneId + " status: " + status);
+                if ((status == PhoneConstants.SUCCESS) && (state == SubscriptionManager.INACTIVE) &&
+                        phoneId == getPhoneId()) {
+                    resetSubSpecifics();
+                }
+            }
+
+        }};
 
     // Constructors
 
@@ -203,6 +236,11 @@ public class GSMPhone extends PhoneBase {
             mSubInfo = new PhoneSubInfo(this);
         }
 
+        mNotificationManager = (NotificationManager) mContext
+                .getSystemService(Context.NOTIFICATION_SERVICE);
+        IntentFilter filter =
+                new IntentFilter(TelephonyIntents.ACTION_SUBSCRIPTION_SET_UICC_RESULT);
+        context.registerReceiver(mReceiver, filter);
         mCi.registerForAvailable(this, EVENT_RADIO_AVAILABLE, null);
         mCi.registerForOffOrNotAvailable(this, EVENT_RADIO_OFF_OR_NOT_AVAILABLE, null);
         mCi.registerForOn(this, EVENT_RADIO_ON, null);
@@ -1807,6 +1845,13 @@ public class GSMPhone extends PhoneBase {
             return;
         }
 
+        if ((mUiccController.getUiccCard(getPhoneId()) != null ) &&
+                mUiccController.getUiccCard(getPhoneId()).getCardState() ==
+                CardState.CARDSTATE_ABSENT) {
+            log("SIM not present");
+            resetSubSpecifics();
+        }
+
         // Get the latest info on the card and
         // send this to Phone Book
         setCardInPhoneBook();
@@ -2115,6 +2160,15 @@ public class GSMPhone extends PhoneBase {
 
     public void unregisterForEcmTimerReset(Handler h) {
         mEcmTimerResetRegistrants.remove(h);
+    }
+
+    public void resetSubSpecifics() {
+        Rlog.d(LOG_TAG,"resetSubSpecifics: " + getCallForwardingIndicator());
+        if (getCallForwardingIndicator()) {
+            int notificationId = CALL_FORWARD_NOTIFICATION +
+                    (getPhoneId() * NOTIFICATION_ID_OFFSET);
+            mNotificationManager.cancel(notificationId);
+        }
     }
 
     /** gets the voice mail count from preferences */
