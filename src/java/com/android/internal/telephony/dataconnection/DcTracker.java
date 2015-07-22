@@ -900,7 +900,7 @@ public final class DcTracker extends DcTrackerBase {
         boolean defaultDataSelected = SubscriptionManager.isValidSubscriptionId(dataSub);
 
         boolean allowed =
-                    (attachedState || mAutoAttachOnCreation) &&
+                    (attachedState || (mAutoAttachOnCreation && (mPhone.getSubId() == dataSub))) &&
                     (subscriptionFromNv || recordsLoaded) &&
                     (mPhone.getState() == PhoneConstants.State.IDLE ||
                      mPhone.getServiceStateTracker().isConcurrentVoiceAndDataAllowed()) &&
@@ -1206,7 +1206,8 @@ public final class DcTracker extends DcTrackerBase {
         }
         if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())
                 && isDisconnected()
-                && !Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)) {
+                && !Phone.REASON_SINGLE_PDN_ARBITRATION.equals(reason)
+                && !Phone.REASON_RADIO_TURNED_OFF.equals(reason)) {
             setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
         }
     }
@@ -1667,12 +1668,13 @@ public final class DcTracker extends DcTrackerBase {
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_TYPE, apnType);
 
         // Get current sub id.
-        int subId = SubscriptionManager.getDefaultDataSubId();
+        int subId = mPhone.getSubId();
+
         intent.putExtra(PhoneConstants.SUBSCRIPTION_KEY, subId);
 
         if (DBG) {
             log("startAlarmForReconnect: delay=" + delay + " action=" + intent.getAction()
-                    + " apn=" + apnContext);
+                    + " apn=" + apnContext + " subId=" + subId);
         }
 
         PendingIntent alarmIntent = PendingIntent.getBroadcast (mPhone.getContext(), 0,
@@ -2363,7 +2365,8 @@ public final class DcTracker extends DcTrackerBase {
             }
             apnContext.setApnSetting(null);
             apnContext.setDataConnectionAc(null);
-            if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())) {
+            if (isOnlySingleDcAllowed(mPhone.getServiceState().getRilDataRadioTechnology())
+                    && !Phone.REASON_RADIO_TURNED_OFF.equals(apnContext.getReason())) {
                 if(DBG) log("onDisconnectDone: isOnlySigneDcAllowed true so setup single apn");
                 setupDataOnConnectableApns(Phone.REASON_SINGLE_PDN_ARBITRATION);
             } else {
