@@ -1044,6 +1044,8 @@ public class DctController extends Handler {
             int subId = mPhones[i].getSubId();
             logd("onSubInfoReady handle pending requests subId=" + subId);
             mNetworkFilter[i].setNetworkSpecifier(String.valueOf(subId));
+            ((DctController.TelephonyNetworkFactory)mNetworkFactory[i])
+                    .registerOnDemandDdsCallback();
             ((DctController.TelephonyNetworkFactory)mNetworkFactory[i]).evalPendingRequest();
         }
         processRequests();
@@ -1191,7 +1193,7 @@ public class DctController extends Handler {
             }
         }
 
-        private void registerOnDemandDdsCallback() {
+        public void registerOnDemandDdsCallback() {
             SubscriptionController subController = SubscriptionController.getInstance();
 
             subController.registerForOnDemandDdsLockNotification(mPhone.getSubId(),
@@ -1251,8 +1253,9 @@ public class DctController extends Handler {
             log("my networkSpecifier = " + mNetworkCapabilities.getNetworkSpecifier());
 
 
-            if (!SubscriptionManager.isValidSubscriptionId(currentDds)) {
+            if (!isActiveSubId(currentDds)) {
                 log("Can't handle any network request now, currentDds not ready.");
+                mPendingReq.put(networkRequest.requestId, networkRequest);
                 return;
             }
 
