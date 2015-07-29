@@ -1410,7 +1410,6 @@ public class SubscriptionController extends ISub.Stub {
         return mScheduler.getCurrentDds();
     }
 
-
     private void updateDataSubId(AsyncResult ar) {
         Integer subId = (Integer)ar.result;
         int reqStatus = PhoneConstants.FAILURE;
@@ -1420,11 +1419,18 @@ public class SubscriptionController extends ISub.Stub {
         if (ar.exception == null) {
             setDataSubId(subId);
             reqStatus = PhoneConstants.SUCCESS;
-        }
-        mScheduler.updateCurrentDds(null);
-        broadcastDefaultDataSubIdChanged(subId);
 
-        updateAllDataConnectionTrackers();
+            mScheduler.updateCurrentDds(null);
+            broadcastDefaultDataSubIdChanged(subId);
+
+            updateAllDataConnectionTrackers();
+        } else {
+            // DDS switch failed. Make sure DDS is still
+            // intact on last known dds subscription.
+            int defaultDds = getDefaultDataSubId();
+            logd("DDS switch failed, enforce last dds = " + defaultDds);
+            setDefaultDataSubId(defaultDds);
+        }
     }
 
     public void setDefaultDataSubId(int subId) {
@@ -1439,6 +1445,7 @@ public class SubscriptionController extends ISub.Stub {
         }
         mDctController.setDefaultDataSubId(subId);
     }
+
 
     public void setDataSubId(int subId) {
         Settings.Global.putInt(mContext.getContentResolver(),
