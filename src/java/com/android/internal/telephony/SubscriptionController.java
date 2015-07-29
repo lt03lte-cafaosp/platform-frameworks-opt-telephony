@@ -1258,7 +1258,6 @@ public class SubscriptionController extends ISub.Stub {
         return mScheduler.getCurrentDds();
     }
 
-
     private void updateDataSubId(AsyncResult ar) {
         Long subId = (Long)ar.result;
         int reqStatus = PhoneConstants.FAILURE;
@@ -1268,13 +1267,24 @@ public class SubscriptionController extends ISub.Stub {
         if (ar.exception == null) {
             setDataSubId(subId);
             reqStatus = PhoneConstants.SUCCESS;
-        }
-        mScheduler.updateCurrentDds(null);
-        broadcastDefaultDataSubIdChanged(reqStatus);
 
-        // FIXME is this still needed?
-        updateAllDataConnectionTrackers();
+            mScheduler.updateCurrentDds(null);
+            /* Only success result would be broadcasted.
+             * Success either on the desired sub or success on the
+             * previos default sub.
+             * */
+            broadcastDefaultDataSubIdChanged(reqStatus);
+
+            updateAllDataConnectionTrackers();
+        } else {
+            // DDS switch failed. Make sure DDS is still
+            // intact on last known dds subscription.
+            long defaultDds = getDefaultDataSubId();
+            logd("DDS switch failed, enforce last dds = " + defaultDds);
+            setDefaultDataSubId(defaultDds);
+        }
     }
+
     public void setDataSubId(long subId) {
         Settings.Global.putLong(mContext.getContentResolver(),
                 Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION, subId);
