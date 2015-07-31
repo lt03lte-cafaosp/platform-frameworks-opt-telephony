@@ -1464,7 +1464,8 @@ public class SIMRecords extends IccRecords {
             log("update icc_operator_numeric=" + operator);
             setSystemProperty(PROPERTY_ICC_OPERATOR_NUMERIC, operator);
             final SubscriptionController subController = SubscriptionController.getInstance();
-            subController.setMccMnc(operator, subController.getDefaultSmsSubId());
+            int[] subId = subController.getSubIdUsingSlotId(mParentApp.getSlotId());
+            subController.setMccMnc(operator, subId[0]);
         } else {
             log("onAllRecordsLoaded empty 'gsm.sim.operator.numeric' skipping");
         }

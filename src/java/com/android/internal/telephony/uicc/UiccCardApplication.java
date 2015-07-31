@@ -909,6 +909,9 @@ public class UiccCardApplication {
         return mUiccCard;
     }
 
+    public int getSlotId() {
+        return mUiccCard.getPhoneId();
+    }
     private void log(String msg) {
         Rlog.d(LOG_TAG, msg);
     }
