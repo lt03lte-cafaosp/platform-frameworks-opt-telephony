@@ -154,7 +154,7 @@ public class ModemBindingPolicyHandler extends Handler {
     //***** Events
     private static final int EVENT_MODEM_RAT_CAPS_AVAILABLE = 1;
     private static final int EVENT_UPDATE_BINDING_DONE = 2;
-    private static final int EVENT_SET_NW_MODE_DONE = 3;
+    private static final int EVENT_RADIO_NOT_AVAILABLE = 3;
 
     //*****Constants
     private static final int SUCCESS = 1;
@@ -165,7 +165,6 @@ public class ModemBindingPolicyHandler extends Handler {
     private static ModemStackController mModemStackController;
     private CommandsInterface[] mCi;
     private Context mContext;
-    private int mNumOfSetPrefNwModeSuccess = 0;
     private int mNumPhones = TelephonyManager.getDefault().getPhoneCount();
     private boolean mModemRatCapabilitiesAvailable = false;
     private boolean mIsSetPrefNwModeInProgress = false;
@@ -211,6 +210,10 @@ public class ModemBindingPolicyHandler extends Handler {
         mModemStackController.registerForModemRatCapsAvailable
                 (this, EVENT_MODEM_RAT_CAPS_AVAILABLE, null);
 
+        for (int i = 0; i < mCi.length; i++) {
+            mCi[i].registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, null);
+        }
+
         for (int i = 0; i < mNumPhones; i++) {
             mPreferredStackId[i] = i;
             mCurrentStackId[i] = i;
@@ -237,36 +240,14 @@ public class ModemBindingPolicyHandler extends Handler {
                 handleModemRatCapsAvailable();
                 break;
 
-            case EVENT_SET_NW_MODE_DONE:
-                handleSetPreferredNetwork(msg);
+            case EVENT_RADIO_NOT_AVAILABLE:
+                logd("EVENT_RADIO_NOT_AVAILABLE");
+                handleModemRatCapsUnAvailable();
                 break;
 
             default:
                 break;
         }
-    }
-
-    private void handleSetPreferredNetwork(Message msg) {
-        AsyncResult ar = (AsyncResult) msg.obj;
-        int index = (Integer) ar.userObj;
-        if (ar.exception == null) {
-            mNumOfSetPrefNwModeSuccess++;
-            // set nw mode success for all the subs, then update value to DB
-            if (mNumOfSetPrefNwModeSuccess == mNumPhones) {
-                for (int i = 0; i < mNumPhones; i++) {
-                    logd("Updating network mode in DB for slot[" + i + "] with "
-                            + mNwModeinSubIdTable[i]);
-                    TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
-                            android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
-                            i, mNwModeinSubIdTable[i]);
-                }
-                mNumOfSetPrefNwModeSuccess = 0;
-            }
-        } else {
-            logd("Failed to set preferred network mode for slot" + index);
-            mNumOfSetPrefNwModeSuccess = 0;
-        }
-
     }
 
     private void handleUpdateBindingDone(AsyncResult ar) {
@@ -291,7 +272,7 @@ public class ModemBindingPolicyHandler extends Handler {
     * Description: If Network mode for a subid in simInfo table is valid and and is not
     * equal to value in DB, then update the DB value and send request to RIL.
     */
-    public void updatePrefNwTypeIfRequired(){
+    public void updatePrefNwTypeIfRequired(Message response){
         boolean updateRequired = false;
         syncPreferredNwModeFromDB();
         SubscriptionController subCtrlr = SubscriptionController.getInstance();
@@ -313,16 +294,27 @@ public class ModemBindingPolicyHandler extends Handler {
                 }
             }
         }
+        logd("updatePrefNwTypeIfRequired: updateRequired : " + updateRequired);
 
         if (updateRequired) {
-            if (FAILURE == updateStackBindingIfRequired(false)) {
-                //In case of Update Stack Binding not required or failure, send setPrefNwType to
-                //RIL immediately. In case of success after stack binding completed setPrefNwType
-                //request is anyways sent.
+            //if binding is in progress return failure for this request
+            if (mIsSetPrefNwModeInProgress) {
+                loge("setPreferredNetworkType: In Progress:");
+                sendResponseToTarget(response, RILConstants.GENERIC_FAILURE);
+                return;
+            }
+
+            mIsSetPrefNwModeInProgress = true;
+
+            //If CrossBinding request is not accepted, i.e. return value is FAILURE
+            //send request directly to RIL, or else store the setpref Msg for later processing.
+            if (updateStackBindingIfRequired(false) == SUCCESS) {
+                mStoredResponse.put(0, response);
+            } else {
                 for (int i=0; i < mNumPhones; i++ ) {
-                    Message msg = obtainMessage(EVENT_SET_NW_MODE_DONE, i);
-                    mCi[i].setPreferredNetworkType(mNwModeinSubIdTable[i], msg);
+                    mCi[i].setPreferredNetworkType(mNwModeinSubIdTable[i], response);
                 }
+                mIsSetPrefNwModeInProgress = false;
             }
        }
     }
@@ -331,6 +323,12 @@ public class ModemBindingPolicyHandler extends Handler {
         mModemRatCapabilitiesAvailable = true;
         //Initialization sequence: Need to send Bind request always, so override is true.
         if (SUCCESS == updateStackBindingIfRequired(true)) mIsSetPrefNwModeInProgress = true;
+    }
+
+    private void handleModemRatCapsUnAvailable() {
+        if (mModemRatCapabilitiesAvailable) {
+            mModemRatCapabilitiesAvailable = false;
+        }
     }
 
     private void syncCurrentStackInfo() {
@@ -508,6 +506,11 @@ public class ModemBindingPolicyHandler extends Handler {
         int supportedRatMaskForNwMode = 0;
 
         logd("getNumOfRATsSupportedForNwMode: nwMode[" + nwMode +"] modemCaps = " + modemCaps);
+
+        if (modemCaps == null) {
+            loge("getNumOfRATsSupportedForNwMode: Modem Capabilites are null. Return!!");
+            return 0;
+        }
 
         //send result by ANDing corresponding NETWORK MASK and Modem Caps mask.
         switch (nwMode) {
