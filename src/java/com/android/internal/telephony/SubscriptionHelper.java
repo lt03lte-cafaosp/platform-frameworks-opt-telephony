@@ -65,6 +65,66 @@ class SubscriptionHelper extends Handler {
     // This flag is used to trigger Dds during boot-up
     // and when flex mapping performed
     private static boolean sTriggerDds = false;
+    private class SetUiccTransaction {
+        int mRequestCount;
+        int mApp3gppResult;
+        int mApp3gpp2Result;
+
+        public SetUiccTransaction() {
+            resetToDefault();
+        }
+
+        void incrementReqCount() {
+            mRequestCount++;
+        }
+
+        void updateAppResult(int appType, int result) {
+            mRequestCount--;
+            if (appType == PhoneConstants.APPTYPE_USIM || appType == PhoneConstants.APPTYPE_SIM) {
+                mApp3gppResult = result;
+            } else if (appType == PhoneConstants.APPTYPE_CSIM ||
+                    appType == PhoneConstants.APPTYPE_RUIM) {
+                mApp3gpp2Result = result;
+            }
+        }
+
+        boolean isResponseReceivedForAllApps() {
+            return (mRequestCount == 0);
+        }
+
+        int getTransactionResult(int newSubState) {
+            int result = PhoneConstants.SUCCESS;
+
+            // In case of activation, if both APPS request failed treat
+            // it as overall failure.
+            // In case of deactivation, if any of the APP request failed
+            // treat it as overall failure.
+            if (newSubState == SubscriptionManager.ACTIVE &&
+                    ((mApp3gppResult == SUB_SET_UICC_FAIL) &&
+                    (mApp3gpp2Result == SUB_SET_UICC_FAIL))) {
+                result = PhoneConstants.FAILURE;
+            } else if (newSubState == SubscriptionManager.INACTIVE &&
+                    ((mApp3gppResult == SUB_SET_UICC_FAIL) ||
+                    (mApp3gpp2Result == SUB_SET_UICC_FAIL))) {
+                result = PhoneConstants.FAILURE;
+            }
+
+            return result;
+        }
+
+        void resetToDefault() {
+            mApp3gppResult = SUB_INIT_STATE;
+            mApp3gpp2Result = SUB_INIT_STATE;
+            mRequestCount = 0;
+        }
+
+        @Override
+        public String toString() {
+            return "reqCount " + mRequestCount + " 3gppApp result "
+                    + mApp3gppResult + " 3gpp2 app result " + mApp3gpp2Result;
+        }
+    };
+    private SetUiccTransaction[] mSetUiccTransaction;
 
     private static final String APM_SIM_NOT_PWDN_PROPERTY = "persist.radio.apm_sim_not_pwdn";
     private static final boolean sApmSIMNotPwdn = (SystemProperties.getInt(
@@ -76,6 +136,7 @@ class SubscriptionHelper extends Handler {
     public static final int SUB_SET_UICC_FAIL = -100;
     public static final int SUB_SIM_NOT_INSERTED = -99;
     public static final int SUB_INIT_STATE = -1;
+    public static final int SUB_SET_UICC_SUCCESS = 1;
     private static boolean mNwModeUpdated = false;
 
     private final ContentObserver nwModeObserver =
@@ -114,11 +175,13 @@ class SubscriptionHelper extends Handler {
         mCi = ci;
         sNumPhones = TelephonyManager.getDefault().getPhoneCount();
         mSubStatus = new int[sNumPhones];
+        mSetUiccTransaction = new SetUiccTransaction[sNumPhones];
         for (int i=0; i < sNumPhones; i++ ) {
             mSubStatus[i] = SUB_INIT_STATE;
             Integer index = new Integer(i);
             // Register for SIM Refresh events
             mCi[i].registerForIccRefresh(this, EVENT_REFRESH, index);
+            mSetUiccTransaction[i] = new SetUiccTransaction();
         }
         mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
                 Settings.Global.PREFERRED_NETWORK_MODE), false, nwModeObserver);
@@ -233,20 +296,61 @@ class SubscriptionHelper extends Handler {
             int appType = uiccCard.getApplicationIndex(i).getType().ordinal();
             if (set3GPPDone == false && (appType == PhoneConstants.APPTYPE_USIM ||
                     appType == PhoneConstants.APPTYPE_SIM)) {
+                mSetUiccTransaction[slotId].incrementReqCount();
                 Message msgSetUiccSubDone = Message.obtain(
-                        this, EVENT_SET_UICC_SUBSCRIPTION_DONE, slotId, subStatus);
+                        this, EVENT_SET_UICC_SUBSCRIPTION_DONE,
+                        slotId, subStatus, new Integer(appType));
                 mCi[slotId].setUiccSubscription(slotId, i, slotId, subStatus, msgSetUiccSubDone);
                 set3GPPDone = true;
             } else if (set3GPP2Done == false && (appType == PhoneConstants.APPTYPE_CSIM ||
                     appType == PhoneConstants.APPTYPE_RUIM)) {
+                mSetUiccTransaction[slotId].incrementReqCount();
                 Message msgSetUiccSubDone = Message.obtain(
-                        this, EVENT_SET_UICC_SUBSCRIPTION_DONE, slotId, subStatus);
+                        this, EVENT_SET_UICC_SUBSCRIPTION_DONE,
+                        slotId, subStatus, new Integer(appType));
                 mCi[slotId].setUiccSubscription(slotId, i, slotId, subStatus, msgSetUiccSubDone);
                 set3GPP2Done = true;
             }
 
             if (set3GPPDone && set3GPP2Done) break;
         }
+    }
+
+    /**
+     * Called when Activate/Deactivate is triggered by UI.
+     * @param requestSentFromApps true if request is triggered by UI.
+     * @return
+     *    true if SusbcriptionHelper is ready to send request to RIL, that is, flex mapping is
+     *            currently Not in progress.
+     *    false if SusbcriptionHelper is not ready to send the request to RIL. SusbcriptionHelper
+     *            will be 'not ready' if flex mapping is in progress.
+     */
+    public boolean setUiccSubscription(int slotId, int subStatus, boolean requestSentFromApps) {
+       logd("setUiccSusbcription request received from apps");
+       if (requestSentFromApps && !isReadyForSetUicc()) {
+           return false;
+       } else {
+           setUiccSubscription(slotId, subStatus);
+           return true;
+       }
+    }
+
+    private boolean isReadyForSetUicc() {
+       boolean isStackReady = ModemStackController.getInstance().isStackReady();
+       boolean isResponseReceivedForAllSlots = true;
+       for (int i = 0; i < sNumPhones; i++) {
+          if(!mSetUiccTransaction[i].isResponseReceivedForAllApps()){
+              isResponseReceivedForAllSlots = false;
+              logd("isReadyForSerUicc: response not received for slot = " + i);
+              break;
+          }
+       }
+       logd("isReadyForSetUicc: isStackReady = " + isStackReady +
+               " isResponseReceivedForAllSlots = " + isResponseReceivedForAllSlots);
+       if (isStackReady && isResponseReceivedForAllSlots) {
+          return true;
+       }
+       return false;
     }
 
     /**
@@ -260,14 +364,25 @@ class SubscriptionHelper extends Handler {
         int newSubState = msg.arg2;
         long[] subId = subCtrlr.getSubIdUsingSlotId(slotId);
 
-        if (ar.exception != null) {
+        mSetUiccTransaction[slotId].updateAppResult((Integer)ar.userObj,
+                (ar.exception != null) ? SUB_SET_UICC_FAIL : SUB_SET_UICC_SUCCESS);
+        if (!mSetUiccTransaction[slotId].isResponseReceivedForAllApps()) {
+            logi("Waiting for more responses " + mSetUiccTransaction[slotId] + " slotId " + slotId);
+            return;
+        }
+        logd(" SubParams info " + mSetUiccTransaction[slotId] + " slotId " + slotId);
+
+        if (mSetUiccTransaction[slotId].
+                getTransactionResult(newSubState) == PhoneConstants.FAILURE) {
             loge("Exception in SET_UICC_SUBSCRIPTION, slotId = " + slotId
                     + " newSubState " + newSubState);
             // broadcast set uicc failure
             mSubStatus[slotId] = SUB_SET_UICC_FAIL;
             broadcastSetUiccResult(slotId, newSubState, PhoneConstants.FAILURE);
+            mSetUiccTransaction[slotId].resetToDefault();
             return;
         }
+        mSetUiccTransaction[slotId].resetToDefault();
 
         int subStatus = subCtrlr.getSubState(subId[0]);
         if (newSubState != subStatus) {
@@ -356,6 +471,7 @@ class SubscriptionHelper extends Handler {
         // Seems SSR happenned or RILD crashed, do not handle SIM change events
         if (!isRadioAvailable(slotId)) {
             logi(" proceedToHandleIccEvent, radio not available, slotId = " + slotId);
+            mSubStatus[slotId] = SUB_INIT_STATE;
             return false;
         }
         return true;

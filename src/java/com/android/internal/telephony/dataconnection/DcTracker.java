@@ -246,6 +246,7 @@ public final class DcTracker extends DcTrackerBase {
         }
 
         mDataConnectionTracker = this;
+        registerForAllEvents();
         update();
         mApnObserver = new ApnChangeObserver();
         p.getContext().getContentResolver().registerContentObserver(
@@ -385,6 +386,7 @@ public final class DcTracker extends DcTrackerBase {
         if (mOmhApt != null) {
             mOmhApt.unregisterForModemProfileReady(this);
         }
+        unregisterForAllEvents();
 
         destroyDataConnections();
     }
@@ -2157,7 +2159,9 @@ public final class DcTracker extends DcTrackerBase {
                             break;
                         case DISCONNECTING:
                             // Update for DISCONNECTING only if there is no other potential match
-                            if (potentialDcac == null) {
+                            // and the apns are same.
+                            if (potentialDcac == null &&
+                                    apnSetting.equals(apnContext.getNextWaitingApn())) {
                                 potentialDcac = curDcac;
                                 potentialApnCtx = curApnCtx;
                             }
@@ -3394,7 +3398,6 @@ public final class DcTracker extends DcTrackerBase {
     public void update() {
         log("update sub = " + mPhone.getSubId());
         log("update(): Active DDS, register for all events now!");
-        registerForAllEvents();
         onUpdateIcc();
 
         mUserDataEnabled = Settings.Global.getInt(mPhone.getContext().getContentResolver(),
