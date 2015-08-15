@@ -1666,6 +1666,7 @@ public final class DcTracker extends DcTrackerBase {
         Intent intent = new Intent(INTENT_RECONNECT_ALARM + "." + apnType);
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_REASON, apnContext.getReason());
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_TYPE, apnType);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
 
         // Get current sub id.
         int subId = SubscriptionManager.getDefaultDataSubId();
@@ -1679,7 +1680,7 @@ public final class DcTracker extends DcTrackerBase {
         PendingIntent alarmIntent = PendingIntent.getBroadcast (mPhone.getContext(), 0,
                                         intent, PendingIntent.FLAG_UPDATE_CURRENT);
         apnContext.setReconnectIntent(alarmIntent);
-        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + delay, alarmIntent);
     }
 
@@ -1687,6 +1688,7 @@ public final class DcTracker extends DcTrackerBase {
         String apnType = apnContext.getApnType();
         Intent intent = new Intent(INTENT_RESTART_TRYSETUP_ALARM + "." + apnType);
         intent.putExtra(INTENT_RESTART_TRYSETUP_ALARM_EXTRA_TYPE, apnType);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
 
         if (DBG) {
             log("startAlarmForRestartTrySetup: delay=" + delay + " action=" + intent.getAction()
@@ -1695,7 +1697,7 @@ public final class DcTracker extends DcTrackerBase {
         PendingIntent alarmIntent = PendingIntent.getBroadcast (mPhone.getContext(), 0,
                                         intent, PendingIntent.FLAG_UPDATE_CURRENT);
         apnContext.setReconnectIntent(alarmIntent);
-        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + delay, alarmIntent);
     }
 
