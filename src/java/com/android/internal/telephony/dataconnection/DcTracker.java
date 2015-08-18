@@ -836,7 +836,7 @@ public final class DcTracker extends DcTrackerBase {
             notifyOffApnsOfAvailability(Phone.REASON_DATA_ATTACHED);
         }
         if (mAutoAttachOnCreationConfig) {
-            mAutoAttachOnCreation = true;
+            mAutoAttachOnCreation.set(true);
         }
         setupDataOnConnectableApns(Phone.REASON_DATA_ATTACHED);
     }
@@ -896,7 +896,7 @@ public final class DcTracker extends DcTrackerBase {
         boolean defaultDataSelected = SubscriptionManager.isValidSubscriptionId(dataSub);
 
         boolean allowed =
-                    (attachedState || mAutoAttachOnCreation) &&
+                    (attachedState || mAutoAttachOnCreation.get()) &&
                     (subscriptionFromNv || recordsLoaded) &&
                     (mPhone.getState() == PhoneConstants.State.IDLE ||
                      mPhone.getServiceStateTracker().isConcurrentVoiceAndDataAllowed()) &&
@@ -907,7 +907,7 @@ public final class DcTracker extends DcTrackerBase {
                     desiredPowerState;
         if (!allowed && DBG) {
             String reason = "";
-            if (!(attachedState || mAutoAttachOnCreation)) {
+            if (!(attachedState || mAutoAttachOnCreation.get())) {
                 reason += " - Attached= " + attachedState;
             }
             if (!(subscriptionFromNv || recordsLoaded)) {
@@ -1482,8 +1482,8 @@ public final class DcTracker extends DcTrackerBase {
         Message msg = obtainMessage();
         msg.what = DctConstants.EVENT_DATA_SETUP_COMPLETE;
         msg.obj = apnContext;
-        dcac.bringUp(apnContext, getInitialMaxRetry(), profileId, radioTech, mAutoAttachOnCreation,
-                msg);
+        dcac.bringUp(apnContext, getInitialMaxRetry(), profileId, radioTech,
+                mAutoAttachOnCreation.get(), msg);
 
         if (DBG) log("setupData: initing!");
         return true;
@@ -1713,7 +1713,7 @@ public final class DcTracker extends DcTrackerBase {
         mAutoAttachOnCreationConfig = mPhone.getContext().getResources()
                 .getBoolean(com.android.internal.R.bool.config_auto_attach_data_on_creation);
         if (mAutoAttachOnCreationConfig && mAttached.get()) {
-            mAutoAttachOnCreation = true;
+            mAutoAttachOnCreation.set(true);
         }
 
         if (mOmhApt != null) {
