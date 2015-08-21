@@ -68,6 +68,10 @@ public final class SmsApplication {
 
     private static SmsPackageMonitor sSmsPackageMonitor = null;
 
+    public static String ACTION_DEFAULT_MMS_APPLICATION_CHANGED =
+            "com.android.telephony.intent.action.DEFAULT_MMS_APPLICATION_CHANGED";
+
+    public static String MMS_APP_SET = "mms_app";
     public static class SmsApplicationData {
         /**
          * Name of this SMS app for display.
@@ -495,6 +499,9 @@ public final class SmsApplication {
                     Settings.Secure.SMS_DEFAULT_APPLICATION, applicationData.mPackageName,
                     userId);
 
+            Intent intent = new Intent(ACTION_DEFAULT_MMS_APPLICATION_CHANGED);
+            intent.putExtra(MMS_APP_SET, applicationData.mPackageName);
+            context.sendBroadcast(intent);
             // Configure this as the preferred activity for SENDTO sms/mms intents
             configurePreferredActivity(packageManager, new ComponentName(
                     applicationData.mPackageName, applicationData.mSendToClass), userId);
