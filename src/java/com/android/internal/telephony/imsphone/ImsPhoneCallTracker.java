@@ -1490,9 +1490,13 @@ public final class ImsPhoneCallTracker extends CallTracker {
             }
 
             if (mPhone != null) {
-                String msg = "LTE HD voice is unavailable. 3G voice call will be connected." +
-                        "Server Error code: " + reasonInfo.getCode();
-                Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
+                final boolean displayCsRetryToast = mPhone.getContext().getResources().
+                       getBoolean(com.android.internal.R.bool.config_carrier_display_csretry_toast);
+                if (displayCsRetryToast) {
+                    String msg = "LTE HD voice is unavailable. 3G voice call will be connected." +
+                            "Server Error code: " + reasonInfo.getCode();
+                    Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
+                }
             }
         }
     };
