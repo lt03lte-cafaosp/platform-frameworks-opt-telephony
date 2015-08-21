@@ -240,6 +240,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
     private Object mAddParticipantLock = new Object();
     private Message mAddPartResp;
+    private BeepUtils mBeepUtils;
 
     //***** Events
 
@@ -252,6 +253,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
         IntentFilter intentfilter = new IntentFilter();
         intentfilter.addAction(ImsManager.ACTION_IMS_INCOMING_CALL);
         mPhone.getContext().registerReceiver(mReceiver, intentfilter);
+        mBeepUtils = new BeepUtils(mPhone.getContext());
 
         Thread t = new Thread() {
             public void run() {
@@ -1475,6 +1477,10 @@ public final class ImsPhoneCallTracker extends CallTracker {
             if (mPhone != null && msg != null) {
                 Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
             }
+            if (mPhone.getContext().getResources().getBoolean(
+                            com.android.internal.R.bool.config_regional_alerts_for_drop_call)) {
+                mBeepUtils.startAlert();
+            }
         }
 
         @Override
@@ -1550,6 +1556,16 @@ public final class ImsPhoneCallTracker extends CallTracker {
             }
 
             mPhone.onIncomingUSSD(ussdMode, ussdMessage);
+        }
+
+
+        @Override
+        public void onCallHandoverFailed(ImsCall imsCall, int srcAccessTech,
+                int targetAccessTech, ImsReasonInfo reasonInfo) {
+            if (mPhone.getContext().getResources().getBoolean(
+                            com.android.internal.R.bool.config_regional_alerts_for_drop_call)) {
+                mBeepUtils.startAlert();
+            }
         }
     };
 

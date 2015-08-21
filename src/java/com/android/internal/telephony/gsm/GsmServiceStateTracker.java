@@ -29,6 +29,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.database.ContentObserver;
+import android.net.ZeroBalanceHelper;
 import android.os.AsyncResult;
 import android.os.Build;
 import android.os.Handler;
@@ -79,6 +80,7 @@ import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.SIMRecords;
 import com.android.internal.telephony.uicc.SpnOverride;
+import com.android.internal.telephony.uicc.PlmnOverride;
 import com.android.internal.telephony.uicc.UiccCard;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
@@ -105,6 +107,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
     GsmCellLocation mCellLoc;
     GsmCellLocation mNewCellLoc;
     SpnOverride mSpnOverride;
+    PlmnOverride mPlmnOverride;
     int mPreferredNetworkType;
 
     private int mMaxDataCalls = 1;
@@ -182,6 +185,8 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
     static final int PS_NOTIFICATION = 888;  // Id to update and cancel PS restricted
     static final int CS_NOTIFICATION = 999;  // Id to update and cancel CS restricted
 
+    private int mTac = -1;
+
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -225,6 +230,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         mCellLoc = new GsmCellLocation();
         mNewCellLoc = new GsmCellLocation();
         mSpnOverride = new SpnOverride();
+        mPlmnOverride = new PlmnOverride();
 
         PowerManager powerManager =
                 (PowerManager)phone.getContext().getSystemService(Context.POWER_SERVICE);
@@ -827,6 +833,16 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                             if (states.length >= 6) {
                                 mNewMaxDataCalls = Integer.parseInt(states[5]);
                             }
+                            // Reading the TAC update value
+                            if (states.length >= 7) {
+                                int tac = Integer.parseInt(states[6]);
+                                Rlog.d(LOG_TAG,
+                                    "Updated TAC:" +tac + ", old TAC:" +mTac);
+                                if (mTac != tac) {
+                                    mTac = tac;
+                                    resetDataBlocked();
+                                }
+                            }
                         } catch (NumberFormatException ex) {
                             loge("error parsing GprsRegistrationState: " + ex);
                         }
@@ -858,6 +874,9 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                             if (mSpnOverride.containsCarrier(opNames[2])) {
                                 log("EVENT_POLL_STATE_OPERATOR: use spnOverride");
                                 strOperatorLong = mSpnOverride.getSpn(opNames[2]);
+                            } else if (mPlmnOverride.containsCarrier(opNames[2])) {
+                                log("EVENT_POLL_STATE_OPERATOR: use plmnOverride");
+                                strOperatorLong = mPlmnOverride.getPlmn(opNames[2]);
                             } else {
                                 log("EVENT_POLL_STATE_OPERATOR: use value from ril");
                                 strOperatorLong = opNames[0];
@@ -1062,6 +1081,8 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         boolean hasRoamingOff = mSS.getRoaming() && !mNewSS.getRoaming();
 
         boolean hasLocationChanged = !mNewCellLoc.equals(mCellLoc);
+
+        boolean hasLacChanged = (mNewCellLoc.getLac() != mCellLoc.getLac());
 
         boolean needNotifyData = (mSS.getCssIndicator() != mNewSS.getCssIndicator());
 
@@ -1318,6 +1339,11 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
             mPhone.notifyLocationChanged();
         }
 
+        if (hasLacChanged) {
+            // Resetting the data block flag on LAC change
+            resetDataBlocked();
+        }
+
         if (! isGprsConsistent(mSS.getDataRegState(), mSS.getVoiceRegState())) {
             if (!mStartedGprsRegCheck && !mReportedGprsNoReg) {
                 mStartedGprsRegCheck = true;
@@ -1333,6 +1359,18 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
             mReportedGprsNoReg = false;
         }
         // TODO: Add GsmCellIdenity updating, see CdmaLteServiceStateTracker.
+    }
+
+     /**
+     * Method to reset Data block flag on LAC/TAC update
+     * @hide
+     */
+    private void resetDataBlocked() {
+        ZeroBalanceHelper helper = new ZeroBalanceHelper();
+        if (helper.getBgDataProperty().equals("true")) {
+            Rlog.d(LOG_TAG, "Enabling the background data on LAU/RAU");
+            helper.setBgDataProperty("false");
+        }
     }
 
     /**

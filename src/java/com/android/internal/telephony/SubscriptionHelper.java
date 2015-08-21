@@ -131,6 +131,8 @@ class SubscriptionHelper extends Handler {
 
     private static final int EVENT_SET_UICC_SUBSCRIPTION_DONE = 1;
     private static final int EVENT_REFRESH = 2;
+    private static final int EVENT_SET_NW_MODE_DONE = 3;
+    private static final int EVENT_GET_PREFERRED_NETWORK_TYPE = 4;
 
     public static final int SUB_SET_UICC_FAIL = -100;
     public static final int SUB_SIM_NOT_INSERTED = -99;
@@ -228,9 +230,58 @@ class SubscriptionHelper extends Handler {
                 logd("EVENT_REFRESH");
                 processSimRefresh((AsyncResult)msg.obj);
                 break;
+            case EVENT_SET_NW_MODE_DONE:
+                handleSetPrefNwModeDone(msg);
+                break;
+            case EVENT_GET_PREFERRED_NETWORK_TYPE:
+                handleGetPreferredNetworkTypeResponse(msg);
+                break;
            default:
            break;
         }
+    }
+
+    private void handleGetPreferredNetworkTypeResponse(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        Integer phoneId = (Integer)ar.userObj;
+        if (ar.exception == null) {
+            int modemNetworkMode = ((int[])ar.result)[0];
+
+            //check that modemNetworkMode is from an accepted value
+            if (isNwModeValid(modemNetworkMode)) {
+                //update nwMode value to the DB
+                logd("Updating nw mode in DB for slot[" + phoneId+ "] with " + modemNetworkMode);
+                TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        phoneId, modemNetworkMode);
+            } else {
+                loge("handleGetPreferredNetworkTypeResponse: InValid for slot : " + phoneId);
+            }
+        } else {
+            loge("handleGetPreferredNetworkTypeResponse: Failed for slot : "+ phoneId);
+        }
+    }
+
+    private boolean isNwModeValid(int nwMode) {
+        return (nwMode >= Phone.NT_MODE_WCDMA_PREF) &&
+                    (nwMode <= Phone.NT_MODE_LTE_CDMA_EVDO_GSM);
+    }
+
+    private void handleSetPrefNwModeDone(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        if (ar.exception != null) {
+            logd("Failed to set preferred network mode as per simInfo Table");
+
+            for (int i=0; i < sNumPhones; i++ ) {
+                logd("Get nw mode from modem and set to DB for slot :" + i);
+                Message getNwModeMsg = Message.obtain(this, EVENT_GET_PREFERRED_NETWORK_TYPE,
+                    new Integer(i));
+                mCi[i].getPreferredNetworkType(getNwModeMsg);
+            }
+        } else {
+            logd("Success to set pref nw mode as per sim info table on a slot");
+        }
+
     }
 
     public boolean needSubActivationAfterRefresh(int slotId) {
@@ -277,9 +328,53 @@ class SubscriptionHelper extends Handler {
     }
 
     public void updateNwMode() {
+        SubscriptionController subCtrlr = SubscriptionController.getInstance();
+        int[] prefNwModeInDB = new int[sNumPhones];
+        int[] nwModeinSubIdTable = new int[sNumPhones];
+        boolean updateRequired = false;
+
         updateNwModesInSubIdTable(false);
-        ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired();
         mNwModeUpdated = true;
+
+        for (int i=0; i < sNumPhones; i++ ) {
+            int[] subIdList = subCtrlr.getSubId(i);
+            try {
+                prefNwModeInDB[i] = TelephonyManager.getIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE, i);
+            } catch (SettingNotFoundException snfe) {
+                loge("updateNwMode: Could not find PREFERRED_NETWORK_MODE!!!");
+                prefNwModeInDB[i] = Phone.PREFERRED_NT_MODE;
+            }
+
+            if (subIdList != null && subIdList[0] > 0) {
+                int subId = subIdList[0];
+                if (!SubscriptionManager.isValidSubscriptionId(subId)) {
+                    nwModeinSubIdTable[i] = SubscriptionManager.DEFAULT_NW_MODE;
+                } else {
+                    nwModeinSubIdTable[i] = subCtrlr.getNwMode(subId);
+                }
+                if (nwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
+                    updateRequired = false;
+                    break;
+                }
+                if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
+                        && isNwModeValid(nwModeinSubIdTable[i])) {
+                    updateRequired = true;
+                }
+            }
+        }
+        logd("updateNwMode: updateRequired in Modem: " + updateRequired);
+
+        if (updateRequired) {
+            for (int i=0; i < sNumPhones; i++ ) {
+                logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable[i]);
+                TelephonyManager.putIntAtIndex( mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        i, nwModeinSubIdTable[i]);
+            }
+            Message msg = obtainMessage(EVENT_SET_NW_MODE_DONE);
+            ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired(msg);
+        }
     }
 
     public void setUiccSubscription(int slotId, int subStatus) {
@@ -429,16 +524,10 @@ class SubscriptionHelper extends Handler {
         }
 
 
-        // Seems SSR happenned or RILD crashed, do not handle SIM change events.
-        // During SSR, radio state will move to UNAVAILABLE and then OFF.
-        // Checking for only the radio state Unavailable for deciding if SubscriptionInfoUpdater
-        // needs to proceed with updating the sim states is not sufficient.
-        // We need to check for radio state off in addition for checking unavailable as there
-        // could be race condition where radio state could have moved to OFF from Unavailable
-        // before SubscriptionInfoUpdater receives the notification to update the sim states.
-        if (!isRadioAvailable(slotId) || ((apmState == 0) && !isRadioOn(slotId))) {
-            logi(" proceedToHandleIccEvent, ssr or rild crash, radio off/unavailable,"
-                    + "slotId = " + slotId);
+        // Seems SSR happenned or RILD crashed, do not handle SIM change events
+        if (!isRadioAvailable(slotId)) {
+            logi(" proceedToHandleIccEvent, radio not available, slotId = " + slotId);
+            mSubStatus[slotId] = SUB_INIT_STATE;
             return false;
         }
         return true;

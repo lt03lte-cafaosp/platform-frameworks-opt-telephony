@@ -415,8 +415,6 @@ public final class SmsApplication {
                     // No BT app on this device
                     Rlog.e(LOG_TAG, "Bluetooth package not found: " + BLUETOOTH_PACKAGE_NAME);
                 }
-                // RCS service should always have this permission to write the sms database.
-                setReadAndWriteSmsPermissionsForRcsService(appOps, packageManager);
 
                 try {
                     PackageInfo info = packageManager.getPackageInfo(MMS_SERVICE_PACKAGE_NAME, 0);
@@ -433,6 +431,8 @@ public final class SmsApplication {
                     applicationData = null;
                 }
 
+                // RCS service should always have this permission to write the sms database.
+                setReadAndWriteSmsPermissionsForRcsService(appOps, packageManager);
             }
         }
         if (DEBUG_MULTIUSER) {
@@ -522,8 +522,7 @@ public final class SmsApplication {
                 // No BT app on this device
                 Rlog.e(LOG_TAG, "Bluetooth package not found: " + BLUETOOTH_PACKAGE_NAME);
             }
-            // RCS service should always have this permission to write the sms database.
-            setReadAndWriteSmsPermissionsForRcsService(appOps, packageManager);
+
             // MmsService needs to always have this permission to write to the sms database
             try {
                 PackageInfo info = packageManager.getPackageInfo(MMS_SERVICE_PACKAGE_NAME, 0);
@@ -533,6 +532,9 @@ public final class SmsApplication {
                 // No phone app on this device (unexpected, even for non-phone devices)
                 Rlog.e(LOG_TAG, "MmsService package not found: " + MMS_SERVICE_PACKAGE_NAME);
             }
+
+            // RCS service should always have this permission to write the sms database.
+            setReadAndWriteSmsPermissionsForRcsService(appOps, packageManager);
         }
     }
 
@@ -752,8 +754,7 @@ public final class SmsApplication {
         }
 
         if ((defaultSmsPackage == null || !defaultSmsPackage.equals(packageName))
-                && !packageName.equals(BLUETOOTH_PACKAGE_NAME)
-                && !packageName.equals(RCS_SERVICE_PACKAGE_NAME)) {
+                && !packageName.equals(BLUETOOTH_PACKAGE_NAME)) {
             // To write the message for someone other than the default SMS and BT app
             return true;
         }
@@ -762,7 +763,7 @@ public final class SmsApplication {
     }
 
     /**
-     * set read and write sms provider permissions for rcs service.
+     * Set read and write sms provider permissions for rcs service.
      */
     private static void setReadAndWriteSmsPermissionsForRcsService(AppOpsManager appOps,
             PackageManager packageManager) {
