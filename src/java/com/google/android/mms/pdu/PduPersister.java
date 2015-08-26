@@ -34,6 +34,7 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteException;
 import android.drm.DrmManagerClient;
+import android.drm.OmaDrmHelper;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.provider.Telephony;
@@ -957,6 +958,11 @@ public class PduPersister {
             }
             if (drmConvertSession != null) {
                 drmConvertSession.close(path);
+
+                if (OmaDrmHelper.isOmaDrmEnabled()) {
+                    // Update the mimetype of the media content correctly.
+                    OmaDrmHelper.refactorMimetype(mContext, path, uri);
+                }
 
                 // Reset the permissions on the encrypted part file so everyone has only read
                 // permission.
