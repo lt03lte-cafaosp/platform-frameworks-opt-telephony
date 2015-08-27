@@ -290,7 +290,7 @@ public class ModemBindingPolicyHandler extends Handler {
             mStoredResponse.put(0, response);
         } else {
             for (int i=0; i < mNumPhones; i++ ) {
-                mCi[i].setPreferredNetworkType(mNwModeinSubIdTable[i], response);
+                mCi[i].setPreferredNetworkType(mPrefNwMode[i], response);
             }
             mIsSetPrefNwModeInProgress = false;
         }
