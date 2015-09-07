@@ -32,6 +32,7 @@ import android.database.ContentObserver;
 import android.net.ZeroBalanceHelper;
 import android.os.AsyncResult;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
@@ -185,6 +186,12 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
     static final int PS_NOTIFICATION = 888;  // Id to update and cancel PS restricted
     static final int CS_NOTIFICATION = 999;  // Id to update and cancel CS restricted
 
+    private final String ACTION_RAC_CHANGED = "qualcomm.intent.action.ACTION_RAC_CHANGED";
+    private final String rat_info = "rat";
+    private final String rac_change = "rac";
+    private int mRac;
+    private int mRat;
+
     private int mTac = -1;
 
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
@@ -203,6 +210,14 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                 mAlarmSwitch = false;
                 DcTrackerBase dcTracker = mPhone.mDcTracker;
                 powerOffRadioSafely(dcTracker);
+            }
+
+            if (intent.getAction().equals(ACTION_RAC_CHANGED)) {
+                Bundle bundle = intent.getExtras();
+                if(bundle !=null){
+                   mRac = bundle.getInt(rac_change);
+                   mRat = bundle.getInt(rat_info);
+                }
             }
         }
     };
@@ -268,6 +283,10 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         Context context = phone.getContext();
         filter.addAction(ACTION_RADIO_OFF);
         context.registerReceiver(mIntentReceiver, filter);
+
+        filter = new IntentFilter();
+        filter.addAction(ACTION_RAC_CHANGED);
+        phone.getContext().registerReceiver(mIntentReceiver, filter);
     }
 
     @Override
