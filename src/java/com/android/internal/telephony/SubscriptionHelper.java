@@ -221,8 +221,11 @@ class SubscriptionHelper extends Handler {
 
     }
 
-    public boolean needSubActivationAfterRefresh(int slotId) {
-        return (sNumPhones > 1  && mSubStatus[slotId] == SUB_INIT_STATE);
+    // Subscription activation needs to be performed if current
+    // sub state is SUB_INIT_STATE or SUB_SET_UICC_FAIL.
+    public boolean needSubActivation(int slotId) {
+        return (sNumPhones > 1  && (mSubStatus[slotId] == SUB_INIT_STATE
+                || mSubStatus[slotId] == SUB_SET_UICC_FAIL));
     }
 
     public void updateSubActivation(int[] simStatus, boolean isStackReadyEvent) {
