@@ -358,7 +358,7 @@ public class SubscriptionInfoUpdater extends Handler {
             mNeedUpdate = true;
             queryIccId(slotId);
         } else if (oldState.isCardPresent() && newState.isCardPresent() &&
-                (subHelper.needSubActivationAfterRefresh(slotId))) {
+                (subHelper.needSubActivation(slotId))) {
             logd("SIM" + (slotId + 1) + " refresh happened, need sub activation");
             if (isAllIccIdQueryDone()) {
                 //updateSimInfoByIccId();
