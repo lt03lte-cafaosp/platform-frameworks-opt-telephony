@@ -439,14 +439,19 @@ public class DctController extends Handler {
                     Rlog.d(LOG_TAG, "Failed, switchInfo = " + s
                             + " attempt delayed retry");
                     s.incRetryCount();
-                    if (s.isRetryPossible() && isCurrentRequest(s) &&
-                            !registerForCallEndOnActiveCall(s)) {
-                        SomeArgs args = SomeArgs.obtain();
-                        args.arg1 = s;
-                        args.arg2 = true;
-                        sendMessageDelayed(obtainMessage(EVENT_DELAYED_RETRY, args),
-                                ATTACH_RETRY_DELAY);
-                        return;
+                    if (s.isRetryPossible() && isCurrentRequest(s) ) {
+                        if (s.mIsDefaultDataSwitchRequested &&
+                                registerForCallEndOnActiveCall(s)) {
+                            Rlog.d(LOG_TAG, "Voice call in progress, notify failure");
+                            errorEx = new RuntimeException("PS ATTACH failed");
+                        } else {
+                            SomeArgs args = SomeArgs.obtain();
+                            args.arg1 = s;
+                            args.arg2 = true;
+                            sendMessageDelayed(obtainMessage(EVENT_DELAYED_RETRY, args),
+                                    ATTACH_RETRY_DELAY);
+                            return;
+                        }
                     } else {
                         Rlog.d(LOG_TAG, "Already did max retries, notify failure");
                         errorEx = new RuntimeException("PS ATTACH failed");
