@@ -291,9 +291,8 @@ public class DefaultPhoneNotifier implements PhoneNotifier {
 
     @Override
     public void notifyVoLteServiceStateChanged(Phone sender, VoLteServiceState lteState) {
-        // FIXME: subID
         try {
-            mRegistry.notifyVoLteServiceStateChanged(lteState);
+            mRegistry.notifyVoLteServiceStateChangedForSubscriber(sender.getSubId(), lteState);
         } catch (RemoteException ex) {
             // system process is dead
         }
