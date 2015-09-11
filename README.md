@@ -1,2 +1,0 @@
-platform-frameworks-opt-telephony
-=================================
