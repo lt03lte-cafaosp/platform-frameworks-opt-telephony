@@ -354,8 +354,10 @@ class SubscriptionHelper extends Handler {
                     nwModeinSubIdTable[i] = subCtrlr.getNwMode(subId);
                 }
                 if (nwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
-                    updateRequired = false;
-                    break;
+                    // Since we have called updateNwModesInSubIdTable() above, SubId based
+                    // nwmode DEFAULT_NW_MODE means there is no SIM inserted in the slot.
+                    // Set the network mode to GSM_ONLY.
+                    nwModeinSubIdTable[i] = RILConstants.NETWORK_MODE_GSM_ONLY;
                 }
                 if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
                         && isNwModeValid(nwModeinSubIdTable[i])) {
