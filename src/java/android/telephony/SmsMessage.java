@@ -30,7 +30,6 @@ import com.android.internal.telephony.SmsMessageBase.SubmitPduBase;
 import com.android.internal.telephony.Sms7BitEncodingTranslator;
 
 import java.lang.Math;
-import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -415,14 +414,7 @@ public class SmsMessage {
                             ted.languageTable, ted.languageShiftTable);
                 }
             } else {  // Assume unicode.
-                nextPos = Math.min(pos + limit / 2, textLen);
-                if (nextPos < textLen) {
-                    BreakIterator breakIterator = BreakIterator.getCharacterInstance();
-                    breakIterator.setText(newMsgBody.toString());
-                    if (!breakIterator.isBoundary(nextPos)) {
-                        nextPos = breakIterator.preceding(nextPos);
-                    }
-                }
+                nextPos = pos + Math.min(limit / 2, textLen - pos);
             }
             if ((nextPos <= pos) || (nextPos > textLen)) {
                 Rlog.e(LOG_TAG, "fragmentText failed (" + pos + " >= " + nextPos + " or " +
