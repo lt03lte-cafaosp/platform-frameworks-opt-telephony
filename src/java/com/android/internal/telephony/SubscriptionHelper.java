@@ -322,25 +322,34 @@ class SubscriptionHelper extends Handler {
             return;
         }
 
-        //Activate/Deactivate first 3GPP and 3GPP2 app in the sim, if available
+        //First, Activate/Deactivate first 3GPP app in the sim, if available
         for (int i = 0; i < uiccCard.getNumApplications(); i++) {
             int appType = uiccCard.getApplicationIndex(i).getType().ordinal();
             if (set3GPPDone == false && (appType == PhoneConstants.APPTYPE_USIM ||
                     appType == PhoneConstants.APPTYPE_SIM)) {
                 Message msgSetUiccSubDone = Message.obtain(
                         this, EVENT_SET_UICC_SUBSCRIPTION_DONE, slotId, subStatus);
+                logd("setUiccSubscription: slotId:" + slotId + " , for 3GPP");
                 mCi[slotId].setUiccSubscription(slotId, i, slotId, subStatus, msgSetUiccSubDone);
                 set3GPPDone = true;
-            } else if (set3GPP2Done == false && (appType == PhoneConstants.APPTYPE_CSIM ||
+                break;
+            }
+        }
+
+        //Later, Activate/Deactivate first 3GPP2 app in the sim, if available
+        for (int i = 0; i < uiccCard.getNumApplications(); i++) {
+            int appType = uiccCard.getApplicationIndex(i).getType().ordinal();
+            if (set3GPP2Done == false && (appType == PhoneConstants.APPTYPE_CSIM ||
                     appType == PhoneConstants.APPTYPE_RUIM)) {
                 Message msgSetUiccSubDone = Message.obtain(
                         this, EVENT_SET_UICC_SUBSCRIPTION_DONE, slotId, subStatus);
+                logd("setUiccSubscription: slotId:" + slotId + " , for 3GPP2");
                 mCi[slotId].setUiccSubscription(slotId, i, slotId, subStatus, msgSetUiccSubDone);
                 set3GPP2Done = true;
+                break;
             }
-
-            if (set3GPPDone && set3GPP2Done) break;
         }
+
     }
 
     /**
