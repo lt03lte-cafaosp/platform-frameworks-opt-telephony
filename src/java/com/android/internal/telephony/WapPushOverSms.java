@@ -298,12 +298,16 @@ public class WapPushOverSms implements ServiceConnection {
                 if (DBG) Rlog.v(TAG, "Delivering MMS to: " + componentName.getPackageName() +
                         " " + componentName.getClassName());
             }
-            if (handler.isMmsBlockedByFirewall(getPduAddress(phoneId, intentData))) {
-                // send firewall block sms intent
-                intent.putExtra("block_number", getPduAddress(phoneId, intentData));
-                handler.sendBlockRecordBroadcast(intent, false, receiver, permission, appOp);
+            if (mimeType != null && mimeType.equals(WspTypeDecoder.CONTENT_TYPE_B_MMS)) {
+                if (handler.isMmsBlockedByFirewall(getPduAddress(phoneId, intentData))) {
+                    // send firewall block sms intent
+                    intent.putExtra("block_number", getPduAddress(phoneId, intentData));
+                    handler.sendBlockRecordBroadcast(intent, false, receiver, permission, appOp);
+                } else {
+                    handler.dispatchIntent(intent, permission, appOp, receiver, UserHandle.OWNER);
+                }
             } else {
-                handler.dispatchIntent(intent, permission, appOp, receiver, UserHandle.OWNER);
+                   handler.dispatchIntent(intent, permission, appOp, receiver, UserHandle.OWNER);
             }
             return Activity.RESULT_OK;
         } catch (ArrayIndexOutOfBoundsException aie) {
