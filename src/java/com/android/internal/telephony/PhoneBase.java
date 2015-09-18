@@ -2350,6 +2350,19 @@ public abstract class PhoneBase extends Handler implements Phone {
                 + this);
     }
 
+    @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason,
+            int commandInterfaceServiceClass, Message onComplete) {
+        logUnexpectedCdmaMethodCall("getCallForwardingOption with Serviceclass");
+    }
+
+    @Override
+    public void setCallForwardingOption(int commandInterfaceCFReason,
+            int commandInterfaceCFAction, String dialingNumber,
+            int commandInterfaceServiceClass, int timerSeconds, Message onComplete) {
+        logUnexpectedCdmaMethodCall("setCallForwardingOption with Serviceclass");
+    }
+
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("PhoneBase: subId=" + getSubId());
         pw.println(" mPhoneId=" + mPhoneId);
