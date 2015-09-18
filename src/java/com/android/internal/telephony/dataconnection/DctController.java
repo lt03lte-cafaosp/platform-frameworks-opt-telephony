@@ -1133,16 +1133,20 @@ public class DctController extends Handler {
             log("update networkCapabilites for subId = " + subId);
 
             mNetworkCapabilities.setNetworkSpecifier(""+subId);
-            if ((subId > 0 && SubscriptionController.getInstance().
-                    getSubState(subId) == SubscriptionManager.ACTIVE) &&
-                    (subId == SubscriptionController.getInstance().getDefaultDataSubId())) {
-                log("INTERNET capability is with subId = " + subId);
-                //Only defaultDataSub provides INTERNET.
-                mNetworkCapabilities.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-            } else {
-                log("INTERNET capability is removed from subId = " + subId);
-                mNetworkCapabilities.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+            if (!isVsimFeatureEnabled()) {
+                if (((subId > 0)
+                        && (SubscriptionController.getInstance().getSubState(subId)
+                            == SubscriptionManager.ACTIVE))
+                        && (subId == SubscriptionController.getInstance().getDefaultDataSubId())) {
+                    log("INTERNET capability is with subId = " + subId);
+                    //Only defaultDataSub provides INTERNET.
+                    mNetworkCapabilities.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                } else {
+                    log("INTERNET capability is removed from subId = " + subId);
+                    mNetworkCapabilities.removeCapability(
+                            NetworkCapabilities.NET_CAPABILITY_INTERNET);
 
+                }
             }
             setScoreFilter(50);
             registerOnDemandDdsCallback();
@@ -1235,7 +1239,7 @@ public class DctController extends Handler {
         }
 
         private void requestOnDemandDataSubscriptionLock(NetworkRequest n) {
-            if(!isNetworkRequestForInternet(n)) {
+            if(!isNetworkRequestForInternet(n) || isVsimFeatureEnabled()) {
                 //Request tempDDS lock only for non-default PDP requests
                 SubscriptionController subController = SubscriptionController.getInstance();
                 log("requestOnDemandDataSubscriptionLock for request = " + n);
@@ -1262,7 +1266,7 @@ public class DctController extends Handler {
             log("Release the request from dds queue, if found");
             removeRequestFromList(mDdsRequests, n);
 
-            if(!isNetworkRequestForInternet(n)) {
+            if(!isNetworkRequestForInternet(n) || isVsimFeatureEnabled()) {
                 SubscriptionController subController = SubscriptionController.getInstance();
                 subController.stopOnDemandDataSubscriptionRequest(n);
             } else {
@@ -1275,6 +1279,13 @@ public class DctController extends Handler {
                     log("Unsupported APN");
                 }
             }
+        }
+
+        private boolean isVsimFeatureEnabled() {
+            boolean flag = (Settings.Global.getInt(mContext.getContentResolver(),
+                        Settings.Global.VSIM_FEATURE, 0) == 1) ? true : false;
+            log("Vsim feature enabled = " + flag);
+            return flag;
         }
 
         @Override

@@ -957,10 +957,6 @@ public final class DataConnection extends StateMachine {
                     }
                     default:
                 }
-                if (mPhone.getSubId() != SubscriptionManager.getDefaultDataSubId()) {
-                    log("DataConnection on non-dds does not have INTERNET capability.");
-                    result.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-                }
             }
             ConnectivityManager.maybeMarkCapabilitiesRestricted(result);
         }
