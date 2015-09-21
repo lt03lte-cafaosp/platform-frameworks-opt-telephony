@@ -1712,7 +1712,22 @@ public final class DcTracker extends DcTrackerBase {
     }
 
     private void onRecordsLoaded() {
-        if (DBG) log("onRecordsLoaded: createAllApnList");
+        Resources res = SubscriptionManager.getResourcesForSubId(mPhone.getContext(),
+                mPhone.getSubId());
+        final boolean fetchApnFromOmhCard = res.getBoolean(com.android.internal.
+                R.bool.config_fetch_apn_from_omh_card);
+        if (DBG) log("onRecordsLoaded: createAllApnList and fetchApnFromOmhCard is: "
+                + fetchApnFromOmhCard);
+        if (mOmhApt != null && !fetchApnFromOmhCard) {
+            mOmhApt.unregisterForModemProfileReady(this);
+            mOmhApt = null;
+        } else if (mOmhApt == null && fetchApnFromOmhCard && mPhone.getPhoneType()
+                == PhoneConstants.PHONE_TYPE_CDMA) {
+            mOmhApt = new CdmaApnProfileTracker((CDMAPhone)mPhone);
+            mOmhApt.registerForModemProfileReady(this,
+                    DctConstants.EVENT_MODEM_DATA_PROFILE_READY, null);
+        }
+
         mAutoAttachOnCreationConfig = mPhone.getContext().getResources()
                 .getBoolean(com.android.internal.R.bool.config_auto_attach_data_on_creation);
         if (mAutoAttachOnCreationConfig && mAttached.get()) {
