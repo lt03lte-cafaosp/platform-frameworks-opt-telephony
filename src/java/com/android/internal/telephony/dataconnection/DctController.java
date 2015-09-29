@@ -442,8 +442,7 @@ public class DctController extends Handler {
                     if (s.isRetryPossible() && isCurrentRequest(s) ) {
                         if (s.mIsDefaultDataSwitchRequested &&
                                 registerForCallEndOnActiveCall(s)) {
-                            Rlog.d(LOG_TAG, "Voice call in progress, notify failure");
-                            errorEx = new RuntimeException("PS ATTACH failed");
+                            return;
                         } else {
                             SomeArgs args = SomeArgs.obtain();
                             args.arg1 = s;
@@ -517,9 +516,12 @@ public class DctController extends Handler {
                     return;
                 }
 
-                int[] subId = mSubController.getSubId(s.mPhoneId);
-                logd("Voice Call is ended, set Dds on sub: " + subId[0]);
-                setDefaultDataSubId(subId[0]);
+                int subId = mSubController.getSubId(s.mPhoneId)[0];
+                if (!isActiveSubId(subId)) {
+                    subId = mSubController.getDefaultSubId();
+                }
+                logd("Voice Call is ended, set Dds on sub: " + subId);
+                setDefaultDataSubId(subId);
                 ((PhoneBase)mPhones[s.mPhoneId].getActivePhone()).getCallTracker().
                         unregisterForVoiceCallEnded(this);
 
