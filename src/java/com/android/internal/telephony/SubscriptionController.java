@@ -1428,6 +1428,11 @@ public class SubscriptionController extends ISub.Stub {
             // DDS switch failed. Make sure DDS is still
             // intact on last known dds subscription.
             int defaultDds = getDefaultDataSubId();
+            if (!isActiveSubId(defaultDds)) {
+                defaultDds = getDefaultSubId();
+                if (DBG) logd("Dds sub not active use fall back subid=" +
+                        defaultDds);
+            }
             logd("DDS switch failed, enforce last dds = " + defaultDds);
             setDefaultDataSubId(defaultDds);
         }
