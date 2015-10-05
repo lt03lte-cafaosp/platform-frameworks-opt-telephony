@@ -2248,18 +2248,52 @@ public class GSMPhone extends PhoneBase {
         return false;
     }
 
+    private boolean isSupportedOverImsPhone(String facility) {
+        return (facility != null) && (facility.equals(CommandsInterface.CB_FACILITY_BAIC)
+                || facility.equals(CommandsInterface.CB_FACILITY_BAICr));
+    }
+
+
     public void getCallBarringOption(String facility, String password, Message onComplete) {
         if (isValidFacilityString(facility)) {
-            mCi.queryFacilityLock(facility, password, CommandsInterface.SERVICE_CLASS_NONE,
-                    onComplete);
+            //Non CMCC mode, send the request on CS
+            if (!SystemProperties.getBoolean("persist.radio.ims.cmcc", false)) {
+                mCi.queryFacilityLock(facility, password, CommandsInterface.SERVICE_CLASS_NONE,
+                        onComplete);
+                return;
+            }
+            ImsPhone imsPhone = mImsPhone;
+            if (isSupportedOverImsPhone(facility) && ((imsPhone != null)
+                    && (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE
+                    || imsPhone.isUtEnabled()))) {
+                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Trying IMS PS get call barring");
+                imsPhone.getCallBarring(facility, onComplete);
+            } else {
+                mCi.queryFacilityLock(facility, password, CommandsInterface.SERVICE_CLASS_NONE,
+                        onComplete);
+            }
         }
     }
 
     public void setCallBarringOption(String facility, boolean lockState, String password,
             Message onComplete) {
         if (isValidFacilityString(facility)) {
-            mCi.setFacilityLock(facility, lockState, password,
-                    CommandsInterface.SERVICE_CLASS_VOICE, onComplete);
+            //Non CMCC mode, send the request on CS
+            if (!SystemProperties.getBoolean("persist.radio.ims.cmcc", false)) {
+                mCi.setFacilityLock(facility, lockState, password,
+                        CommandsInterface.SERVICE_CLASS_VOICE, onComplete);
+                return;
+            }
+            ImsPhone imsPhone = mImsPhone;
+            if (isSupportedOverImsPhone(facility) && ((imsPhone != null)
+                    && (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE
+                    || imsPhone.isUtEnabled()))) {
+                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Trying IMS PS set call barring");
+                imsPhone.setCallBarring(facility, lockState, password, onComplete);
+            } else {
+                mCi.setFacilityLock(facility, lockState, password,
+                        CommandsInterface.SERVICE_CLASS_VOICE, onComplete);
+            }
         }
     }
 

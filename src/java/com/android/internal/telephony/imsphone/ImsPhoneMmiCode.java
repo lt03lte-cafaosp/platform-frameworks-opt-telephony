@@ -22,6 +22,7 @@ import android.os.AsyncResult;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.telephony.PhoneNumberUtils;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -704,7 +705,9 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
                 || (mSc != null && mSc.equals(SC_COLR))
                 || (mSc != null && mSc.equals(SC_COLP))
                 || (mSc != null && mSc.equals(SC_BS_MT))
-                || (mSc != null && mSc.equals(SC_BAICa))) {
+                || (mSc != null && mSc.equals(SC_BAICa))
+                || (SystemProperties.getBoolean("persist.radio.ims.cmcc", false) &&
+                ((mSc != null && mSc.equals(SC_BAICr)) || (mSc != null && mSc.equals(SC_BAIC))))) {
 
             int serviceClass = siToServiceClass(mSib);
             if (serviceClass != SERVICE_CLASS_NONE
