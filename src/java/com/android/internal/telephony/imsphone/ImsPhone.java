@@ -259,6 +259,10 @@ public class ImsPhone extends ImsPhoneBase {
         } else {
             cf = getCallForwardingPreference();
         }
+        //Check if Video call forwarding is enabled
+        if (!cf) {
+            cf = getVideoCallForwardingPreference();
+        }
         return cf;
     }
 
@@ -1228,7 +1232,11 @@ public class ImsPhone extends ImsPhoneBase {
         } else {
             for (int i = 0, s = infos.length; i < s; i++) {
                 if (infos[i].mCondition == ImsUtInterface.CDIV_CF_UNCONDITIONAL) {
-                    if (r != null) {
+                    //Check if the service class signifies Video call forward
+                    if (infos[i].mServiceClass == (SERVICE_CLASS_DATA_SYNC +
+                            SERVICE_CLASS_PACKET)) {
+                        setVideoCallForwardingPreference(infos[i].mStatus == 1);
+                    } else if (r != null) {
                         setCallForwardingPreference(infos[i].mStatus == 1);
                         r.setVoiceCallForwardingFlag(1, (infos[i].mStatus == 1),
                             infos[i].mNumber);
@@ -1354,8 +1362,6 @@ public class ImsPhone extends ImsPhoneBase {
                  break;
 
              case EVENT_GET_CALLFORWARDING_STATUS:
-                boolean cfEnabled = getCallForwardingPreference();
-                if (DBG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
                 notifyCallForwardingIndicator();
                 break;
 
