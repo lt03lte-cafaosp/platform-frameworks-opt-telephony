@@ -918,6 +918,13 @@ public final class GsmCallTracker extends CallTracker {
                 ar = (AsyncResult)msg.obj;
                 if (ar.exception != null) {
                     mPhone.notifySuppServiceFailed(getFailedService(msg.what));
+                    if (msg.what == EVENT_CONFERENCE_RESULT) {
+                        List<Connection> conn = mForegroundCall.getConnections();
+                        if (conn != null) {
+                            Rlog.d(LOG_TAG, "Notify merge failure");
+                            conn.get(0).onConferenceMergeFailed();
+                        }
+                    }
                 }
                 operationComplete();
             break;
