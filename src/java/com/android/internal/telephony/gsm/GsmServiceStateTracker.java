@@ -217,6 +217,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                 if(bundle !=null){
                    mRac = bundle.getInt(rac_change);
                    mRat = bundle.getInt(rat_info);
+                   resetDataBlocked();
                 }
             }
         }
