@@ -19,6 +19,7 @@ package com.google.android.mms.util;
 import android.content.Context;
 import android.drm.DrmConvertedStatus;
 import android.drm.DrmManagerClient;
+import android.drm.OmaDrmHelper;
 import android.util.Log;
 import android.provider.Downloads;
 
@@ -135,6 +136,16 @@ public class DrmConvertSession {
                     RandomAccessFile rndAccessFile = null;
                     try {
                         rndAccessFile = new RandomAccessFile(filename, "rw");
+
+                        if (OmaDrmHelper.isOmaDrmEnabled() &&
+                                OmaDrmHelper.copyData(mDrmClient,
+                                    new String(convertedStatus.convertedData),
+                                    rndAccessFile.getFD())) {
+                            // This block of code will execute even if the Oma Drm
+                            // is enabled in the product
+                            return result = Downloads.Impl.STATUS_SUCCESS;
+                        }
+
                         rndAccessFile.seek(convertedStatus.offset);
                         rndAccessFile.write(convertedStatus.convertedData);
                         result = Downloads.Impl.STATUS_SUCCESS;
