@@ -61,6 +61,7 @@ public abstract class Connection {
         public void onAudioQualityChanged(int audioQuality);
         public void onCallSubstateChanged(int callSubstate);
         public void onConferenceParticipantsChanged(List<ConferenceParticipant> participants);
+        public void onConferenceMergedFailed();
     }
 
     /**
@@ -80,6 +81,8 @@ public abstract class Connection {
         public void onCallSubstateChanged(int callSubstate) {}
         @Override
         public void onConferenceParticipantsChanged(List<ConferenceParticipant> participants) {}
+        @Override
+        public void onConferenceMergedFailed() {}
     }
 
     public static final int AUDIO_QUALITY_STANDARD = 1;
@@ -640,6 +643,15 @@ public abstract class Connection {
     public void updateConferenceParticipants(List<ConferenceParticipant> conferenceParticipants) {
         for (Listener l : mListeners) {
             l.onConferenceParticipantsChanged(conferenceParticipants);
+        }
+    }
+
+    /**
+     * Notifies listeners of a failure in merging this connection with the background connection.
+     */
+    public void onConferenceMergeFailed() {
+        for (Listener l : mListeners) {
+            l.onConferenceMergedFailed();
         }
     }
 
