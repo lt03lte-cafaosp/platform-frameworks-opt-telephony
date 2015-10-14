@@ -186,6 +186,25 @@ public final class DcTracker extends DcTrackerBase {
     /* IWLAN and WWAN co-exist flag */
     private boolean mWwanIwlanCoexistFlag = false;
 
+    private static final int EVENT_3GPP_RECORDS_LOADED = 100;
+
+    Handler mSimRecordsLoadedHandler = new Handler() {
+        @Override
+        public void handleMessage (Message msg) {
+            if (!mPhone.mIsTheCurrentActivePhone || mIsDisposed) {
+                loge("Sim handler handleMessage: Ignore msgs since phone is inactive");
+                return;
+            }
+
+            switch (msg.what) {
+                case EVENT_3GPP_RECORDS_LOADED:
+                    log("EVENT_3GPP_RECORDS_LOADED");
+                    onSimRecordsLoaded();
+                    break;
+            }
+        }
+    };
+
     private CdmaApnProfileTracker mOmhApt;
 
     //***** Constructor
@@ -213,6 +232,7 @@ public final class DcTracker extends DcTrackerBase {
         }
 
         mDataConnectionTracker = this;
+        registerForAllEvents();
         update();
         mApnObserver = new ApnChangeObserver();
         p.getContext().getContentResolver().registerContentObserver(
@@ -299,6 +319,7 @@ public final class DcTracker extends DcTrackerBase {
         if (mOmhApt != null) {
             mOmhApt.unregisterForModemProfileReady(this);
         }
+        unregisterForAllEvents();
 
         destroyDataConnections();
     }
@@ -310,6 +331,11 @@ public final class DcTracker extends DcTrackerBase {
         if (r != null) {
             r.unregisterForRecordsLoaded(this);
             mIccRecords.set(null);
+        }
+        r = mSimRecords.get();
+        if (r != null) {
+            r.unregisterForRecordsLoaded(mSimRecordsLoadedHandler);
+            mSimRecords.set(null);
         }
         mPhone.mCi.unregisterForDataNetworkStateChanged(this);
         mPhone.getCallTracker().unregisterForVoiceCallEnded(this);
@@ -847,7 +873,7 @@ public final class DcTracker extends DcTrackerBase {
         boolean defaultDataSelected = SubscriptionManager.isValidSubscriptionId(dataSub);
 
         boolean allowed =
-                    (attachedState || mAutoAttachOnCreation) &&
+                    (attachedState || (mAutoAttachOnCreation && (mPhone.getSubId() == dataSub))) &&
                     (subscriptionFromNv || recordsLoaded) &&
                     (mPhone.getState() == PhoneConstants.State.IDLE ||
                      mPhone.getServiceStateTracker().isConcurrentVoiceAndDataAllowed()) &&
@@ -1298,10 +1324,9 @@ public final class DcTracker extends DcTrackerBase {
         return apn;
     }
 
-    private ArrayList<ApnSetting> createApnList(Cursor cursor) {
+    private ArrayList<ApnSetting> createApnList(Cursor cursor, IccRecords r) {
         ArrayList<ApnSetting> mnoApns = new ArrayList<ApnSetting>();
         ArrayList<ApnSetting> mvnoApns = new ArrayList<ApnSetting>();
-        IccRecords r = mIccRecords.get();
 
         if (cursor.moveToFirst()) {
             do {
@@ -1445,6 +1470,7 @@ public final class DcTracker extends DcTrackerBase {
      */
     private void onApnChanged() {
         if (DBG) log("onApnChanged: tryRestartDataConnections");
+        setInitialAttachApn(create3gppApnsList(), mSimRecords.get());
         tryRestartDataConnections(true, Phone.REASON_APN_CHANGED);
     }
 
@@ -1462,7 +1488,6 @@ public final class DcTracker extends DcTrackerBase {
         // match the current operator.
         if (DBG) log("tryRestartDataConnections: createAllApnList and cleanUpAllConnections");
         createAllApnList();
-        setInitialAttachApn();
         if (isCleanupNeeded) {
             cleanUpAllConnections(!isDisconnected, reason);
         }
@@ -1615,12 +1640,13 @@ public final class DcTracker extends DcTrackerBase {
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_TYPE, apnType);
 
         // Get current sub id.
-        int subId = SubscriptionManager.getDefaultDataSubId();
+        int subId = mPhone.getSubId();
+
         intent.putExtra(PhoneConstants.SUBSCRIPTION_KEY, subId);
 
         if (DBG) {
             log("startAlarmForReconnect: delay=" + delay + " action=" + intent.getAction()
-                    + " apn=" + apnContext);
+                    + " apn=" + apnContext + " subId=" + subId);
         }
 
         PendingIntent alarmIntent = PendingIntent.getBroadcast (mPhone.getContext(), 0,
@@ -2472,7 +2498,7 @@ public final class DcTracker extends DcTrackerBase {
 
                 if (cursor != null) {
                     if (cursor.getCount() > 0) {
-                        mAllApnSettings = createApnList(cursor);
+                        mAllApnSettings = createApnList(cursor, mIccRecords.get());
                     }
                     cursor.close();
                 }
@@ -2503,6 +2529,30 @@ public final class DcTracker extends DcTrackerBase {
         if (DBG) log("createAllApnList: X mAllApnSettings=" + mAllApnSettings);
 
         setDataProfilesAsNeeded();
+    }
+
+    private ArrayList<ApnSetting> create3gppApnsList() {
+        ArrayList<ApnSetting>  apnsList = null;
+        IccRecords r = mSimRecords.get();
+        String operator = (r != null) ? r.getOperatorNumeric() : "";
+        if (!TextUtils.isEmpty(operator)) {
+            String selection = "numeric = '" + operator + "'";
+            // query only enabled apn.
+            // carrier_enabled : 1 means enabled apn, 0 disabled apn.
+            selection += " and carrier_enabled = 1";
+            if (DBG) log("create3gppApnList: selection=" + selection);
+
+            Cursor cursor = mPhone.getContext().getContentResolver().query(
+                    Telephony.Carriers.CONTENT_URI, null, selection, null, null);
+
+            if (cursor != null) {
+                if (cursor.getCount() > 0) {
+                    apnsList = createApnList(cursor, r);
+                }
+                cursor.close();
+            }
+        }
+        return apnsList;
     }
 
     private void dedupeApnSettings() {
@@ -3033,6 +3083,8 @@ public final class DcTracker extends DcTrackerBase {
             return false;
         }
 
+        updateSimRecords();
+
         int dataRat = mPhone.getServiceState().getRilDataRadioTechnology();
         int appFamily = UiccController.getFamilyFromRadioTechnology(dataRat);
         IccRecords newIccRecords = getUiccRecords(appFamily);
@@ -3066,10 +3118,41 @@ public final class DcTracker extends DcTrackerBase {
         return result;
     }
 
+    /**
+     * This function updates mSimRecords reference to track the current 3GPP icc records.
+     * mSimRecords is used to populate the initial attach apn for the ICC card.
+     */
+    private void updateSimRecords() {
+        if (mUiccController == null ) {
+            return;
+        }
+
+        IccRecords newSimRecords = getUiccRecords(UiccController.APP_FAM_3GPP);
+        log("updateSimRecords: newSimRecords = " + newSimRecords);
+
+        IccRecords r = mSimRecords.get();
+        if (r != newSimRecords) {
+            if (r != null) {
+                log("Removing stale sim objects.");
+                r.unregisterForRecordsLoaded(mSimRecordsLoadedHandler);
+                mSimRecords.set(null);
+            }
+            if (newSimRecords != null) {
+                log("New sim records found");
+                mSimRecords.set(newSimRecords);
+                newSimRecords.registerForRecordsLoaded(
+                        mSimRecordsLoadedHandler, EVENT_3GPP_RECORDS_LOADED, null);
+            }
+        }
+    }
+
+    private void onSimRecordsLoaded() {
+        setInitialAttachApn(create3gppApnsList(), mSimRecords.get());
+    }
+
     public void update() {
         log("update sub = " + mPhone.getSubId());
         log("update(): Active DDS, register for all events now!");
-        registerForAllEvents();
         onUpdateIcc();
 
         mUserDataEnabled = Settings.Global.getInt(mPhone.getContext().getContentResolver(),
