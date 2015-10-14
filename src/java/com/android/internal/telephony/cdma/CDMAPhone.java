@@ -442,7 +442,8 @@ public class CDMAPhone extends PhoneBase {
         final boolean isVideoCall = VideoState.isVideo(videoState);
         boolean imsUseEnabled =
                 ImsManager.isVolteEnabledByPlatform(mContext) &&
-                ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext) &&
+                (ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext) ||
+                ImsManager.isWfcEnabledByUser(mContext)) &&
                 ImsManager.isNonTtyOrTtyOnVolteEnabled(mContext) &&
                 imsPhone != null &&
                 (imsPhone.isVolteEnabled() || (imsPhone.isVtEnabled() && isVideoCall)) &&
