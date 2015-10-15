@@ -16,6 +16,8 @@
 
 package android.telephony;
 
+import android.util.SeempApiEnum;
+import android.util.SeempLog;
 import android.app.ActivityThread;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;

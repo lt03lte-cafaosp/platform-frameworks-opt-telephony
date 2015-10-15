@@ -16,6 +16,8 @@
 
 package android.telephony.gsm;
 
+import android.util.SeempApiEnum;
+import android.util.SeempLog;
 import android.app.PendingIntent;
 
 import java.util.ArrayList;
