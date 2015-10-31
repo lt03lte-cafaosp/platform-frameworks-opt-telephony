@@ -283,14 +283,17 @@ public class ModemBindingPolicyHandler extends Handler {
         }
 
         mIsSetPrefNwModeInProgress = true;
+        logd("setPreferredNetworkType: Check if flex map is required");
 
         //If CrossBinding request is not accepted, i.e. return value is FAILURE
         //send request directly to RIL, or else store the setpref Msg for later processing.
         if (updateStackBindingIfRequired(false) == SUCCESS) {
             mStoredResponse.put(0, response);
         } else {
-            for (int i=0; i < mNumPhones; i++ ) {
-                mCi[i].setPreferredNetworkType(mPrefNwMode[i], response);
+            logd("setPreferredNetworkType: flex map not required send nwMode request to modem");
+            for (int i = 0; i < mNumPhones; i++ ) {
+                Message msg = Message.obtain(response);
+                mCi[i].setPreferredNetworkType(mPrefNwMode[i], msg);
             }
             mIsSetPrefNwModeInProgress = false;
         }
