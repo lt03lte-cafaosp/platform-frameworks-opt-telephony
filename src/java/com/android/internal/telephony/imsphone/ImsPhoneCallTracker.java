@@ -415,6 +415,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
             mPendingMO = new ImsPhoneConnection(mPhone.getContext(),
                     checkForTestEmergencyNumber(dialString), this,
                     mForegroundCall, extras);
+            mPendingMO.setVideoState(videoState);
         }
         addConnection(mPendingMO);
 
