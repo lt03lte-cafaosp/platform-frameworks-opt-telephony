@@ -387,6 +387,10 @@ public class GSMPhone extends PhoneBase {
         } else {
             cf = getCallForwardingPreference();
         }
+        if (!cf) {
+            cf = getVideoCallForwardingPreference();
+            Rlog.d(LOG_TAG, "getCallForwardingIndicator for video cf = "+cf);
+        }
         return cf;
     }
 
@@ -1633,6 +1637,7 @@ public class GSMPhone extends PhoneBase {
                 if (imsi != null && imsiFromSIM != null && !imsiFromSIM.equals(imsi)) {
                     storeVoiceMailNumber(null);
                     setCallForwardingPreference(false);
+                    setVideoCallForwardingPreference(false);
                     setSimImsi(null);
                     SubscriptionController controller =
                             SubscriptionController.getInstance();
@@ -1799,11 +1804,7 @@ public class GSMPhone extends PhoneBase {
                 mmi.processSsData(ar);
 
             case EVENT_GET_CALLFORWARDING_STATUS:
-                boolean cfEnabled = getCallForwardingPreference();
-                if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
-                if (cfEnabled) {
-                    notifyCallForwardingIndicator();
-                }
+                notifyCallForwardingIndicator();
                 break;
 
              default:
