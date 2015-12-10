@@ -2088,6 +2088,11 @@ public abstract class PhoneBase extends Handler implements Phone {
     }
 
     @Override
+    public boolean isUtEnabled() {
+        return false;
+    }
+
+    @Override
     public ImsPhone relinquishOwnershipOfImsPhone() {
         synchronized (mImsLock) {
             if (mImsPhone == null)
