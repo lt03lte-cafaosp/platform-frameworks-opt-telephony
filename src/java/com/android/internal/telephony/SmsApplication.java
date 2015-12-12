@@ -66,6 +66,14 @@ public final class SmsApplication {
 
     private static SmsPackageMonitor sSmsPackageMonitor = null;
 
+    /* Begin add for RCS */
+    public static String ACTION_DEFAULT_MMS_APPLICATION_CHANGED =
+            "com.android.telephony.intent.action.DEFAULT_MMS_APPLICATION_CHANGED";
+    public static String MMS_APP_SET = "mms_app";
+    private static final String RCS_SERVICE_PACKAGE_NAME = "com.suntek.mway.rcs.app.service";
+    private static final String RCS_NATIVE_UI_PACKAGE_NAME = "com.suntek.mway.rcs.nativeui";
+    /* End add for RCS */
+
     public static class SmsApplicationData {
         /**
          * Name of this SMS app for display.
@@ -393,6 +401,10 @@ public final class SmsApplication {
                         MMS_SERVICE_PACKAGE_NAME);
                 assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
                         TELEPHONY_PROVIDER_PACKAGE_NAME);
+                assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                        RCS_SERVICE_PACKAGE_NAME);
+                assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                        RCS_NATIVE_UI_PACKAGE_NAME);
             }
         }
         if (DEBUG_MULTIUSER) {
@@ -455,6 +467,9 @@ public final class SmsApplication {
                     Settings.Secure.SMS_DEFAULT_APPLICATION, applicationData.mPackageName,
                     userId);
 
+            Intent intent = new Intent(ACTION_DEFAULT_MMS_APPLICATION_CHANGED);
+            intent.putExtra(MMS_APP_SET, applicationData.mPackageName);
+            context.sendBroadcast(intent);
             // Configure this as the preferred activity for SENDTO sms/mms intents
             configurePreferredActivity(packageManager, new ComponentName(
                     applicationData.mPackageName, applicationData.mSendToClass), userId);
@@ -472,6 +487,10 @@ public final class SmsApplication {
                     MMS_SERVICE_PACKAGE_NAME);
             assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
                     TELEPHONY_PROVIDER_PACKAGE_NAME);
+            assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                    RCS_SERVICE_PACKAGE_NAME);
+            assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                    RCS_NATIVE_UI_PACKAGE_NAME);
         }
     }
 
