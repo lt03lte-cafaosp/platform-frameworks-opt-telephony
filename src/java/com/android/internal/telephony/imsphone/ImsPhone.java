@@ -786,6 +786,7 @@ public class ImsPhone extends ImsPhoneBase {
                 CommandsInterface.SERVICE_CLASS_VOICE, timerSeconds, onComplete);
     }
 
+    @Override
     public void setCallForwardingOption(int commandInterfaceCFAction,
             int commandInterfaceCFReason,
             String dialingNumber,
@@ -1469,5 +1470,27 @@ public class ImsPhone extends ImsPhoneBase {
     }
     public void setImsRegistered(boolean value) {
         mImsRegistered = value;
+    }
+
+    @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason,
+            int commandInterfaceServiceClass, Message onComplete) {
+        if (DBG) Rlog.d(LOG_TAG, "getCallForwardingOption reason=" + commandInterfaceCFReason +
+                "serviceclass =" + commandInterfaceServiceClass);
+        if (isValidCommandInterfaceCFReason(commandInterfaceCFReason)) {
+            if (DBG) Rlog.d(LOG_TAG, "requesting call forwarding query.");
+            Message resp;
+            resp = obtainMessage(EVENT_GET_CALL_FORWARD_DONE, onComplete);
+
+            try {
+                ImsUtInterface ut = mCT.getUtInterface();
+                ut.queryCallForward(getConditionFromCFReason(commandInterfaceCFReason), null,
+                        commandInterfaceServiceClass, resp);
+            } catch (ImsException e) {
+                sendErrorResponse(onComplete, e);
+            }
+        } else if (onComplete != null) {
+            sendErrorResponse(onComplete);
+        }
     }
 }
