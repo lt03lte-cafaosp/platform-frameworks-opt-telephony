@@ -47,6 +47,8 @@ import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.RILConstants;
+import com.android.internal.telephony.uicc.IccCardStatus.CardState;
+import com.android.internal.telephony.uicc.UiccCard;
 import com.android.internal.telephony.uicc.UiccController;
 
 import com.android.internal.telephony.ModemStackController.ModemCapabilityInfo;
@@ -160,10 +162,14 @@ public class ModemBindingPolicyHandler extends Handler {
     private static final int SUCCESS = 1;
     private static final int FAILURE = 0;
 
+    private static final int PRIMARY_STACK = 0;
+    private static final int SECONDARY_STACK = 1;
+
     //***** Class Variables
     private static ModemBindingPolicyHandler sModemBindingPolicyHandler;
     private static ModemStackController mModemStackController;
     private CommandsInterface[] mCi;
+    private UiccController mUiccController;
     private Context mContext;
     private int mNumPhones = TelephonyManager.getDefault().getPhoneCount();
     private boolean mModemRatCapabilitiesAvailable = false;
@@ -204,6 +210,7 @@ public class ModemBindingPolicyHandler extends Handler {
 
         mCi = ci;
         mContext = context;
+        mUiccController = uiccManager;
         mModemStackController = ModemStackController.getInstance();
         mModemCapInfo = new ModemCapabilityInfo[mNumPhones];
 
@@ -330,6 +337,8 @@ public class ModemBindingPolicyHandler extends Handler {
         boolean isUpdateStackBindingRequired = false;
         int response = FAILURE;
 
+        logd("updateStackBindingIfRequired: Started!!");
+
         updatePreferredStackIds();
 
         for (int i = 0; i < mNumPhones; i++) {
@@ -339,6 +348,46 @@ public class ModemBindingPolicyHandler extends Handler {
                 break;
             }
         }
+
+        logd("isUpdateStackBindingRequired: " + isUpdateStackBindingRequired);
+
+        //In DSDS cases, if there is only one SIM present
+        //map it to primary stack, if not already done.
+        if (!isBootUp && !isUpdateStackBindingRequired
+                && mNumPhones == PhoneConstants.MAX_PHONE_COUNT_DUAL_SIM) {
+            int numCardsPresent = 0;
+            int cardPresentIndex = -1;
+            int cardAbsentIndex = -1;
+            for (int i = 0; i < mNumPhones; i++) {
+                UiccCard card = mUiccController.getUiccCard(i);
+                if (card != null && card.getCardState() == CardState.CARDSTATE_PRESENT) {
+                    numCardsPresent++;
+                    cardPresentIndex = i;
+                } else {
+                    cardAbsentIndex = i;
+                }
+            }
+
+            logd("numCardsPresent: " + numCardsPresent + "cardPresentIndex: " + cardPresentIndex +
+                    "cardAbsentIndex: " + cardAbsentIndex);
+
+            if (numCardsPresent == 1 && cardPresentIndex != -1 && cardAbsentIndex != -1 &&
+                    mCurrentStackId[cardPresentIndex] != PRIMARY_STACK) {
+                mPreferredStackId[cardPresentIndex] = PRIMARY_STACK;
+                mPreferredStackId[cardAbsentIndex] = SECONDARY_STACK;
+
+                //save the network mode of Absent index to GSM and update in DB
+                mPrefNwMode[cardAbsentIndex] = RILConstants.NETWORK_MODE_GSM_ONLY;
+                TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE, cardAbsentIndex,
+                        RILConstants.NETWORK_MODE_GSM_ONLY);
+
+                logd("Only one sim is present in slot[" + cardPresentIndex + "],Do Flex Mapping");
+
+                isUpdateStackBindingRequired = true;
+            }
+        }
+
         if (isBootUp || isUpdateStackBindingRequired) {
             Message msg = Message.obtain(this, EVENT_UPDATE_BINDING_DONE, null);
             response = mModemStackController.updateStackBinding(mPreferredStackId, isBootUp, msg);
