@@ -36,6 +36,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Registrant;
 import android.os.RegistrantList;
+import android.os.SystemProperties;
 import android.provider.Settings.SettingNotFoundException;
 import android.telephony.Rlog;
 import android.telephony.ServiceState;
@@ -273,6 +274,11 @@ public class ModemBindingPolicyHandler extends Handler {
         }
     }
 
+    public boolean isDetect4gCardEnabled() {
+        return SystemProperties.getBoolean("persist.radio.detect4gcard", false) &&
+                SystemProperties.getBoolean("persist.radio.primarycard", false);
+    }
+
     /*
     * updatePrefNwTypeIfRequired: Method used to set pref network type if required.
     *
@@ -294,7 +300,7 @@ public class ModemBindingPolicyHandler extends Handler {
 
         //If CrossBinding request is not accepted, i.e. return value is FAILURE
         //send request directly to RIL, or else store the setpref Msg for later processing.
-        if (updateStackBindingIfRequired(false) == SUCCESS) {
+        if (!isDetect4gCardEnabled() && updateStackBindingIfRequired(false) == SUCCESS) {
             mStoredResponse.put(0, response);
         } else {
             logd("setPreferredNetworkType: flex map not required send nwMode request to modem");
