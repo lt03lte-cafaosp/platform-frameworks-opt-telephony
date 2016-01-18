@@ -261,7 +261,7 @@ public abstract class ServiceStateTracker extends Handler {
             // Set the network type, in case the radio does not restore it.
             int subId = mPhoneBase.getSubId();
             if (mPreviousSubId.getAndSet(subId) != subId) {
-                if (SubscriptionManager.isValidSubscriptionId(subId)) {
+                if (mSubscriptionController.isActiveSubId(subId)) {
                     Context context = mPhoneBase.getContext();
 
                     mPhoneBase.notifyCallForwardingIndicator();
@@ -700,8 +700,10 @@ public abstract class ServiceStateTracker extends Handler {
      */
     public void registerForDataRegStateOrRatChanged(Handler h, int what, Object obj) {
         Registrant r = new Registrant(h, what, obj);
+        int rat = mSS.getRilDataRadioTechnology();
+        int drs = mSS.getDataRegState();
         mDataRegStateOrRatChangedRegistrants.add(r);
-        notifyDataRegStateRilRadioTechnologyChanged();
+        r.notifyResult(new Pair<Integer, Integer>(drs, rat));
     }
     public void unregisterForDataRegStateOrRatChanged(Handler h) {
         mDataRegStateOrRatChangedRegistrants.remove(h);

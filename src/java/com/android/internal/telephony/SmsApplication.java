@@ -32,6 +32,7 @@ import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Debug;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.provider.Telephony.Sms.Intents;
@@ -65,6 +66,18 @@ public final class SmsApplication {
     private static final boolean DEBUG_MULTIUSER = false;
 
     private static SmsPackageMonitor sSmsPackageMonitor = null;
+
+    /* Begin add for RCS */
+    public static String ACTION_DEFAULT_MMS_APPLICATION_CHANGED =
+            "com.android.telephony.intent.action.DEFAULT_MMS_APPLICATION_CHANGED";
+    private static String MMS_APP_SET = "mms_app";
+    private static final String RCS_SERVICE_PACKAGE_NAME = "com.suntek.mway.rcs.app.service";
+    private static final String RCS_NATIVE_UI_PACKAGE_NAME = "com.suntek.mway.rcs.nativeui";
+    private static final String PROPERTY_NAME_RCS_ENABLED = "persist.sys.rcs.enabled";
+    private static boolean isRcsEnabled() {
+        return SystemProperties.getBoolean(PROPERTY_NAME_RCS_ENABLED, false);
+    }
+    /* End add for RCS */
 
     public static class SmsApplicationData {
         /**
@@ -393,6 +406,12 @@ public final class SmsApplication {
                         MMS_SERVICE_PACKAGE_NAME);
                 assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
                         TELEPHONY_PROVIDER_PACKAGE_NAME);
+                if (isRcsEnabled()) {
+                    assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                            RCS_SERVICE_PACKAGE_NAME);
+                    assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                            RCS_NATIVE_UI_PACKAGE_NAME);
+                }
             }
         }
         if (DEBUG_MULTIUSER) {
@@ -454,7 +473,11 @@ public final class SmsApplication {
             Settings.Secure.putStringForUser(context.getContentResolver(),
                     Settings.Secure.SMS_DEFAULT_APPLICATION, applicationData.mPackageName,
                     userId);
-
+            if (isRcsEnabled()) {
+                Intent intent = new Intent(ACTION_DEFAULT_MMS_APPLICATION_CHANGED);
+                intent.putExtra(MMS_APP_SET, applicationData.mPackageName);
+                context.sendBroadcast(intent);
+            }
             // Configure this as the preferred activity for SENDTO sms/mms intents
             configurePreferredActivity(packageManager, new ComponentName(
                     applicationData.mPackageName, applicationData.mSendToClass), userId);
@@ -472,6 +495,12 @@ public final class SmsApplication {
                     MMS_SERVICE_PACKAGE_NAME);
             assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
                     TELEPHONY_PROVIDER_PACKAGE_NAME);
+            if (isRcsEnabled()) {
+                assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                        RCS_SERVICE_PACKAGE_NAME);
+                assignWriteSmsPermissionToSystemApp(context, packageManager, appOps,
+                        RCS_NATIVE_UI_PACKAGE_NAME);
+            }
         }
     }
 

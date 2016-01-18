@@ -6,6 +6,7 @@ file_name='tdi'
 
 # Get the command as the first parameter
 cmd=$1
+echo $1
 shift
 
 function dc_errors()

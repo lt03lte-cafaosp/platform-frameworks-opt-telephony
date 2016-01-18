@@ -199,6 +199,19 @@ public abstract class InboundSmsHandler extends StateMachine {
 
     IDeviceIdleController mDeviceIdleController;
 
+    /* Begin add for RCS */
+    //Firewall
+    private static final Uri FIREWALL_PROVIDER_URI = Uri.parse("content://com.android.firewall");
+    private static final String EXTRA_NUMBER = "phonenumber";
+    private static final String IS_FORBIDDEN = "isForbidden";
+    private static final String SMS_BLOCK_RECORD_INTENT =
+            "com.android.firewall.ADD_SMS_BLOCK_RECORD";
+    private static final String BLOCK_RECORD_NUMBER = "number";
+    private static final String BLOCK_RECORD_CONTENT = "content";
+    private static final String MMS_BLOCK_RECORD_INTENT =
+            "com.android.firewall.ADD_MMS_BLOCK_RECORD";
+    /* End add for RCS */
+
     /**
      * Create a new SMS broadcast helper.
      * @param name the class name for logging
@@ -821,6 +834,15 @@ public abstract class InboundSmsHandler extends StateMachine {
             }
         }
 
+        Intent blockItent = new Intent();
+        blockItent.putExtra("pdus", pdus);
+        blockItent.putExtra("format", tracker.getFormat());
+        if (isSmsBlockedByFirewall(blockItent)) {
+            // send firewall block sms intent
+            sendBlockRecordBroadcast(blockItent, true, resultReceiver, "", -1);
+            return true;
+        }
+
         List<String> carrierPackages = null;
         UiccCard card = UiccController.getInstance().getUiccCard(mPhone.getPhoneId());
         if (card != null) {
@@ -1406,4 +1428,74 @@ public abstract class InboundSmsHandler extends StateMachine {
     private static String replaceFormFeeds(String s) {
         return s == null ? "" : s.replace('\f', '\n');
     }
+
+    /* Begin add for RCS */
+    /**
+     * send block record broadcast to firewall apk which handler the blocked record
+     * @param context bradcast context
+     * @param intent is sms intent
+     * @param isSms judge it is a sms or mms
+     * @param receiver which handler this broadcast at last
+     */
+    public void sendBlockRecordBroadcast(Intent intent, boolean isSms, BroadcastReceiver receiver,
+            String permission, int appOp) {
+        Intent sendIntent;
+        if (isSms) {
+            final SmsMessage[] messages = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+            if (messages != null) {
+                sendIntent = new Intent(SMS_BLOCK_RECORD_INTENT);
+                sendIntent
+                        .putExtra(BLOCK_RECORD_NUMBER, messages[0].getDisplayOriginatingAddress());
+                sendIntent.putExtra(BLOCK_RECORD_CONTENT, buildMessageBodyFromPdus(messages));
+                Bundle options = handleSmsWhitelisting(sendIntent.getComponent());
+                dispatchIntent(sendIntent, android.Manifest.permission.RECEIVE_SMS,
+                        AppOpsManager.OP_RECEIVE_SMS, options, receiver, UserHandle.ALL);
+            }
+        } else {
+            sendIntent = new Intent(MMS_BLOCK_RECORD_INTENT);
+            String blockNumber = intent.getStringExtra("block_number");
+            Bundle options = handleSmsWhitelisting(sendIntent.getComponent());
+            if (blockNumber == null) {
+                dispatchIntent(intent, permission, appOp, options, receiver, UserHandle.OWNER);
+                return;
+            }
+            byte[] pushData = intent.getByteArrayExtra("data");
+            sendIntent.putExtra(BLOCK_RECORD_NUMBER, blockNumber);
+            sendIntent.putExtra("data", pushData);
+            sendIntent.putExtra("subid", mPhone.getSubId());
+            dispatchIntent(sendIntent, permission, appOp, options, receiver, UserHandle.OWNER);
+        }
+    }
+
+    public boolean isMmsBlockedByFirewall(String address) {
+        return isBlockedByFirewall(address);
+    }
+
+    private boolean isSmsBlockedByFirewall(Intent intent) {
+        final SmsMessage[] messages = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+        if (messages == null || messages.length < 1) {
+            loge("Failed to parse SMS pdu");
+            return false;
+        }
+        String number = messages[0].getDisplayOriginatingAddress();
+        return isBlockedByFirewall(number);
+    }
+
+    private boolean isBlockedByFirewall(String address) {
+        boolean isForbidden = false;
+        // Add to check the firewall when firewall provider is built.
+        final ContentResolver cr = mContext.getContentResolver();
+        if (cr.acquireProvider(FIREWALL_PROVIDER_URI) != null && null != address) {
+            Bundle extras = new Bundle();
+            extras.putString(EXTRA_NUMBER, address);
+            extras.putInt(PhoneConstants.SUBSCRIPTION_KEY, mPhone.getSubId());
+            extras = cr.call(FIREWALL_PROVIDER_URI, IS_FORBIDDEN, null, extras);
+            if (extras != null) {
+                isForbidden = extras.getBoolean(IS_FORBIDDEN);
+            }
+        }
+        return isForbidden;
+    }
+    /* End add for RCS */
+
 }

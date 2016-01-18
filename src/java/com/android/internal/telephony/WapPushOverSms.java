@@ -310,8 +310,19 @@ public class WapPushOverSms implements ServiceConnection {
                 } catch (RemoteException e) {
                 }
             }
-
-            handler.dispatchIntent(intent, permission, appOp, options, receiver, UserHandle.OWNER);
+            if (mimeType != null && mimeType.equals(WspTypeDecoder.CONTENT_TYPE_B_MMS)) {
+                if (handler.isMmsBlockedByFirewall(getPduAddress(phoneId, intentData))) {
+                    // send firewall block mms intent
+                    intent.putExtra("block_number", getPduAddress(phoneId, intentData));
+                    handler.sendBlockRecordBroadcast(intent, false, receiver, permission, appOp);
+                } else {
+                    handler.dispatchIntent(intent, permission, appOp, options, receiver,
+                            UserHandle.OWNER);
+                }
+            } else {
+                handler.dispatchIntent(intent, permission, appOp, options, receiver,
+                        UserHandle.OWNER);
+            }
             return Activity.RESULT_OK;
         } catch (ArrayIndexOutOfBoundsException aie) {
             // 0-byte WAP PDU or other unexpected WAP PDU contents can easily throw this;
@@ -492,4 +503,19 @@ public class WapPushOverSms implements ServiceConnection {
         }
         return false;
     }
+
+    /* Begin add for RCS */
+    private String getPduAddress(int phoneId, byte[] intentData) {
+        int [] subIds = SubscriptionManager.getSubId(phoneId);
+        int subId = (subIds != null) && (subIds.length > 0) ? subIds[0] :
+                 SmsManager.getDefaultSmsSubscriptionId();
+        final GenericPdu pdu =
+                new PduParser(intentData, shouldParseContentDisposition(subId)).parse();
+        if (pdu == null || pdu.getFrom() == null) {
+            return null;
+        }
+        return pdu.getFrom().getString();
+    }
+    /* End add for RCS */
+
 }

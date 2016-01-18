@@ -206,6 +206,8 @@ public abstract class PhoneBase extends Handler implements Phone {
     public static final String VM_SIM_IMSI = "vm_sim_imsi_key";
     // Key used to read/write if Call Forwarding is enabled
     public static final String CF_ENABLED = "cf_enabled_key";
+    // Key used to read/write if Video Call Forwarding is enabled
+    public static final String CF_ENABLED_VIDEO = "cf_enabled_key_video";
 
     // Key used for storing call forwarding status
     public static final String CF_STATUS = "cf_status_key";
@@ -1122,7 +1124,7 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     private void updateSavedNetworkOperator(NetworkSelectMessage nsm) {
         int subId = getSubId();
-        if (SubscriptionManager.isValidSubscriptionId(subId)) {
+        if (SubscriptionController.getInstance().isActiveSubId(subId)) {
             // open the shared preferences editor, and write the value.
             // nsm.operatorNumeric is "" if we're in automatic.selection.
             SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
@@ -1390,8 +1392,12 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     @Override
     public void updatePhoneObject(int voiceRadioTech) {
+        Rlog.d(LOG_TAG, "updatePhoneObject: phoneid = " + mPhoneId + " rat = " + voiceRadioTech);
         // Only the PhoneProxy can update the phone object.
-        PhoneFactory.getDefaultPhone().updatePhoneObject(voiceRadioTech);
+        Phone phoneProxy = PhoneFactory.getPhone(mPhoneId);
+        if (phoneProxy != null) {
+            phoneProxy.updatePhoneObject(voiceRadioTech);
+        }
     }
 
     /**
@@ -1522,7 +1528,10 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     public void setVoiceCallForwardingFlag(int line, boolean enable, String number) {
         setCallForwardingIndicatorInSharedPref(enable);
-        mIccRecords.get().setVoiceCallForwardingFlag(line, enable, number);
+        IccRecords r = mIccRecords.get();
+        if (r != null) {
+            r.setVoiceCallForwardingFlag(line, enable, number);
+        }
     }
 
     protected void setVoiceCallForwardingFlag(IccRecords r, int line, boolean enable,
@@ -1596,6 +1605,51 @@ public abstract class PhoneBase extends Handler implements Phone {
             return cf;
         }
         cf = sp.getBoolean(CF_ENABLED + getSubId(), false);
+        return cf;
+    }
+
+    /**
+     * This method stores the CF_ENABLED_VIDEO flag in preferences
+     * @param enabled
+     */
+    public void setVideoCallForwardingPreference(boolean enabled) {
+        Rlog.d(LOG_TAG, "Set video call forwarding info to preferences");
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        SharedPreferences.Editor edit = sp.edit();
+        edit.putBoolean(CF_ENABLED_VIDEO + getSubId(), enabled);
+        edit.commit();
+
+        // set the sim imsi to be able to track when the sim card is changed.
+        setSimImsi(getSubscriberId());
+    }
+
+    /**
+     * This method gets Video Call Forwarding enabled/disabled from preferences
+     */
+    public boolean getVideoCallForwardingPreference() {
+        Rlog.d(LOG_TAG, "Get video call forwarding info from preferences");
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        boolean cf = false;
+        if (TelephonyManager.getDefault().isMultiSimEnabled()) {
+            if (!sp.contains(CF_ENABLED_VIDEO + getSubId()) &&
+                    sp.contains(CF_ENABLED_VIDEO + mPhoneId)) {
+                cf = sp.getBoolean(CF_ENABLED_VIDEO + mPhoneId, false);
+                setVideoCallForwardingPreference(cf);
+                SharedPreferences.Editor edit = sp.edit();
+                edit.remove(CF_ENABLED_VIDEO + mPhoneId);
+                edit.commit();
+            }
+        } else {
+            if (!sp.contains(CF_ENABLED_VIDEO + getSubId()) && sp.contains(CF_ENABLED_VIDEO)) {
+                cf = sp.getBoolean(CF_ENABLED_VIDEO, false);
+                setVideoCallForwardingPreference(cf);
+                SharedPreferences.Editor edit = sp.edit();
+                edit.remove(CF_ENABLED_VIDEO);
+                edit.commit();
+            }
+        }
+        cf = sp.getBoolean(CF_ENABLED_VIDEO + getSubId(), false);
         return cf;
     }
 
@@ -2658,7 +2712,7 @@ public abstract class PhoneBase extends Handler implements Phone {
         // Update the cached value
         mRadioCapability.set(rc);
 
-        if (SubscriptionManager.isValidSubscriptionId(getSubId())) {
+        if (SubscriptionController.getInstance().isActiveSubId(getSubId())) {
             sendSubscriptionSettings(true);
         }
     }
@@ -2676,7 +2730,7 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     protected void setPreferredNetworkTypeIfSimLoaded() {
         int subId = getSubId();
-        if (SubscriptionManager.isValidSubscriptionId(subId)) {
+        if (SubscriptionController.getInstance().isActiveSubId(subId)) {
             int type = PhoneFactory.calculatePreferredNetworkType(mContext, getSubId());
             setPreferredNetworkType(type, null);
         }
@@ -2767,6 +2821,19 @@ public abstract class PhoneBase extends Handler implements Phone {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason,
+            int commandInterfaceServiceClass, Message onComplete) {
+        logUnexpectedCdmaMethodCall("getCallForwardingOption with Serviceclass");
+    }
+
+    @Override
+    public void setCallForwardingOption(int commandInterfaceCFReason,
+            int commandInterfaceCFAction, String dialingNumber,
+            int commandInterfaceServiceClass, int timerSeconds, Message onComplete) {
+        logUnexpectedCdmaMethodCall("setCallForwardingOption with Serviceclass");
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
