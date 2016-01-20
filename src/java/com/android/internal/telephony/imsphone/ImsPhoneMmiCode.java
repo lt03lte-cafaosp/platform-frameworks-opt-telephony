@@ -709,12 +709,16 @@ public final class ImsPhoneMmiCode extends Handler implements MmiCode {
                 || (SystemProperties.getBoolean("persist.radio.ims.cmcc", false) &&
                 ((mSc != null && mSc.equals(SC_BAICr)) || (mSc != null && mSc.equals(SC_BAIC))))) {
 
-            int serviceClass = siToServiceClass(mSib);
-            if (serviceClass != SERVICE_CLASS_NONE
-                    && serviceClass != SERVICE_CLASS_VOICE) {
-                return false;
+            try {
+                int serviceClass = siToServiceClass(mSib);
+                if (serviceClass != SERVICE_CLASS_NONE
+                        && serviceClass != SERVICE_CLASS_VOICE) {
+                    return false;
+                }
+                return true;
+            } catch (RuntimeException exc) {
+                Rlog.d(LOG_TAG, "Invalid service class " + exc);
             }
-            return true;
         } else if (isPinPukCommand()
                 || (mSc != null
                     && (mSc.equals(SC_PWD) || mSc.equals(SC_CLIP) || mSc.equals(SC_CLIR)))) {
