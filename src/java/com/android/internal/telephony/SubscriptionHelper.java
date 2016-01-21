@@ -270,6 +270,8 @@ class SubscriptionHelper extends Handler {
         int[] prefNwModeInDB = new int[sNumPhones];
         int[] nwModeinSubIdTable = new int[sNumPhones];
         boolean updateRequired = false;
+        int simCount = 0;
+        int simIndex = 0;
 
         updateNwModesInSubIdTable(false);
         mNwModeUpdated = true;
@@ -294,7 +296,29 @@ class SubscriptionHelper extends Handler {
                 if (nwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
                     // Since we have called updateNwModesInSubIdTable() above, SubId based
                     // nwmode DEFAULT_NW_MODE means there is no SIM inserted in the slot.
-                    // Set the network mode to GSM_ONLY.
+                    // Use the nwmode in settings DB for now.
+                    nwModeinSubIdTable[i] = prefNwModeInDB[i];
+                } else {
+                    // Save the sim card count and index.
+                    simCount++;
+                    simIndex = i;
+                }
+                if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
+                        && isNwModeValid(nwModeinSubIdTable[i])) {
+                    updateRequired = true;
+                }
+            }
+        }
+
+        // If there is only single sim inserted and it's network mode is other than G_ONLY,
+        // set all other slots to G_ONLY, so that flex map can be triggered if necessary.
+        if (simCount == 1 && sNumPhones > 1 &&
+                nwModeinSubIdTable[simIndex] != RILConstants.NETWORK_MODE_GSM_ONLY) {
+            logd("updateNwMode: Only one sim inserted at slot = " + simIndex + " nwMode = " +
+                    nwModeinSubIdTable[simIndex]);
+            for (int i=0; i < sNumPhones; i++ ) {
+                if (i != simIndex) {
+                    // Set GSM_ONLY to all absent slots.
                     nwModeinSubIdTable[i] = RILConstants.NETWORK_MODE_GSM_ONLY;
                 }
                 if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
