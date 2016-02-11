@@ -495,7 +495,7 @@ public class CDMAPhone extends PhoneBase {
         }
 
         if (mSST != null && mSST.mSS.getState() == ServiceState.STATE_OUT_OF_SERVICE
-                && mSST.mSS.getDataRegState() != ServiceState.STATE_IN_SERVICE && !isEmergency) {
+                && !isEmergency) {
             throw new CallStateException("cannot dial in current state");
         }
         if (DBG) Rlog.d(LOG_TAG, "Trying (non-IMS) CS call");
