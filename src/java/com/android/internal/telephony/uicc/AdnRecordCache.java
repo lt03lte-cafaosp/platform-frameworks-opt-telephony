@@ -221,7 +221,9 @@ public final class AdnRecordCache extends Handler implements IccConstants {
         int result;
         result = updateAdnBySearchOnEf(false, efid, oldAdn, newAdn, pin2, response);
 
-        if (UPDATE_ADN_SUCCESS != result && efid == EF_PBR) {
+        boolean isLocalPbrPresent = mUsimLocalPhoneBookManager.isPbrFilePresent();
+        Log.d("AdnRecordCache", " isLocalPbrPresent " + isLocalPbrPresent);
+        if (isLocalPbrPresent && UPDATE_ADN_SUCCESS != result && efid == EF_PBR) {
             //Update failed on global PB, do update on local PB now.
             result = updateAdnBySearchOnEf(true, efid, oldAdn, newAdn, pin2, response);
         }
