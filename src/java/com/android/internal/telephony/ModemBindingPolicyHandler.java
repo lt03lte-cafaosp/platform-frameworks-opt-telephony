@@ -257,6 +257,8 @@ public class ModemBindingPolicyHandler extends Handler {
             if (resp != null) {
                 if (ar.exception != null) {
                     errorCode = RILConstants.GENERIC_FAILURE;
+                } else {
+                    savePreferredNwModeToDB();
                 }
                 sendResponseToTarget(resp, errorCode);
                 mStoredResponse.put(i, null);
@@ -483,6 +485,13 @@ public class ModemBindingPolicyHandler extends Handler {
                 loge("getPreferredNetworkMode: Could not find PREFERRED_NETWORK_MODE!!!");
                 mPrefNwMode[i] = Phone.PREFERRED_NT_MODE;
              }
+        }
+    }
+
+    private void savePreferredNwModeToDB() {
+        for (int i = 0; i < mNumPhones; i++) {
+            TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                    android.provider.Settings.Global.PREFERRED_NETWORK_MODE, i, mPrefNwMode[i]);
         }
     }
 
