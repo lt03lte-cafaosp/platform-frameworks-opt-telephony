@@ -188,6 +188,10 @@ public final class DcTracker extends DcTrackerBase {
 
     private static final int EVENT_3GPP_RECORDS_LOADED = 100;
 
+    // If multi sim is enabled and modem doesnot support attach profiles per
+    // subscription, restrict set initial attach apn to DDS sub only.
+    private boolean mRestrictSetInitialAttachToDds = false;
+
     Handler mSimRecordsLoadedHandler = new Handler() {
         @Override
         public void handleMessage (Message msg) {
@@ -253,6 +257,9 @@ public final class DcTracker extends DcTrackerBase {
         addEmergencyApnSetting();
 
         mProvisionActionName = "com.android.internal.telephony.PROVISION" + p.getPhoneId();
+
+        mRestrictSetInitialAttachToDds = TelephonyManager.getDefault().isMultiSimEnabled() &&
+                !SystemProperties.getBoolean("radio.sub_based_data_profiles", true);
     }
 
     protected void registerForAllEvents() {
@@ -3168,6 +3175,11 @@ public final class DcTracker extends DcTrackerBase {
     }
 
     private void setAttachApn() {
+        if (mRestrictSetInitialAttachToDds &&
+                mPhone.getSubId() != SubscriptionManager.getOnDemandDataSubId()) {
+            log("setAttachApn: Ignoring the request on non DDS sub");
+            return;
+        }
         ArrayList<ApnSetting> apnList = create3gppApnsList();
         ApnSetting preferApn = getPreferredApn(apnList);
         setInitialAttachApn(apnList, preferApn, mSimRecords.get());
@@ -3189,6 +3201,9 @@ public final class DcTracker extends DcTrackerBase {
             supplyMessenger();
         } else {
             log("Phone object is not MultiSim. This should not hit!!!!");
+        }
+        if (mRestrictSetInitialAttachToDds) {
+            setAttachApn();
         }
     }
 
