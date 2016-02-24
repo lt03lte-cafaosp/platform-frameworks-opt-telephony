@@ -589,7 +589,8 @@ public class DctController extends Handler {
             UiccCard card = uiccController.getUiccCard(i);
             int subId = mPhones[i].getSubId();
             logd("onSubInfoReady handle pending requests subId=" + subId);
-            if (card.getCardState() == IccCardStatus.CardState.CARDSTATE_ABSENT) {
+            if ((card == null) || (card.getCardState() ==
+                    IccCardStatus.CardState.CARDSTATE_ABSENT)) {
                 logd("onSubInfoReady: SIM card absent on phoneId = " + i);
                 PhoneBase phoneBase = (PhoneBase)mPhones[i].getActivePhone();
                 DcTrackerBase dcTracker = phoneBase.mDcTracker;
