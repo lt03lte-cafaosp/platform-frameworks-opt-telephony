@@ -76,7 +76,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.codeaurora.QtiVideoCallConstants;
+import org.codeaurora.ims.QtiCallConstants;
 
 /**
  * (<em>Not for SDK use</em>)
@@ -2809,8 +2809,8 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     /* Validate the given extras if the call is for CS domain or not */
     protected boolean shallDialOnCircuitSwitch(Bundle extras) {
-            return (extras != null && extras.getInt(QtiVideoCallConstants.EXTRA_CALL_DOMAIN,
-                    QtiVideoCallConstants.DOMAIN_AUTOMATIC) == QtiVideoCallConstants.DOMAIN_CS);
+            return (extras != null && extras.getInt(QtiCallConstants.EXTRA_CALL_DOMAIN,
+                    QtiCallConstants.DOMAIN_AUTOMATIC) == QtiCallConstants.DOMAIN_CS);
     }
 
     protected boolean isMatchGid(String gid) {
