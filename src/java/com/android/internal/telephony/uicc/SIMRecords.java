@@ -1515,7 +1515,16 @@ public class SIMRecords extends IccRecords {
             return;
         }
 
-        if (mParentApp.getType() == AppType.APPTYPE_USIM) {
+        // Find the usim app used for subscription. We need to read EF_LI/EF_PL only for that app.
+        UiccCardApplication usimSubscriptionApp = null;
+        if (mParentApp != null && mParentApp.getUiccCard() != null
+                && mParentApp.getType() == AppType.APPTYPE_USIM) {
+            usimSubscriptionApp = mParentApp.getUiccCard()
+                    .getApplication(UiccController.APP_FAM_3GPP);
+        }
+        if (DBG) log ("loadEfLiAndEfPl: mParentApp = " + mParentApp +
+                " usimSubscApp = " + usimSubscriptionApp);
+        if (mParentApp == usimSubscriptionApp) {
             mRecordsRequested = true;
             mFh.loadEFTransparent(EF_LI,
                     obtainMessage(EVENT_GET_ICC_RECORD_DONE, new EfUsimLiLoaded()));
