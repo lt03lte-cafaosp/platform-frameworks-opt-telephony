@@ -54,7 +54,7 @@ public final class AdnRecordCache extends Handler implements IccConstants {
     // People waiting for adn record to be updated
     SparseArray<Message> mUserWriteResponse = new SparseArray<Message>();
 
-    private boolean mUseLocalPb = false;
+    public boolean mUseLocalPb = false;
     //***** Event Constants
 
     static final int EVENT_LOAD_ALL_ADN_LIKE_DONE = 1;
