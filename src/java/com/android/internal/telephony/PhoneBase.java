@@ -110,9 +110,16 @@ public abstract class PhoneBase extends Handler implements Phone {
 
             synchronized (PhoneProxy.lockForRadioTechnologyChange) {
                 if (intent.getAction().equals(ImsManager.ACTION_IMS_SERVICE_UP)) {
-                    mImsServiceReady = true;
-                    updateImsPhone();
-                    ImsManager.updateImsServiceConfig(mContext, mPhoneId, false);
+                    // Handle the intent ONLY if the service is available
+                    ImsManager imsManager = ImsManager.getInstance(mContext, getPhoneId());
+                    if (imsManager != null && imsManager.isServiceAvailable()) {
+                        mImsServiceReady = true;
+                        updateImsPhone();
+                        ImsManager.updateImsServiceConfig(mContext, mPhoneId, false);
+                    } else {
+                        Rlog.d(LOG_TAG, "Ignore ACTION_IMS_SERVICE_UP, IMS service is" +
+                                "unavailable for phone ID " + getPhoneId());
+                    }
                 } else if (intent.getAction().equals(ImsManager.ACTION_IMS_SERVICE_DOWN)) {
                     mImsServiceReady = false;
                     updateImsPhone();
