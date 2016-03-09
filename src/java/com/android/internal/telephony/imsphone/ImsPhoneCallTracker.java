@@ -1255,6 +1255,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
             if (DBG) log("onCallTerminated reasonCode=" + reasonInfo.getCode());
 
             ImsPhoneCall.State oldState = mForegroundCall.getState();
+            ImsPhoneCall.State oldBgCallState = mBackgroundCall.getState();
             int cause = getDisconnectCauseFromReasonInfo(reasonInfo);
             ImsPhoneConnection conn = findConnection(imsCall);
             if (DBG) log("cause = " + cause + " conn = " + conn);
@@ -1283,6 +1284,16 @@ public final class ImsPhoneCallTracker extends CallTracker {
                     mPendingMO = null;
                 } else if (mPendingMO != null) {
                     sendEmptyMessage(EVENT_DIAL_PENDINGMO);
+                } else if (mSwitchingFgAndBgCalls) {
+                    /**
+                     * During a call swap operation,
+                     * imsCall != mCallExpectedToResume means the active call which will be held
+                     * oldBgCallState being ACTIVE means active call is ended before being held.
+                     */
+                    if ((imsCall != mCallExpectedToResume) &&
+                            (oldBgCallState == ImsPhoneCall.State.ACTIVE)) {
+                        sendEmptyMessage(EVENT_RESUME_BACKGROUND);
+                    }
                 }
             }
         }
@@ -1359,15 +1370,18 @@ public final class ImsPhoneCallTracker extends CallTracker {
         public void onCallResumed(ImsCall imsCall) {
             if (DBG) log("onCallResumed");
 
-            // If we are the in midst of swapping FG and BG calls and the call we end up resuming
-            // is not the one we expected, we likely had a resume failure and we need to swap the
-            // FG and BG calls back.
-            if (mSwitchingFgAndBgCalls && imsCall != mCallExpectedToResume) {
-                if (DBG) {
-                    log("onCallResumed : switching " + mForegroundCall + " with "
-                            + mBackgroundCall);
+            if (mSwitchingFgAndBgCalls) {
+                // If we are the in midst of swapping FG and BG calls and
+                // the call we end up resuming is not the one we expected,
+                // we likely had a resume failure and we need to swap the FG and BG calls back.
+                if (imsCall != mCallExpectedToResume) {
+                    if (DBG) {
+                        log("onCallResumed : switching " + mForegroundCall + " with "
+                                + mBackgroundCall);
+                    }
+                    mForegroundCall.switchWith(mBackgroundCall);
                 }
-                mForegroundCall.switchWith(mBackgroundCall);
+                //Call swap is done, reset the relevant variables
                 mSwitchingFgAndBgCalls = false;
                 mCallExpectedToResume = null;
             }
@@ -1377,14 +1391,17 @@ public final class ImsPhoneCallTracker extends CallTracker {
 
         @Override
         public void onCallResumeFailed(ImsCall imsCall, ImsReasonInfo reasonInfo) {
-            // If we are in the midst of swapping the FG and BG calls and we got a resume fail, we
-            // need to swap back the FG and BG calls.
-            if (mSwitchingFgAndBgCalls && imsCall == mCallExpectedToResume) {
-                if (DBG) {
-                    log("onCallResumeFailed : switching " + mForegroundCall + " with "
-                            + mBackgroundCall);
+            if (mSwitchingFgAndBgCalls) {
+                // If we are in the midst of swapping the FG and BG calls and
+                // we got a resume fail, we need to swap back the FG and BG calls.
+                if (imsCall == mCallExpectedToResume) {
+                    if (DBG) {
+                        log("onCallResumeFailed : switching " + mForegroundCall + " with "
+                                + mBackgroundCall);
+                    }
+                    mForegroundCall.switchWith(mBackgroundCall);
                 }
-                mForegroundCall.switchWith(mBackgroundCall);
+                //Call swap is done, reset the relevant variables
                 mCallExpectedToResume = null;
                 mSwitchingFgAndBgCalls = false;
             }
