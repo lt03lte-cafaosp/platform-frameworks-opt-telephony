@@ -93,7 +93,6 @@ import java.util.TimeZone;
  * {@hide}
  */
 public class GsmServiceStateTracker extends ServiceStateTracker {
-    static final boolean testingDevCIAutomaticMerge = true;
     static final String LOG_TAG = "GsmSST";
     static final boolean VDBG = false;
     //CAF_MSIM make it private ??
