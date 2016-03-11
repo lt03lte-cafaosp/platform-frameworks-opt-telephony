@@ -136,7 +136,7 @@ public class DcSwitchStateMachine extends StateMachine {
                         log("IdleState: EVENT_DATA_ATTACHED");
                     }
 
-                    if (ddsPhoneId == mId) {
+                    if (DctController.getInstance().isDataAllowedOnPhoneId(mId)) {
                         if (DBG) {
                             log("IdleState: DDS sub reported ATTACHed in IDLE state");
                         }
@@ -145,6 +145,8 @@ public class DcSwitchStateMachine extends StateMachine {
                          */
                         deferMessage(msg);
                         transitionTo(mAttachingState);
+                    } else {
+                        if (DBG) log("IdleState: ignore ATATCHed event as data is not allowed");
                     }
                     retVal = HANDLED;
                     break;
