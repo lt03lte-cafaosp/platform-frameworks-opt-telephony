@@ -2009,6 +2009,11 @@ public interface Phone {
     public Phone getImsPhone();
 
     /**
+     * Return if UT capability of ImsPhone is enabled or not
+     */
+    public boolean isUtEnabled();
+
+    /**
      * Release the local instance of the ImsPhone and disconnect from
      * the phone.
      * @return the instance of the ImsPhone phone previously owned
@@ -2062,4 +2067,47 @@ public interface Phone {
      * @return true if IMS is Registered
      */
     public boolean isImsRegistered();
+
+    /**
+     * getCallForwardingOption
+     * gets a call forwarding option. The return value of
+     * ((AsyncResult)onComplete.obj) is an array of CallForwardInfo.
+     *
+     * @param commandInterfaceCFReason is one of the valid call forwarding
+     *        CF_REASONS, as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param commandInterfaceServiceClass is one of the valid supplementary
+     *        service class SERVICE_CLASS_* as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param onComplete a callback message when the action is completed.
+     *        @see com.android.internal.telephony.CallForwardInfo for details.
+     */
+    void getCallForwardingOption(int commandInterfaceCFReason,
+                                 int commandInterfaceServiceClass,
+                                 Message onComplete);
+
+    /**
+     * setCallForwardingOption
+     * sets a call forwarding option.
+     *
+     * @param commandInterfaceCFReason is one of the valid call forwarding
+     *        CF_REASONS, as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param commandInterfaceCFAction is one of the valid call forwarding
+     *        CF_ACTIONS, as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param dialingNumber is the target phone number to forward calls to
+     * @param commandInterfaceServiceClass is one of the valid supplementary
+     *        service class SERVICE_CLASS_* as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param timerSeconds is used by CFNRy to indicate the timeout before
+     *        forwarding is attempted.
+     * @param onComplete a callback message when the action is completed.
+     */
+    void setCallForwardingOption(int commandInterfaceCFReason,
+                                 int commandInterfaceCFAction,
+                                 String dialingNumber,
+                                 int commandInterfaceServiceClass,
+                                 int timerSeconds,
+                                 Message onComplete);
 }

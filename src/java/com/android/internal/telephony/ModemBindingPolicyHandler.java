@@ -36,6 +36,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Registrant;
 import android.os.RegistrantList;
+import android.os.SystemProperties;
 import android.provider.Settings.SettingNotFoundException;
 import android.telephony.Rlog;
 import android.telephony.ServiceState;
@@ -46,6 +47,8 @@ import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.RILConstants;
+import com.android.internal.telephony.uicc.IccCardStatus.CardState;
+import com.android.internal.telephony.uicc.UiccCard;
 import com.android.internal.telephony.uicc.UiccController;
 
 import com.android.internal.telephony.ModemStackController.ModemCapabilityInfo;
@@ -153,15 +156,20 @@ public class ModemBindingPolicyHandler extends Handler {
     //***** Events
     private static final int EVENT_MODEM_RAT_CAPS_AVAILABLE = 1;
     private static final int EVENT_UPDATE_BINDING_DONE = 2;
+    private static final int EVENT_RADIO_NOT_AVAILABLE = 3;
 
     //*****Constants
     private static final int SUCCESS = 1;
     private static final int FAILURE = 0;
 
+    private static final int PRIMARY_STACK = 0;
+    private static final int SECONDARY_STACK = 1;
+
     //***** Class Variables
     private static ModemBindingPolicyHandler sModemBindingPolicyHandler;
     private static ModemStackController mModemStackController;
     private CommandsInterface[] mCi;
+    private UiccController mUiccController;
     private Context mContext;
     private int mNumPhones = TelephonyManager.getDefault().getPhoneCount();
     private boolean mModemRatCapabilitiesAvailable = false;
@@ -170,6 +178,7 @@ public class ModemBindingPolicyHandler extends Handler {
     private int[] mPreferredStackId = new int[mNumPhones];
     private int[] mCurrentStackId = new int[mNumPhones];
     private int[] mPrefNwMode = new int[mNumPhones];
+    private int[] mNwModeinSubIdTable = new int[mNumPhones];
     private HashMap<Integer, Message> mStoredResponse = new HashMap<Integer, Message>();
 
     //Modem capabilities as per StackId
@@ -201,11 +210,16 @@ public class ModemBindingPolicyHandler extends Handler {
 
         mCi = ci;
         mContext = context;
+        mUiccController = uiccManager;
         mModemStackController = ModemStackController.getInstance();
         mModemCapInfo = new ModemCapabilityInfo[mNumPhones];
 
         mModemStackController.registerForModemRatCapsAvailable
                 (this, EVENT_MODEM_RAT_CAPS_AVAILABLE, null);
+
+        for (int i = 0; i < mCi.length; i++) {
+            mCi[i].registerForNotAvailable(this, EVENT_RADIO_NOT_AVAILABLE, null);
+        }
 
         for (int i = 0; i < mNumPhones; i++) {
             mPreferredStackId[i] = i;
@@ -230,6 +244,11 @@ public class ModemBindingPolicyHandler extends Handler {
                 handleModemRatCapsAvailable();
                 break;
 
+            case EVENT_RADIO_NOT_AVAILABLE:
+                logd("EVENT_RADIO_NOT_AVAILABLE");
+                handleModemRatCapsUnAvailable();
+                break;
+
             default:
                 break;
         }
@@ -244,11 +263,18 @@ public class ModemBindingPolicyHandler extends Handler {
             if (resp != null) {
                 if (ar.exception != null) {
                     errorCode = RILConstants.GENERIC_FAILURE;
+                } else {
+                    savePreferredNwModeToDB();
                 }
                 sendResponseToTarget(resp, errorCode);
                 mStoredResponse.put(i, null);
             }
         }
+    }
+
+    public boolean isDetect4gCardEnabled() {
+        return SystemProperties.getBoolean("persist.radio.detect4gcard", false) &&
+                SystemProperties.getBoolean("persist.radio.primarycard", false);
     }
 
     /*
@@ -257,48 +283,43 @@ public class ModemBindingPolicyHandler extends Handler {
     * Description: If Network mode for a subid in simInfo table is valid and and is not
     * equal to value in DB, then update the DB value and send request to RIL.
     */
-    public void updatePrefNwTypeIfRequired(){
-        boolean updateRequired = false;
-        int[] nwModeinSubIdTable = new int[mNumPhones];
+    public void updatePrefNwTypeIfRequired(Message response){
         syncPreferredNwModeFromDB();
-        SubscriptionController subCtrlr = SubscriptionController.getInstance();
-        for (int i=0; i < mNumPhones; i++ ) {
-            int[] subIdList = subCtrlr.getSubId(i);
-            if (subIdList != null && subIdList[0] > 0) {
-                int subId = subIdList[0];
-                nwModeinSubIdTable[i] = subCtrlr.getNwMode(subId);
-                if (nwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
-                    updateRequired = false;
-                    break;
-                }
-                if (nwModeinSubIdTable[i] != mPrefNwMode[i]) {
-                    updateRequired = true;
-                }
-            }
+
+        //if binding is in progress return failure for this request
+        if (mIsSetPrefNwModeInProgress) {
+            loge("setPreferredNetworkType: In Progress:");
+            sendResponseToTarget(response, RILConstants.GENERIC_FAILURE);
+            return;
         }
 
-        if (updateRequired) {
-            for (int i=0; i < mNumPhones; i++ ) {
-                logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable[i]);
-                TelephonyManager.putIntAtIndex( mContext.getContentResolver(),
-                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
-                        i, nwModeinSubIdTable[i]);
+        mIsSetPrefNwModeInProgress = true;
+        logd("setPreferredNetworkType: Check if flex map is required");
+
+        //If CrossBinding request is not accepted, i.e. return value is FAILURE
+        //send request directly to RIL, or else store the setpref Msg for later processing.
+        if (!isDetect4gCardEnabled() && updateStackBindingIfRequired(false) == SUCCESS) {
+            mStoredResponse.put(0, response);
+        } else {
+            logd("setPreferredNetworkType: flex map not required send nwMode request to modem");
+            for (int i = 0; i < mNumPhones; i++ ) {
+                Message msg = Message.obtain(response);
+                mCi[i].setPreferredNetworkType(mPrefNwMode[i], msg);
             }
-            if (FAILURE == updateStackBindingIfRequired(false)) {
-                //In case of Update Stack Binding not required or failure, send setPrefNwType to
-                //RIL immediately. In case of success after stack binding completed setPrefNwType
-                //request is anyways sent.
-                for (int i=0; i < mNumPhones; i++ ) {
-                    mCi[i].setPreferredNetworkType(nwModeinSubIdTable[i], null);
-                }
-            }
-       }
+            mIsSetPrefNwModeInProgress = false;
+        }
     }
 
     private void handleModemRatCapsAvailable() {
         mModemRatCapabilitiesAvailable = true;
         //Initialization sequence: Need to send Bind request always, so override is true.
         if (SUCCESS == updateStackBindingIfRequired(true)) mIsSetPrefNwModeInProgress = true;
+    }
+
+    private void handleModemRatCapsUnAvailable() {
+        if (mModemRatCapabilitiesAvailable) {
+            mModemRatCapabilitiesAvailable = false;
+        }
     }
 
     private void syncCurrentStackInfo() {
@@ -323,6 +344,8 @@ public class ModemBindingPolicyHandler extends Handler {
         boolean isUpdateStackBindingRequired = false;
         int response = FAILURE;
 
+        logd("updateStackBindingIfRequired: Started!!");
+
         updatePreferredStackIds();
 
         for (int i = 0; i < mNumPhones; i++) {
@@ -332,6 +355,46 @@ public class ModemBindingPolicyHandler extends Handler {
                 break;
             }
         }
+
+        logd("isUpdateStackBindingRequired: " + isUpdateStackBindingRequired);
+
+        //In DSDS cases, if there is only one SIM present
+        //map it to primary stack, if not already done.
+        if (!isBootUp && !isUpdateStackBindingRequired && !isDetect4gCardEnabled()
+                && mNumPhones == PhoneConstants.MAX_PHONE_COUNT_DUAL_SIM) {
+            int numCardsPresent = 0;
+            int cardPresentIndex = -1;
+            int cardAbsentIndex = -1;
+            for (int i = 0; i < mNumPhones; i++) {
+                UiccCard card = mUiccController.getUiccCard(i);
+                if (card != null && card.getCardState() == CardState.CARDSTATE_PRESENT) {
+                    numCardsPresent++;
+                    cardPresentIndex = i;
+                } else {
+                    cardAbsentIndex = i;
+                }
+            }
+
+            logd("numCardsPresent: " + numCardsPresent + "cardPresentIndex: " + cardPresentIndex +
+                    "cardAbsentIndex: " + cardAbsentIndex);
+
+            if (numCardsPresent == 1 && cardPresentIndex != -1 && cardAbsentIndex != -1 &&
+                    mCurrentStackId[cardPresentIndex] != PRIMARY_STACK) {
+                mPreferredStackId[cardPresentIndex] = PRIMARY_STACK;
+                mPreferredStackId[cardAbsentIndex] = SECONDARY_STACK;
+
+                //save the network mode of Absent index to GSM and update in DB
+                mPrefNwMode[cardAbsentIndex] = RILConstants.NETWORK_MODE_GSM_ONLY;
+                TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE, cardAbsentIndex,
+                        RILConstants.NETWORK_MODE_GSM_ONLY);
+
+                logd("Only one sim is present in slot[" + cardPresentIndex + "],Do Flex Mapping");
+
+                isUpdateStackBindingRequired = true;
+            }
+        }
+
         if (isBootUp || isUpdateStackBindingRequired) {
             Message msg = Message.obtain(this, EVENT_UPDATE_BINDING_DONE, null);
             response = mModemStackController.updateStackBinding(mPreferredStackId, isBootUp, msg);
@@ -437,6 +500,13 @@ public class ModemBindingPolicyHandler extends Handler {
         }
     }
 
+    private void savePreferredNwModeToDB() {
+        for (int i = 0; i < mNumPhones; i++) {
+            TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                    android.provider.Settings.Global.PREFERRED_NETWORK_MODE, i, mPrefNwMode[i]);
+        }
+    }
+
     public void setPreferredNetworkType(int networkType, int phoneId,
             Message response) {
         //if binding is in progress return failure for this request
@@ -473,6 +543,11 @@ public class ModemBindingPolicyHandler extends Handler {
         int supportedRatMaskForNwMode = 0;
 
         logd("getNumOfRATsSupportedForNwMode: nwMode[" + nwMode +"] modemCaps = " + modemCaps);
+
+        if (modemCaps == null) {
+            loge("getNumOfRATsSupportedForNwMode: Modem Capabilites are null. Return!!");
+            return 0;
+        }
 
         //send result by ANDing corresponding NETWORK MASK and Modem Caps mask.
         switch (nwMode) {

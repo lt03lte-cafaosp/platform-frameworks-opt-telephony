@@ -40,6 +40,7 @@ import android.telephony.CellLocation;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaCellLocation;
 import android.text.TextUtils;
 import android.telephony.Rlog;
@@ -237,6 +238,13 @@ public class CDMAPhone extends PhoneBase {
             mSST.unregisterForNetworkAttached(this); //EVENT_REGISTERED_TO_NETWORK
             mCi.unSetOnSuppServiceNotification(this);
             mCi.unregisterForExitEmergencyCallbackMode(this);
+            if (mIsPhoneInEcmState) {
+                exitEmergencyCallbackMode();
+                mIsPhoneInEcmState = false;
+                setSystemProperty(TelephonyProperties.PROPERTY_INECM_MODE, "false");
+                // notify change
+                sendEmergencyCallbackModeChange();
+            }
             removeCallbacks(mExitEcmRunnable);
 
             mPendingMmis.clear();
@@ -1396,8 +1404,10 @@ public class CDMAPhone extends PhoneBase {
                 mNotifier.notifyMessageWaitingChanged(this);
                 updateVoiceMail();
                 SubscriptionInfoUpdater subInfoRecordUpdater = PhoneFactory.getSubInfoRecordUpdater();
-                if (subInfoRecordUpdater != null) {
-                    subInfoRecordUpdater.updateSubIdForNV (mPhoneId);
+                // Add NV subId for Single SIM devices only.
+                if ((subInfoRecordUpdater != null) &&
+                        (TelephonyManager.getDefault().getPhoneCount() == 1)) {
+                    subInfoRecordUpdater.updateSubIdForNV(mPhoneId);
                 }
             }
             break;
@@ -1967,5 +1977,16 @@ public class CDMAPhone extends PhoneBase {
         }
         return status;
     }
+
+    public boolean isUtEnabled() {
+        ImsPhone imsPhone = mImsPhone;
+        if (imsPhone != null) {
+            return imsPhone.isUtEnabled();
+        } else {
+            Rlog.d(LOG_TAG, "isUtEnabled: called for CDMA");
+            return false;
+        }
+    }
+
 
 }

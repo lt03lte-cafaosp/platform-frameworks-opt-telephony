@@ -840,7 +840,7 @@ public final class DcTracker extends DcTrackerBase {
             notifyOffApnsOfAvailability(Phone.REASON_DATA_ATTACHED);
         }
         if (mAutoAttachOnCreationConfig) {
-            mAutoAttachOnCreation = true;
+            mAutoAttachOnCreation.set(true);
         }
         setupDataOnConnectableApns(Phone.REASON_DATA_ATTACHED);
     }
@@ -873,7 +873,8 @@ public final class DcTracker extends DcTrackerBase {
         boolean defaultDataSelected = SubscriptionManager.isValidSubscriptionId(dataSub);
 
         boolean allowed =
-                    (attachedState || (mAutoAttachOnCreation && (mPhone.getSubId() == dataSub))) &&
+                    (attachedState ||
+                    (mAutoAttachOnCreation.get() && (mPhone.getSubId() == dataSub))) &&
                     (subscriptionFromNv || recordsLoaded) &&
                     (mPhone.getState() == PhoneConstants.State.IDLE ||
                      mPhone.getServiceStateTracker().isConcurrentVoiceAndDataAllowed()) &&
@@ -884,7 +885,7 @@ public final class DcTracker extends DcTrackerBase {
                     desiredPowerState;
         if (!allowed && DBG) {
             String reason = "";
-            if (!(attachedState || mAutoAttachOnCreation)) {
+            if (!(attachedState || mAutoAttachOnCreation.get())) {
                 reason += " - Attached= " + attachedState;
             }
             if (!(subscriptionFromNv || recordsLoaded)) {
@@ -1458,8 +1459,8 @@ public final class DcTracker extends DcTrackerBase {
         Message msg = obtainMessage();
         msg.what = DctConstants.EVENT_DATA_SETUP_COMPLETE;
         msg.obj = apnContext;
-        dcac.bringUp(apnContext, getInitialMaxRetry(), profileId, radioTech, mAutoAttachOnCreation,
-                msg);
+        dcac.bringUp(apnContext, getInitialMaxRetry(), profileId, radioTech,
+                mAutoAttachOnCreation.get(), msg);
 
         if (DBG) log("setupData: initing!");
         return true;
@@ -1489,7 +1490,11 @@ public final class DcTracker extends DcTrackerBase {
         if (DBG) log("tryRestartDataConnections: createAllApnList and cleanUpAllConnections");
         createAllApnList();
         if (isCleanupNeeded) {
-            cleanUpAllConnections(!isDisconnected, reason);
+            if (Phone.REASON_APN_CHANGED.equals(reason)) {
+                cleanUpConnectionsOnUpdatedApns(!isDisconnected);
+            } else {
+                cleanUpAllConnections(!isDisconnected, reason);
+            }
         }
         // If the state is already connected don't setup data now.
         if (isDisconnected &&
@@ -1685,6 +1690,9 @@ public final class DcTracker extends DcTrackerBase {
         if (DBG) log("onRecordsLoaded: createAllApnList");
         mAutoAttachOnCreationConfig = mPhone.getContext().getResources()
                 .getBoolean(com.android.internal.R.bool.config_auto_attach_data_on_creation);
+        if (mAutoAttachOnCreationConfig && mAttached.get()) {
+            mAutoAttachOnCreation.set(true);
+        }
 
         if (mOmhApt != null) {
             log("OMH: onRecordsLoaded(): calling loadProfiles()");
@@ -3396,6 +3404,56 @@ public final class DcTracker extends DcTrackerBase {
                     log("addEmergencyApnSetting - E-APN setting is already present");
                 }
             }
+        }
+    }
+
+    private void cleanUpConnectionsOnUpdatedApns(boolean tearDown) {
+        if (DBG) log("cleanUpConnectionsOnUpdatedApns: tearDown=" + tearDown);
+        if (mAllApnSettings.isEmpty()) {
+            cleanUpAllConnections(tearDown, Phone.REASON_APN_CHANGED);
+        } else {
+            for (ApnContext apnContext : mApnContexts.values()) {
+                if (VDBG) log("cleanUpConnectionsOnUpdatedApns for "+ apnContext);
+
+                boolean cleanUpApn = true;
+                ArrayList<ApnSetting> currentWaitingApns = apnContext.getWaitingApns();
+
+                if ((currentWaitingApns != null) && (!apnContext.isDisconnected())) {
+                    int radioTech = mPhone.getServiceState().getRilDataRadioTechnology();
+                    ArrayList<ApnSetting> waitingApns = buildWaitingApns(
+                            apnContext.getApnType(), radioTech);
+                    if (VDBG) log("new waitingApns:" + waitingApns);
+                    if (waitingApns.size() == currentWaitingApns.size()) {
+                        cleanUpApn = false;
+                        for (int i = 0; i < waitingApns.size(); i++) {
+                            if (!currentWaitingApns.get(i).equals(waitingApns.get(i))) {
+                                if (VDBG) log("new waiting apn is different at " + i);
+                                cleanUpApn = true;
+                                apnContext.setWaitingApns(waitingApns);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (cleanUpApn) {
+                    apnContext.setReason(Phone.REASON_APN_CHANGED);
+                    cleanUpConnection(true, apnContext);
+                }
+            }
+        }
+
+        if (!isConnected()) {
+            stopNetStatPoll();
+            stopDataStallAlarm();
+        }
+
+        mRequestedApnType = PhoneConstants.APN_TYPE_DEFAULT;
+
+        if (DBG) log("mDisconnectPendingCount = " + mDisconnectPendingCount);
+        if (tearDown && mDisconnectPendingCount == 0) {
+            notifyDataDisconnectComplete();
+            notifyAllDataDisconnected();
         }
     }
 }

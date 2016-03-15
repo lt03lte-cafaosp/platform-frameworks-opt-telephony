@@ -72,6 +72,8 @@ class SubscriptionHelper extends Handler {
 
     private static final int EVENT_SET_UICC_SUBSCRIPTION_DONE = 1;
     private static final int EVENT_REFRESH = 2;
+    private static final int EVENT_SET_NW_MODE_DONE = 3;
+    private static final int EVENT_GET_PREFERRED_NETWORK_TYPE = 4;
 
     public static final int SUB_SET_UICC_FAIL = -100;
     public static final int SUB_SIM_NOT_INSERTED = -99;
@@ -166,9 +168,58 @@ class SubscriptionHelper extends Handler {
                 logd("EVENT_REFRESH");
                 processSimRefresh((AsyncResult)msg.obj);
                 break;
+            case EVENT_SET_NW_MODE_DONE:
+                handleSetPrefNwModeDone(msg);
+                break;
+            case EVENT_GET_PREFERRED_NETWORK_TYPE:
+                handleGetPreferredNetworkTypeResponse(msg);
+                break;
            default:
            break;
         }
+    }
+
+    private void handleGetPreferredNetworkTypeResponse(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        Integer phoneId = (Integer)ar.userObj;
+        if (ar.exception == null) {
+            int modemNetworkMode = ((int[])ar.result)[0];
+
+            //check that modemNetworkMode is from an accepted value
+            if (isNwModeValid(modemNetworkMode)) {
+                //update nwMode value to the DB
+                logd("Updating nw mode in DB for slot[" + phoneId+ "] with " + modemNetworkMode);
+                TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        phoneId, modemNetworkMode);
+            } else {
+                loge("handleGetPreferredNetworkTypeResponse: InValid for slot : " + phoneId);
+            }
+        } else {
+            loge("handleGetPreferredNetworkTypeResponse: Failed for slot : "+ phoneId);
+        }
+    }
+
+    private boolean isNwModeValid(int nwMode) {
+        return (nwMode >= Phone.NT_MODE_WCDMA_PREF) &&
+                    (nwMode <= Phone.NT_MODE_TD_SCDMA_LTE_CDMA_EVDO_GSM_WCDMA);
+    }
+
+    private void handleSetPrefNwModeDone(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        if (ar.exception != null) {
+            logd("Failed to set preferred network mode as per simInfo Table");
+
+            for (int i=0; i < sNumPhones; i++ ) {
+                logd("Get nw mode from modem and set to DB for slot :" + i);
+                Message getNwModeMsg = Message.obtain(this, EVENT_GET_PREFERRED_NETWORK_TYPE,
+                    new Integer(i));
+                mCi[i].getPreferredNetworkType(getNwModeMsg);
+            }
+        } else {
+            logd("Success to set pref nw mode as per sim info table on a slot");
+        }
+
     }
 
     public boolean needSubActivationAfterRefresh(int slotId) {
@@ -215,9 +266,79 @@ class SubscriptionHelper extends Handler {
     }
 
     public void updateNwMode() {
+        SubscriptionController subCtrlr = SubscriptionController.getInstance();
+        int[] prefNwModeInDB = new int[sNumPhones];
+        int[] nwModeinSubIdTable = new int[sNumPhones];
+        boolean updateRequired = false;
+        int simCount = 0;
+        int simIndex = 0;
+
         updateNwModesInSubIdTable(false);
-        ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired();
         mNwModeUpdated = true;
+
+        for (int i=0; i < sNumPhones; i++ ) {
+            int[] subIdList = subCtrlr.getSubId(i);
+            try {
+                prefNwModeInDB[i] = TelephonyManager.getIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE, i);
+            } catch (SettingNotFoundException snfe) {
+                loge("updateNwMode: Could not find PREFERRED_NETWORK_MODE!!!");
+                prefNwModeInDB[i] = Phone.PREFERRED_NT_MODE;
+            }
+
+            if (subIdList != null && subIdList[0] > 0) {
+                int subId = subIdList[0];
+                if (!SubscriptionManager.isValidSubscriptionId(subId)) {
+                    nwModeinSubIdTable[i] = SubscriptionManager.DEFAULT_NW_MODE;
+                } else {
+                    nwModeinSubIdTable[i] = subCtrlr.getNwMode(subId);
+                }
+                if (nwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
+                    // Since we have called updateNwModesInSubIdTable() above, SubId based
+                    // nwmode DEFAULT_NW_MODE means there is no SIM inserted in the slot.
+                    // Use the nwmode in settings DB for now.
+                    nwModeinSubIdTable[i] = prefNwModeInDB[i];
+                } else {
+                    // Save the sim card count and index.
+                    simCount++;
+                    simIndex = i;
+                }
+                if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
+                        && isNwModeValid(nwModeinSubIdTable[i])) {
+                    updateRequired = true;
+                }
+            }
+        }
+
+        // If there is only single sim inserted and it's network mode is other than G_ONLY,
+        // set all other slots to G_ONLY, so that flex map can be triggered if necessary.
+        if (simCount == 1 && sNumPhones > 1 &&
+                nwModeinSubIdTable[simIndex] != RILConstants.NETWORK_MODE_GSM_ONLY) {
+            logd("updateNwMode: Only one sim inserted at slot = " + simIndex + " nwMode = " +
+                    nwModeinSubIdTable[simIndex]);
+            for (int i=0; i < sNumPhones; i++ ) {
+                if (i != simIndex) {
+                    // Set GSM_ONLY to all absent slots.
+                    nwModeinSubIdTable[i] = RILConstants.NETWORK_MODE_GSM_ONLY;
+                }
+                if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
+                        && isNwModeValid(nwModeinSubIdTable[i])) {
+                    updateRequired = true;
+                }
+            }
+        }
+        logd("updateNwMode: updateRequired in Modem: " + updateRequired);
+
+        if (updateRequired) {
+            for (int i=0; i < sNumPhones; i++ ) {
+                logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable[i]);
+                TelephonyManager.putIntAtIndex( mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        i, nwModeinSubIdTable[i]);
+            }
+            Message msg = obtainMessage(EVENT_SET_NW_MODE_DONE);
+            ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired(msg);
+        }
     }
 
     public void setUiccSubscription(int slotId, int subStatus) {
@@ -228,25 +349,34 @@ class SubscriptionHelper extends Handler {
             return;
         }
 
-        //Activate/Deactivate first 3GPP and 3GPP2 app in the sim, if available
+        //First, Activate/Deactivate first 3GPP app in the sim, if available
         for (int i = 0; i < uiccCard.getNumApplications(); i++) {
             int appType = uiccCard.getApplicationIndex(i).getType().ordinal();
             if (set3GPPDone == false && (appType == PhoneConstants.APPTYPE_USIM ||
                     appType == PhoneConstants.APPTYPE_SIM)) {
                 Message msgSetUiccSubDone = Message.obtain(
                         this, EVENT_SET_UICC_SUBSCRIPTION_DONE, slotId, subStatus);
+                logd("setUiccSubscription: slotId:" + slotId + " , for 3GPP");
                 mCi[slotId].setUiccSubscription(slotId, i, slotId, subStatus, msgSetUiccSubDone);
                 set3GPPDone = true;
-            } else if (set3GPP2Done == false && (appType == PhoneConstants.APPTYPE_CSIM ||
+                break;
+            }
+        }
+
+        //Later, Activate/Deactivate first 3GPP2 app in the sim, if available
+        for (int i = 0; i < uiccCard.getNumApplications(); i++) {
+            int appType = uiccCard.getApplicationIndex(i).getType().ordinal();
+            if (set3GPP2Done == false && (appType == PhoneConstants.APPTYPE_CSIM ||
                     appType == PhoneConstants.APPTYPE_RUIM)) {
                 Message msgSetUiccSubDone = Message.obtain(
                         this, EVENT_SET_UICC_SUBSCRIPTION_DONE, slotId, subStatus);
+                logd("setUiccSubscription: slotId:" + slotId + " , for 3GPP2");
                 mCi[slotId].setUiccSubscription(slotId, i, slotId, subStatus, msgSetUiccSubDone);
                 set3GPP2Done = true;
+                break;
             }
-
-            if (set3GPPDone && set3GPP2Done) break;
         }
+
     }
 
     /**
