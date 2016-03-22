@@ -266,6 +266,13 @@ public class ImsPhone extends ImsPhoneBase {
         return mCT;
     }
 
+    public void setVoiceCallForwardingFlag(int line, boolean enable, String number) {
+        IccRecords r = getIccRecords();
+        if (r != null) {
+            setVoiceCallForwardingFlag(r, line, enable, number);
+        }
+    }
+
     public boolean getCallForwardingIndicator() {
         int callForwardingIndicator = IccRecords.CALL_FORWARDING_STATUS_UNKNOWN;
         IccRecords r = getIccRecords();
