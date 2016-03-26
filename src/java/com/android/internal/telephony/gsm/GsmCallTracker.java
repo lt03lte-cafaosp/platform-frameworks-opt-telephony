@@ -500,7 +500,8 @@ public final class GsmCallTracker extends CallTracker {
                         // Updating connect time for silent redial cases (ex: Calls are transferred
                         // from DIALING/ALERTING/INCOMING/WAITING to ACTIVE)
                         if (hoConnection.mPreHandoverState != GsmCall.State.ACTIVE &&
-                                hoConnection.mPreHandoverState != GsmCall.State.HOLDING) {
+                                hoConnection.mPreHandoverState != GsmCall.State.HOLDING &&
+                                dc.state == DriverCall.State.ACTIVE) {
                             mConnections[i].onConnectedInOrOut();
                         }
 

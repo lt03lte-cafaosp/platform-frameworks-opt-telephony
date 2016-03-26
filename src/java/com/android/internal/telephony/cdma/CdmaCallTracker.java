@@ -578,7 +578,8 @@ public final class CdmaCallTracker extends CallTracker {
                         // Updating connect time for silent redial cases (ex: Calls are transferred
                         // from DIALING/ALERTING/INCOMING/WAITING to ACTIVE)
                         if (hoConnection.mPreHandoverState != CdmaCall.State.ACTIVE &&
-                                hoConnection.mPreHandoverState != CdmaCall.State.HOLDING) {
+                                hoConnection.mPreHandoverState != CdmaCall.State.HOLDING &&
+                                dc.state == DriverCall.State.ACTIVE) {
                             mConnections[i].onConnectedInOrOut();
                         }
 
