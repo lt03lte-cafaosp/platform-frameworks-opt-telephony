@@ -956,4 +956,9 @@ public class GsmConnection extends Connection {
 
         return false;
     }
+
+    @Override
+    public void resetConnectionTime() {
+        //Do nothing for GSMConn
+    }
 }
