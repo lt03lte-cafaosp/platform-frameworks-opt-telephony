@@ -58,7 +58,7 @@ public final class AdnRecordCache extends Handler implements IccConstants {
     //EXT file Used/free records.
     SparseArray<int[]> extRecList = new SparseArray<int[]>();
 
-    private boolean mUseLocalPb = false;
+    public boolean mUseLocalPb = false;
     //***** Event Constants
 
     static final int EVENT_LOAD_ALL_ADN_LIKE_DONE = 1;

@@ -1545,7 +1545,10 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     }
 
     public String getPBPath() {
-        //Only support global PB
-        return MF_SIM + DF_TELECOM + DF_PHONEBOOK;
+        if (mAdnCache.mUseLocalPb) {
+            return MF_SIM + DF_ADF + DF_PHONEBOOK;
+        } else {
+            return MF_SIM + DF_TELECOM + DF_PHONEBOOK;
+        }
     }
 }
