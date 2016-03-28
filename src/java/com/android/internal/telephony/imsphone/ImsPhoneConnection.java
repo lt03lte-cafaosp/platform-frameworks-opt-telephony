@@ -1036,5 +1036,10 @@ public class ImsPhoneConnection extends Connection {
     protected boolean isEmergency() {
         return mIsEmergency;
     }
+
+    @Override
+    public void resetConnectionTime() {
+        //Do nothing for ImsConn
+    }
 }
 
