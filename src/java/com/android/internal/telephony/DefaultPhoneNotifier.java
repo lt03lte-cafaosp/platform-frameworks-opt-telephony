@@ -254,13 +254,13 @@ public class DefaultPhoneNotifier implements PhoneNotifier {
     }
 
     public void notifyPreciseCallState(Phone sender) {
-        // FIXME: subId?
+        int subId = sender.getSubId();
         Call ringingCall = sender.getRingingCall();
         Call foregroundCall = sender.getForegroundCall();
         Call backgroundCall = sender.getBackgroundCall();
         if (ringingCall != null && foregroundCall != null && backgroundCall != null) {
             try {
-                mRegistry.notifyPreciseCallState(
+                mRegistry.notifyPreciseCallStateForSubscriber(subId,
                         convertPreciseCallState(ringingCall.getState()),
                         convertPreciseCallState(foregroundCall.getState()),
                         convertPreciseCallState(backgroundCall.getState()));
