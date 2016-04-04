@@ -1642,6 +1642,16 @@ public class PhoneProxy extends Handler implements Phone {
     }
 
     /**
+     * Determines if video wifi calling is enabled for the IMS phone.
+     *
+     * @return {@code true} if video calling is enabled
+     */
+    @Override
+    public boolean isVideoWifiCallingEnabled() {
+        return mActivePhone.isVideoWifiCallingEnabled();
+    }
+
+    /**
      * Returns the status of Link Capacity Estimation (LCE) service.
      */
     @Override
