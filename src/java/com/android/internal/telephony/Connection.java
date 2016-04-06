@@ -750,4 +750,9 @@ public abstract class Connection {
                 .append(" post dial state: " + getPostDialState());
         return str.toString();
     }
+
+    /**
+     * Reset the Connection time and Duration
+     */
+    public abstract void resetConnectionTime();
 }
