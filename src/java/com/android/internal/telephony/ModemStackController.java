@@ -170,6 +170,7 @@ public class ModemStackController extends Handler {
     private boolean mIsPhoneInEcbmMode = false;
     private boolean mModemRatCapabilitiesAvailable = false;
     private boolean mDeactivationInProgress = false;
+    private boolean mIsNwSelectionManual = false;
     private boolean[] mCmdFailed = new boolean[mNumPhones];
     private RegistrantList mStackReadyRegistrants = new RegistrantList();
     private RegistrantList mModemRatCapsAvailableRegistrants = new RegistrantList();
@@ -543,8 +544,10 @@ public class ModemStackController extends Handler {
     }
 
     private void updateNetworkSelectionMode() {
-        for (int i = 0; i < mNumPhones; i++) {
-            mCi[i].setNetworkSelectionModeAutomatic(null);
+        if (mIsNwSelectionManual) {
+            for (int i = 0; i < mNumPhones; i++) {
+                mCi[i].setNetworkSelectionModeAutomatic(null);
+            }
         }
     }
 
@@ -731,8 +734,18 @@ public class ModemStackController extends Handler {
                     + mIsStackReady + ". So EXITING!!!");
             return FAILURE;
         }
+
+        mIsNwSelectionManual = false;
         for (int i = 0; i < mNumPhones; i++) {
             mPreferredStackId[i] = prefStackIds[i];
+            try {
+                if (!mIsNwSelectionManual &&
+                        PhoneFactory.getPhone(i).getServiceState().getIsManualSelection()) {
+                    mIsNwSelectionManual = true;
+                }
+            } catch (Exception e) {
+                loge("Got Exception in getting Nw Selection Mode" + e.toString());
+            }
         }
 
         for (int i = 0; i < mNumPhones; i++) {

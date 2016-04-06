@@ -281,7 +281,7 @@ public class ModemBindingPolicyHandler extends Handler {
         syncPreferredNwModeFromDB();
 
         //if binding is in progress return failure for this request
-        if (mIsSetPrefNwModeInProgress) {
+        if (mIsSetPrefNwModeInProgress || isDetect4gCardEnabled()) {
             loge("setPreferredNetworkType: In Progress:");
             sendResponseToTarget(response, RILConstants.GENERIC_FAILURE);
             return;
@@ -292,7 +292,7 @@ public class ModemBindingPolicyHandler extends Handler {
 
         //If CrossBinding request is not accepted, i.e. return value is FAILURE
         //send request directly to RIL, or else store the setpref Msg for later processing.
-        if (!isDetect4gCardEnabled() && updateStackBindingIfRequired(false) == SUCCESS) {
+        if (updateStackBindingIfRequired(false) == SUCCESS) {
             mStoredResponse.put(0, response);
         } else {
             logd("setPreferredNetworkType: flex map not required send nwMode request to modem");
