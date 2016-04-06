@@ -329,6 +329,12 @@ class SubscriptionHelper extends Handler {
         }
         logd("updateNwMode: updateRequired in Modem: " + updateRequired);
 
+        if (ModemBindingPolicyHandler.getInstance().isDetect4gCardEnabled()) {
+            logd("updateNwMode: Detect4GCard is enabled, do not update nwMode in subIdtable" +
+                    " to DB. Change updateRequired to false");
+            updateRequired = false;
+        }
+
         if (updateRequired) {
             for (int i=0; i < sNumPhones; i++ ) {
                 logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable[i]);
