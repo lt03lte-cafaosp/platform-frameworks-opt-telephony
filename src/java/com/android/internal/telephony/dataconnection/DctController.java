@@ -96,6 +96,7 @@ public class DctController extends Handler {
     private SubscriptionManager mSubMgr;
 
     protected AtomicBoolean[] mIsDataAllowed;
+    protected AtomicBoolean mNeedsDdsSwitch = new AtomicBoolean(false);
 
     private OnSubscriptionsChangedListener mOnSubscriptionsChangedListener =
             new OnSubscriptionsChangedListener() {
@@ -532,7 +533,7 @@ public class DctController extends Handler {
     protected void onSettingsChanged() {
         //Sub Selection
         int dataSubId = mSubController.getDefaultDataSubId();
-
+        mNeedsDdsSwitch.set(true);
         int activePhoneId = -1;
         for (int i=0; i<mDcSwitchStateMachine.length; i++) {
             if (!mDcSwitchAsyncChannel[i].isIdleSync()) {
@@ -592,7 +593,7 @@ public class DctController extends Handler {
         return phoneId;
     }
 
-    private void onSubInfoReady() {
+    protected void onSubInfoReady() {
         logd("onSubInfoReady mPhoneNum=" + mPhoneNum);
         UiccController uiccController = UiccController.getInstance();
         for (int i = 0; i < mPhoneNum; ++i) {
@@ -878,6 +879,14 @@ public class DctController extends Handler {
     public boolean isDataAllowedOnPhoneId(int phoneId) {
         return SubscriptionManager.isValidPhoneId(phoneId) &&
                 mIsDataAllowed[phoneId].get();
+    }
+
+    public boolean isDdsSwitchNeeded() {
+        return mNeedsDdsSwitch.get();
+    }
+
+    public void resetDdsSwitchNeededFlag() {
+        mNeedsDdsSwitch.set(false);
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
