@@ -464,6 +464,7 @@ public class DcSwitchStateMachine extends StateMachine {
                     } else {
                         DctController.getInstance().executeRequest(apnRequest);
                     }
+                    DctController.getInstance().resetDdsSwitchNeededFlag();
                     retVal = HANDLED;
                     break;
                 }
