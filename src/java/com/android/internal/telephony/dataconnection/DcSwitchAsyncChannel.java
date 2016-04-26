@@ -48,8 +48,10 @@ public class DcSwitchAsyncChannel extends AsyncChannel {
     static final int EVENT_EMERGENCY_CALL_STARTED =   BASE + 9;
     static final int EVENT_EMERGENCY_CALL_ENDED =     BASE + 10;
     static final int EVENT_RESET =                    BASE + 11;
+    static final int EVENT_DDS_SWITCH =               BASE + 12;
+    static final int EVENT_DATA_RAT_CHANGE =          BASE + 13;
 
-    private static final int CMD_TO_STRING_COUNT = EVENT_RESET - BASE + 1;
+    private static final int CMD_TO_STRING_COUNT = EVENT_DATA_RAT_CHANGE - BASE + 1;
     private static String[] sCmdToString = new String[CMD_TO_STRING_COUNT];
     static {
         sCmdToString[REQ_CONNECT - BASE] = "REQ_CONNECT";
@@ -64,6 +66,8 @@ public class DcSwitchAsyncChannel extends AsyncChannel {
         sCmdToString[EVENT_EMERGENCY_CALL_STARTED - BASE] = "EVENT_EMERGENCY_CALL_STARTED";
         sCmdToString[EVENT_EMERGENCY_CALL_ENDED - BASE] = "EVENT_EMERGENCY_CALL_ENDED";
         sCmdToString[EVENT_RESET - BASE] = "EVENT_RESET";
+        sCmdToString[EVENT_DDS_SWITCH - BASE] = "EVENT_DDS_SWITCH";
+        sCmdToString[EVENT_DATA_RAT_CHANGE - BASE] = "EVENT_DATA_RAT_CHANGE";
     }
 
     public static class RequestInfo {
@@ -139,12 +143,21 @@ public class DcSwitchAsyncChannel extends AsyncChannel {
         return PhoneConstants.APN_REQUEST_STARTED;
     }
 
+    public void notifyDdsSwitch() {
+        log("Notify EVENT_DDS_SWITCH");
+        sendMessage(EVENT_DDS_SWITCH);
+    }
+
     public void notifyDataAttached() {
         sendMessage(EVENT_DATA_ATTACHED);
     }
 
     public void notifyDataDetached() {
         sendMessage(EVENT_DATA_DETACHED);
+    }
+
+    public void notifyDataRatChange(int rat) {
+        sendMessage(EVENT_DATA_RAT_CHANGE, rat);
     }
 
     public void notifyEmergencyCallToggled(int start) {
