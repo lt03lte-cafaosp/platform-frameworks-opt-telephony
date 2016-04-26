@@ -1007,7 +1007,8 @@ public class DcTracker extends DcTrackerBase {
         if (!TextUtils.isEmpty(reason)) {
             specificdisable = reason.equals(Phone.REASON_DATA_SPECIFIC_DISABLED)
                     || reason.equals(Phone.REASON_ROAMING_ON)
-                    || reason.equals(Phone.REASON_SINGLE_PDN_ARBITRATION);
+                    || reason.equals(Phone.REASON_SINGLE_PDN_ARBITRATION)
+                    || reason.equals(Phone.REASON_PDP_RESET);
         }
 
         for (ApnContext apnContext : mApnContexts.values()) {
