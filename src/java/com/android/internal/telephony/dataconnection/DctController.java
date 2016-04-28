@@ -590,7 +590,10 @@ public class DctController extends Handler {
                     PhoneConstants.APN_TYPE_IMS) && mNeedsDdsSwitch.get()) {
                 logd("getTopPriorityRequestPhoneId: ims request, use dds phone id");
                 subId = mSubController.getDefaultDataSubId();
-            }
+            } else if (subId != mSubController.getDefaultDataSubId()) {
+                logd("getTopPriorityRequestPhoneId: Request needs Dds switch");
+                mNeedsDdsSwitch.set(true);
+             }
         }
 
         final int phoneId = mSubController.getPhoneId(subId);
@@ -602,7 +605,7 @@ public class DctController extends Handler {
         return phoneId;
     }
 
-    private void onSubInfoReady() {
+    protected void onSubInfoReady() {
         logd("onSubInfoReady mPhoneNum=" + mPhoneNum);
         UiccController uiccController = UiccController.getInstance();
         for (int i = 0; i < mPhoneNum; ++i) {
