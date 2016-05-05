@@ -157,7 +157,7 @@ public class DcTracker extends DcTrackerBase {
 
     private boolean mCanSetPreferApn = false;
 
-    private AtomicBoolean mAttached = new AtomicBoolean(false);
+    protected AtomicBoolean mAttached = new AtomicBoolean(false);
 
     /** Watches for changes to the APN db. */
     private ApnChangeObserver mApnObserver;
@@ -786,9 +786,7 @@ public class DcTracker extends DcTrackerBase {
             state = mPhone.getCallTracker().getState();
         }
 
-        boolean allowed =
-                    (attachedState || (mAutoAttachOnCreation.get() &&
-                            (mPhone.getSubId() == dataSub))) &&
+        boolean allowed = getAttachedStatus() &&
                     (subscriptionFromNv || recordsLoaded) &&
                     (state == PhoneConstants.State.IDLE ||
                      mPhone.getServiceStateTracker().isConcurrentVoiceAndDataAllowed()) &&
@@ -817,6 +815,14 @@ public class DcTracker extends DcTrackerBase {
             if (DBG) log("isDataAllowed: not allowed due to" + reason);
         }
         return allowed;
+    }
+
+    protected boolean getAttachedStatus() {
+        boolean attachedState = mAttached.get();
+        int dataSub = SubscriptionManager.getDefaultDataSubId();
+
+        return (attachedState || (mAutoAttachOnCreation.get() &&
+                (mPhone.getSubId() == dataSub)));
     }
 
     // arg for setupDataOnConnectableApns
