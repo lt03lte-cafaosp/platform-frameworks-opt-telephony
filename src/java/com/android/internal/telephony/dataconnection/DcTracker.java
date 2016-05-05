@@ -1344,7 +1344,7 @@ public final class DcTracker extends DcTrackerBase {
                 }
 
                 if (apn.hasMvnoParams()) {
-                    if (r != null && mvnoMatches(r, apn.mvnoType, apn.mvnoMatchData)) {
+                    if (r != null && ApnSetting.mvnoMatches(r, apn.mvnoType, apn.mvnoMatchData)) {
                         mvnoApns.add(apn);
                     }
                 } else {
