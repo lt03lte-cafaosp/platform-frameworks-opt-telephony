@@ -706,7 +706,8 @@ public abstract class DcTrackerBase extends Handler {
             if (dunSetting.numeric.equals(operator)) {
                 if (dunSetting.hasMvnoParams()) {
                     if (r != null &&
-                            mvnoMatches(r, dunSetting.mvnoType, dunSetting.mvnoMatchData)) {
+                            ApnSetting.mvnoMatches(r, dunSetting.mvnoType,
+                                    dunSetting.mvnoMatchData)) {
                         if (VDBG) {
                             log("fetchDunApn: global TETHER_DUN_APN dunSetting=" + dunSetting);
                         }
@@ -729,7 +730,8 @@ public abstract class DcTrackerBase extends Handler {
                 }
                 if (dunSetting.hasMvnoParams()) {
                     if (r != null &&
-                            mvnoMatches(r, dunSetting.mvnoType, dunSetting.mvnoMatchData)) {
+                            ApnSetting.mvnoMatches(r, dunSetting.mvnoType,
+                                    dunSetting.mvnoMatchData)) {
                         if (VDBG) log("fetchDunApn: config_tether_apndata mvno dunSetting="
                                 + dunSetting);
                         return dunSetting;
