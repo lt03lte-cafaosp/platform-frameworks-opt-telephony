@@ -628,7 +628,7 @@ public class DctController extends Handler {
         processRequests();
     }
 
-    private String apnForNetworkRequest(NetworkRequest nr) {
+    protected String apnForNetworkRequest(NetworkRequest nr) {
         NetworkCapabilities nc = nr.networkCapabilities;
         // For now, ignore the bandwidth stuff
         if (nc.getTransportTypes().length > 0 &&
