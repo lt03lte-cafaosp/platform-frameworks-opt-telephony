@@ -632,6 +632,12 @@ public abstract class ServiceStateTracker extends Handler {
                 }
                 break;
 
+            case EVENT_IMS_CAPABILITY_CHANGED:
+                if (DBG) log("EVENT_IMS_CAPABILITY_CHANGED");
+                updateSpnDisplay();
+                updateRilImsRadioTechnology();
+                break;
+
             default:
                 log("Unhandled message with number: " + msg.what);
                 break;
@@ -650,7 +656,6 @@ public abstract class ServiceStateTracker extends Handler {
     public abstract boolean isConcurrentVoiceAndDataAllowed();
 
     public abstract void setImsRegistrationState(boolean registered);
-    public void onImsCapabilityChanged() {}
     public abstract void pollState();
 
     /**
@@ -1198,5 +1203,22 @@ public abstract class ServiceStateTracker extends Handler {
                     " original name: " + originalNwName);
         }
         return networkName;
+    }
+
+    public void onImsCapabilityChanged() {
+        sendMessage(obtainMessage(EVENT_IMS_CAPABILITY_CHANGED));
+    }
+
+    private void updateRilImsRadioTechnology() {
+        ImsPhone imsPhone = (ImsPhone)(mPhoneBase.getImsPhone());
+        int imsRadioTechnology = imsPhone != null ?
+                imsPhone.getServiceState().getRilImsRadioTechnology() :
+                ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN;
+        if (imsRadioTechnology != mSS.getRilImsRadioTechnology()) {
+            Rlog.d(LOG_TAG, "updateRilImsRadioTechnology : Old ims RAT: " +
+                    mSS.getRilImsRadioTechnology() + " new ims RAT: " + imsRadioTechnology);
+            mSS.setRilImsRadioTechnology(imsRadioTechnology);
+            mPhoneBase.notifyServiceStateChangedP(mSS);
+        }
     }
 }

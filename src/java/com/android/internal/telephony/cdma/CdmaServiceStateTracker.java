@@ -1251,6 +1251,8 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
                     mNewSS.getVoiceRegState(), mNewSS.getDataRegState());
         }
 
+        // Ims call capable rat will be filled as part of service state changed.
+        mNewSS.setRilImsRadioTechnology(mSS.getRilImsRadioTechnology());
         ServiceState tss;
         tss = mSS;
         mSS = mNewSS;
