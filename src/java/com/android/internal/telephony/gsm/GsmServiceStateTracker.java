@@ -1173,6 +1173,12 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
         mReasonDataDenied = mNewReasonDataDenied;
         mMaxDataCalls = mNewMaxDataCalls;
 
+        if (hasChanged && mSS.getVoiceRegState() == ServiceState.STATE_OUT_OF_SERVICE
+            && mSS.getDataRegState() == ServiceState.STATE_OUT_OF_SERVICE) {
+            log("Clear Signal strength");
+            onSignalStrengthResult(new AsyncResult(null, null, null), true);
+        }
+
         if (hasRilVoiceRadioTechnologyChanged) {
             updatePhoneObject();
         }
