@@ -1264,6 +1264,12 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
         mCellLoc = mNewCellLoc;
         mNewCellLoc = tcl;
 
+        if (hasChanged && mSS.getVoiceRegState() == ServiceState.STATE_OUT_OF_SERVICE
+            && mSS.getDataRegState() == ServiceState.STATE_OUT_OF_SERVICE) {
+            log("Clear Signal Strength");
+            onSignalStrengthResult(new AsyncResult(null, null, null), false);
+        }
+
         if (hasRilVoiceRadioTechnologyChanged) {
             updatePhoneObject();
         }
