@@ -148,8 +148,12 @@ public class DcSwitchStateMachine extends StateMachine {
                         /* Move to AttachingState and handle this ATTACH msg over there.
                          * This would ensure that Modem gets a ALLOW_DATA(true)
                          */
-                        deferMessage(msg);
-                        transitionTo(mAttachingState);
+                        if (ServiceState.isCdma(dataRat)) {
+                            deferMessage(msg);
+                            transitionTo(mAttachingState);
+                        } else {
+                            transitionTo(mAttachedState);
+                        }
                     } else {
                         if (DBG) log("IdleState: ignore ATATCHed event as data is not allowed");
                     }
