@@ -48,9 +48,8 @@ public class DcSwitchAsyncChannel extends AsyncChannel {
     static final int EVENT_EMERGENCY_CALL_STARTED =   BASE + 9;
     static final int EVENT_EMERGENCY_CALL_ENDED =     BASE + 10;
     static final int EVENT_RESET =                    BASE + 11;
-    static final int EVENT_EXECUTE_REQUEST =          BASE + 12;
 
-    private static final int CMD_TO_STRING_COUNT = EVENT_EXECUTE_REQUEST - BASE + 1;
+    private static final int CMD_TO_STRING_COUNT = EVENT_RESET - BASE + 1;
     private static String[] sCmdToString = new String[CMD_TO_STRING_COUNT];
     static {
         sCmdToString[REQ_CONNECT - BASE] = "REQ_CONNECT";
@@ -65,7 +64,6 @@ public class DcSwitchAsyncChannel extends AsyncChannel {
         sCmdToString[EVENT_EMERGENCY_CALL_STARTED - BASE] = "EVENT_EMERGENCY_CALL_STARTED";
         sCmdToString[EVENT_EMERGENCY_CALL_ENDED - BASE] = "EVENT_EMERGENCY_CALL_ENDED";
         sCmdToString[EVENT_RESET - BASE] = "EVENT_RESET";
-        sCmdToString[EVENT_EXECUTE_REQUEST - BASE] = "EVENT_EXECUTE_REQUEST";
     }
 
     public static class RequestInfo {
@@ -139,10 +137,6 @@ public class DcSwitchAsyncChannel extends AsyncChannel {
     public int disconnectAll() {
         sendMessage(REQ_DISCONNECT_ALL);
         return PhoneConstants.APN_REQUEST_STARTED;
-    }
-
-    public void notifyExecuteRequest() {
-        sendMessage(EVENT_EXECUTE_REQUEST);
     }
 
     public void notifyDataAttached() {

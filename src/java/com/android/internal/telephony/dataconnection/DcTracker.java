@@ -157,7 +157,7 @@ public class DcTracker extends DcTrackerBase {
 
     private boolean mCanSetPreferApn = false;
 
-    protected AtomicBoolean mAttached = new AtomicBoolean(false);
+    private AtomicBoolean mAttached = new AtomicBoolean(false);
 
     /** Watches for changes to the APN db. */
     private ApnChangeObserver mApnObserver;
@@ -786,7 +786,9 @@ public class DcTracker extends DcTrackerBase {
             state = mPhone.getCallTracker().getState();
         }
 
-        boolean allowed = getAttachedStatus() &&
+        boolean allowed =
+                    (attachedState || (mAutoAttachOnCreation.get() &&
+                            (mPhone.getSubId() == dataSub))) &&
                     (subscriptionFromNv || recordsLoaded) &&
                     (state == PhoneConstants.State.IDLE ||
                      mPhone.getServiceStateTracker().isConcurrentVoiceAndDataAllowed()) &&
@@ -815,14 +817,6 @@ public class DcTracker extends DcTrackerBase {
             if (DBG) log("isDataAllowed: not allowed due to" + reason);
         }
         return allowed;
-    }
-
-    protected boolean getAttachedStatus() {
-        boolean attachedState = mAttached.get();
-        int dataSub = SubscriptionManager.getDefaultDataSubId();
-
-        return (attachedState || (mAutoAttachOnCreation.get() &&
-                (mPhone.getSubId() == dataSub)));
     }
 
     // arg for setupDataOnConnectableApns
@@ -2978,9 +2972,6 @@ public class DcTracker extends DcTrackerBase {
         return mUiccController.getIccRecords(mPhone.getPhoneId(), appFamily);
     }
 
-    protected int getFamilyTypeFromRAT(int dataRat) {
-        return UiccController.getFamilyFromRadioTechnology(dataRat);
-    }
 
     /**
      * @description This function updates mIccRecords reference to track
@@ -2996,7 +2987,7 @@ public class DcTracker extends DcTrackerBase {
         }
 
         int dataRat = mPhone.getServiceState().getRilDataRadioTechnology();
-        int appFamily = getFamilyTypeFromRAT(dataRat);
+        int appFamily = UiccController.getFamilyFromRadioTechnology(dataRat);
         IccRecords newIccRecords = getUiccRecords(appFamily);
         log("onUpdateIcc: newIccRecords " + ((newIccRecords != null) ?
                 newIccRecords.getClass().getName() : null));

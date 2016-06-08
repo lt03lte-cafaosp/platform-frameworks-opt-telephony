@@ -163,17 +163,6 @@ public class DcSwitchStateMachine extends StateMachine {
                     retVal = HANDLED;
                     break;
                 }
-
-                case DcSwitchAsyncChannel.EVENT_EXECUTE_REQUEST: {
-                    if (DBG) {
-                        log("IdleState: EVENT_EXECUTE_REQUEST, move to Attached state");
-                    }
-
-                    transitionTo(mAttachedState);
-                    retVal = HANDLED;
-                    break;
-                }
-
                 default:
                     if (VDBG) {
                         log("IdleState: nothandled msg.what=0x" +
