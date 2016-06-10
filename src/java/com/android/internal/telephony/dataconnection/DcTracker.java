@@ -1606,7 +1606,7 @@ public class DcTracker extends DcTrackerBase {
         setupDataOnConnectableApns(Phone.REASON_SIM_LOADED);
     }
 
-    private void onSimNotReady() {
+    protected void onSimNotReady() {
         if (DBG) log("onSimNotReady");
 
         cleanUpAllConnections(true, Phone.REASON_SIM_NOT_READY);
