@@ -2100,6 +2100,13 @@ public interface Phone {
     public boolean isVideoEnabled();
 
     /**
+     * Determines if video wifi calling enabled for the phone
+     *
+     * @return {@code true} if video wifi calling is enabled, {@code false} otherwise.
+     */
+     public boolean isVideoWifiCallingEnabled();
+
+    /**
      * @return {@code true} if we are in emergency call back mode. This is a period where the phone
      * should be using as little power as possible and be ready to receive an incoming call from the
      * emergency operator.
