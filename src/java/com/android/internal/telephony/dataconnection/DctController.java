@@ -556,6 +556,7 @@ public class DctController extends Handler {
         //Sub Selection
         int dataSubId = mSubController.getDefaultDataSubId();
         int activePhoneId = -1;
+        mNeedsDdsSwitch.set(true);
         for (int i=0; i<mDcSwitchStateMachine.length; i++) {
             mDcSwitchAsyncChannel[i].notifyDdsSwitch();
             if (!mDcSwitchAsyncChannel[i].isIdleSync()) {
