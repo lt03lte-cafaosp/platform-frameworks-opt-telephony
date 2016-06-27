@@ -1694,6 +1694,6 @@ public class ImsPhone extends ImsPhoneBase {
     protected void notifyServiceStateChangedP(ServiceState serviceState) {
         if (DBG) Rlog.d(LOG_TAG, "notifyServiceStateChangedP to " + serviceState);
         AsyncResult ar = new AsyncResult(null, serviceState, null);
-        mServiceStateRegistrants.notifyRegistrants(ar);
+        mServiceStateChangeRegistrants.notifyRegistrants(ar);
     }
 }
