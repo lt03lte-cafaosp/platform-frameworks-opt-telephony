@@ -1957,6 +1957,10 @@ public final class ImsPhoneCallTracker extends CallTracker {
                 || mImsFeatureEnabled[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]);
     }
 
+    public boolean isVideoWifiCallingEnabled() {
+        return mImsFeatureEnabled[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI];
+    }
+
     @Override
     public PhoneConstants.State getState() {
         return mState;
