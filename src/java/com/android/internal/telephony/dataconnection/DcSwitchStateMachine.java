@@ -379,6 +379,19 @@ public class DcSwitchStateMachine extends StateMachine {
                     break;
                 }
 
+                case DcSwitchAsyncChannel.EVENT_DDS_SWITCH: {
+                    if (DBG) {
+                        log("AttachingState: EVENT_DDS_SWITCH" );
+                    }
+                    int ddsSubId = SubscriptionController.getInstance().getDefaultDataSubId();
+                    int ddsPhoneId = SubscriptionController.getInstance().getPhoneId(ddsSubId);
+                    if (mId == ddsPhoneId) {
+                        transitionTo(mIdleState);
+                    }
+                    retVal = HANDLED;
+                    break;
+                }
+
                 default:
                     if (VDBG) {
                         log("AttachingState: nothandled msg.what=0x" +
@@ -409,23 +422,7 @@ public class DcSwitchStateMachine extends StateMachine {
                     RequestInfo apnRequest = connectInfo.request;
                     apnRequest.log("DcSwitchStateMachine.AttachedState: REQ_CONNECT");
                     if (DBG) log("AttachedState: REQ_CONNECT, apnRequest=" + apnRequest);
-
-                    int dataRat = mPhone.getServiceState().getRilDataRadioTechnology();
-                    if (dataRat == ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN &&
-                             DctController.getInstance().isDdsSwitchNeeded()) {
-                        SubscriptionController subController = SubscriptionController.getInstance();
-                        int ddsSubId = subController.getDefaultDataSubId();
-                        int ddsPhoneId = subController.getPhoneId(ddsSubId);
-                        if (mId == ddsPhoneId) {
-                            logd("AttachedState: Already attached on IWLAN. " +
-                                    "Retry Allow Data for Dds switch");
-                            transitionTo(mAttachingState);
-                        } else {
-                            DctController.getInstance().executeRequest(apnRequest);
-                        }
-                    } else {
-                        DctController.getInstance().executeRequest(apnRequest);
-                    }
+                    DctController.getInstance().executeRequest(apnRequest);
                     DctController.getInstance().resetDdsSwitchNeededFlag();
                     retVal = HANDLED;
                     break;
@@ -446,6 +443,19 @@ public class DcSwitchStateMachine extends StateMachine {
                         log("AttachedState: EVENT_DATA_DETACHED");
                     }
                     transitionTo(mIdleState);
+                    retVal = HANDLED;
+                    break;
+                }
+
+                case DcSwitchAsyncChannel.EVENT_DDS_SWITCH: {
+                    if (DBG) {
+                        log("AttachedState: EVENT_DDS_SWITCH" );
+                    }
+                    int ddsSubId = SubscriptionController.getInstance().getDefaultDataSubId();
+                    int ddsPhoneId = SubscriptionController.getInstance().getPhoneId(ddsSubId);
+                    if (mId == ddsPhoneId) {
+                        transitionTo(mIdleState);
+                    }
                     retVal = HANDLED;
                     break;
                 }
@@ -579,6 +589,13 @@ public class DcSwitchStateMachine extends StateMachine {
                 case DcSwitchAsyncChannel.EVENT_EMERGENCY_CALL_STARTED: {
                     mPreEmergencyState = getCurrentState();
                     transitionTo(mEmergencyState);
+                    break;
+                }
+                case DcSwitchAsyncChannel.EVENT_DATA_RAT_CHANGE: {
+                    if (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN == msg.arg1) {
+                        log("DefaultState: IWLAN enabled, move to attached state" );
+                        transitionTo(mAttachedState);
+                    }
                     break;
                 }
 
