@@ -501,11 +501,6 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
                 setPowerStateToDesired();
                 break;
 
-            case EVENT_IMS_CAPABILITY_CHANGED:
-                if (DBG) log("EVENT_IMS_CAPABILITY_CHANGED");
-                updateSpnDisplay();
-                break;
-
             default:
                 super.handleMessage(msg);
             break;
@@ -1160,6 +1155,8 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
             }
         }
 
+        // Ims call capable rat will be filled as part of service state changed.
+        mNewSS.setRilImsRadioTechnology(mSS.getRilImsRadioTechnology());
         // swap mSS and mNewSS to put new state in mSS
         ServiceState tss = mSS;
         mSS = mNewSS;
@@ -2258,9 +2255,5 @@ public class GsmServiceStateTracker extends ServiceStateTracker {
             }
         }
         mImsRegistrationOnOff = registered;
-    }
-
-    public void onImsCapabilityChanged() {
-        sendMessage(obtainMessage(EVENT_IMS_CAPABILITY_CHANGED));
     }
 }
