@@ -138,6 +138,7 @@ public class DctController extends Handler {
 
     private void updatePhoneBaseForIndex(int index, PhoneBase phoneBase) {
         logd("updatePhoneBaseForIndex for phone index=" + index);
+        boolean isNetworkFilterReset = false;
 
         phoneBase.getServiceStateTracker().registerForDataConnectionAttached(mRspHandler,
                    EVENT_DATA_ATTACHED + index, null);
@@ -157,6 +158,7 @@ public class DctController extends Handler {
             mNetworkFactoryMessenger[index] = null;
             mNetworkFactory[index] = null;
             mNetworkFilter[index] = null;
+            isNetworkFilterReset = true;
         }
 
         // TODO - just make this a singleton.  It'll be simpler
@@ -174,6 +176,13 @@ public class DctController extends Handler {
         mNetworkFilter[index].addCapability(NetworkCapabilities.NET_CAPABILITY_EIMS);
         mNetworkFilter[index].addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
         mNetworkFilter[index].addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+
+        if (isNetworkFilterReset) {
+            int subId = mPhones[index].getSubId();
+            mNetworkFilter[index].setNetworkSpecifier(String.valueOf(subId));
+            logd("Network specifier set with subid: " + subId);
+            isNetworkFilterReset = false;
+        }
 
         mNetworkFactory[index] = new TelephonyNetworkFactory(this.getLooper(),
                 mPhones[index].getContext(), "TelephonyNetworkFactory", phoneBase,
@@ -547,6 +556,7 @@ public class DctController extends Handler {
         //Sub Selection
         int dataSubId = mSubController.getDefaultDataSubId();
         int activePhoneId = -1;
+        mNeedsDdsSwitch.set(true);
         for (int i=0; i<mDcSwitchStateMachine.length; i++) {
             mDcSwitchAsyncChannel[i].notifyDdsSwitch();
             if (!mDcSwitchAsyncChannel[i].isIdleSync()) {

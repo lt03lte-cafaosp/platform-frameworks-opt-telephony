@@ -377,6 +377,19 @@ public class DcSwitchStateMachine extends StateMachine {
                     break;
                 }
 
+                case DcSwitchAsyncChannel.EVENT_DDS_SWITCH: {
+                    if (DBG) {
+                        log("AttachingState: EVENT_DDS_SWITCH" );
+                    }
+                    int ddsSubId = SubscriptionController.getInstance().getDefaultDataSubId();
+                    int ddsPhoneId = SubscriptionController.getInstance().getPhoneId(ddsSubId);
+                    if (mId == ddsPhoneId) {
+                        transitionTo(mIdleState);
+                    }
+                    retVal = HANDLED;
+                    break;
+                }
+
                 default:
                     if (VDBG) {
                         log("AttachingState: nothandled msg.what=0x" +
