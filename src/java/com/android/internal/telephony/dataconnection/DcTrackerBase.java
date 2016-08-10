@@ -68,6 +68,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -121,6 +123,8 @@ public abstract class DcTrackerBase extends Handler {
     private boolean[] mDataEnabled = new boolean[DctConstants.APN_NUM_TYPES];
 
     private int mEnabledCount = 0;
+
+    private HashSet<String> mIccidSet = new HashSet<String>();
 
     /* Currently requested APN type (TODO: This should probably be a parameter not a member) */
     protected String mRequestedApnType = PhoneConstants.APN_TYPE_DEFAULT;
@@ -631,6 +635,7 @@ public abstract class DcTrackerBase extends Handler {
         Handler dcHandler = new Handler(dcHandlerThread.getLooper());
         mDcc = DcController.makeDcc(mPhone, this, dcHandler);
         mDcTesterFailBringUpAll = new DcTesterFailBringUpAll(mPhone, dcHandler);
+        fillIccIdSet();
     }
 
     public void dispose() {
@@ -1820,6 +1825,14 @@ public abstract class DcTrackerBase extends Handler {
             }
         }
 
+        IccRecords r = mIccRecords.get();
+        String iccId = (r != null) ? r.getIccId() : "";
+        if ((iaApnSetting == null) && (defaultApnSetting == null) && (iccId != null) &&
+                isOperatorIccId(iccId)) {
+            log("Abort Initial attach");
+            return;
+        }
+
         // The priority of apn candidates from highest to lowest is:
         //   1) APN_TYPE_IA (Inital Attach)
         //   2) mPreferredApn, i.e. the current preferred apn
@@ -1850,6 +1863,32 @@ public abstract class DcTrackerBase extends Handler {
                     initialAttachApnSetting.protocol, initialAttachApnSetting.authType,
                     initialAttachApnSetting.user, initialAttachApnSetting.password, null);
         }
+    }
+
+    boolean isOperatorIccId (String s) {
+        Iterator<String> itr = mIccidSet.iterator();
+        while (itr.hasNext()) {
+            if (s.contains(itr.next())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void fillIccIdSet() {
+        mIccidSet.add("8991840");
+        mIccidSet.add("8991854");
+        mIccidSet.add("8991855");
+        mIccidSet.add("8991856");
+        mIccidSet.add("8991857");
+        mIccidSet.add("8991858");
+        mIccidSet.add("8991859");
+        mIccidSet.add("899186");
+        mIccidSet.add("8991870");
+        mIccidSet.add("8991871");
+        mIccidSet.add("8991872");
+        mIccidSet.add("8991873");
+        mIccidSet.add("8991874");
     }
 
     protected void setDataProfilesAsNeeded() {
