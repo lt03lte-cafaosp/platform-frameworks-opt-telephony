@@ -689,7 +689,7 @@ public class DcTracker extends DcTrackerBase {
         }
     }
 
-    private boolean isDataAllowed(ApnContext apnContext) {
+    protected boolean isDataAllowed(ApnContext apnContext) {
         //If RAT is iwlan then dont allow default/IA PDP at all.
         //Rest of APN types can be evaluated for remaining conditions.
         if ((apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DEFAULT)
