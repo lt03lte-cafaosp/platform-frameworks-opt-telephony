@@ -993,4 +993,11 @@ public class CdmaConnection extends Connection {
     public boolean isMultiparty() {
         return false;
     }
+
+    @Override
+    public void resetConnectionTime() {
+        mConnectTime = System.currentTimeMillis();
+        mConnectTimeReal = SystemClock.elapsedRealtime();
+        mDuration = 0;
+    }
 }

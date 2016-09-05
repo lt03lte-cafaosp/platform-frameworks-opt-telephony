@@ -223,4 +223,9 @@ abstract class SipConnectionBase extends Connection {
     public boolean isMultiparty() {
         return false;
     }
+
+    @Override
+    public void resetConnectionTime() {
+        //Do nothing for SipConn
+    }
 }
