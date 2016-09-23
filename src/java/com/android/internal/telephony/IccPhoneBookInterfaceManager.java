@@ -402,8 +402,8 @@ public abstract class IccPhoneBookInterfaceManager {
     public int getAdnCount() {
         int adnCount = 0;
         if (mAdnCache != null) {
-            if (mPhone.getCurrentUiccAppType() == AppType.APPTYPE_USIM ||
-                    mPhone.getCurrentUiccAppType() == AppType.APPTYPE_CSIM) {
+            if ((mPhone.getCurrentUiccAppType() == AppType.APPTYPE_USIM ||
+                    mPhone.getCurrentUiccAppType() == AppType.APPTYPE_CSIM) && !mForceAdnUsage) {
                 adnCount = mAdnCache.getUsimAdnCount();
             } else {
                 adnCount = mAdnCache.getAdnCount();
