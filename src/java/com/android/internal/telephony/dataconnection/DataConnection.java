@@ -1455,7 +1455,8 @@ public class DataConnection extends StateMachine {
         @Override
         public void enter() {
             if ((mConnectionParams.mRilRat != mRilRat)
-                    || (mDataRegState != ServiceState.STATE_IN_SERVICE)){
+                    || (mDataRegState != ServiceState.STATE_IN_SERVICE)
+                    && !isDunRetryAllowedForVsim(mConnectionParams.mApnContext)) {
                 // RAT has changed or we're not in service so don't even begin retrying.
                 if (DBG) {
                     String s = "DcRetryingState: enter() not retrying rat changed"
@@ -1498,7 +1499,8 @@ public class DataConnection extends StateMachine {
                                     + " rat=" + rat + " ignoring");
                         }
                     } else {
-                        if (drs == ServiceState.STATE_IN_SERVICE) {
+                        if (drs == ServiceState.STATE_IN_SERVICE
+                                 || isDunRetryAllowedForVsim(mConnectionParams.mApnContext)) {
                             // have to retry connecting since no attach event will come
                             if (mConnectionParams.mRetryWhenSSChange) {
                                 retVal = NOT_HANDLED;
@@ -2356,6 +2358,10 @@ public class DataConnection extends StateMachine {
     protected boolean isPdpRejectCauseFailureHandled(DataCallResponse.SetupResult result,
             ConnectionParams cp) {
         if (DBG) log("isPdpRejectCauseFailureHandled()");
+        return false;
+    }
+
+    protected boolean isDunRetryAllowedForVsim(ApnContext apnContext) {
         return false;
     }
 
