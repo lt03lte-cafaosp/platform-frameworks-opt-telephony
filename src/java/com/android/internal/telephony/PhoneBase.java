@@ -1537,7 +1537,7 @@ public abstract class PhoneBase extends Handler implements Phone {
     }
 
     public void setVoiceCallForwardingFlag(int line, boolean enable, String number) {
-        setCallForwardingIndicatorInSharedPref(enable);
+        setCallForwardingPreference(enable);
         IccRecords r = mIccRecords.get();
         if (r != null) {
             r.setVoiceCallForwardingFlag(line, enable, number);
@@ -1546,12 +1546,13 @@ public abstract class PhoneBase extends Handler implements Phone {
 
     protected void setVoiceCallForwardingFlag(IccRecords r, int line, boolean enable,
                                               String number) {
-        setCallForwardingIndicatorInSharedPref(enable);
+        setCallForwardingPreference(enable);
         r.setVoiceCallForwardingFlag(line, enable, number);
     }
 
     public int getVoiceCallForwardingFlag() {
-        return getCallForwardingIndicatorFromSharedPref();
+        return getCallForwardingPreference() ? IccRecords.CALL_FORWARDING_STATUS_ENABLED :
+                IccRecords.CALL_FORWARDING_STATUS_DISABLED;
     }
 
     @Override
@@ -1562,7 +1563,9 @@ public abstract class PhoneBase extends Handler implements Phone {
             callForwardingIndicator = r.getVoiceCallForwardingFlag();
         }
         if (callForwardingIndicator == IccRecords.CALL_FORWARDING_STATUS_UNKNOWN) {
-            callForwardingIndicator = getCallForwardingIndicatorFromSharedPref();
+            callForwardingIndicator = getCallForwardingPreference() ?
+                    IccRecords.CALL_FORWARDING_STATUS_ENABLED
+                    : IccRecords.CALL_FORWARDING_STATUS_DISABLED;
         }
         return (callForwardingIndicator == IccRecords.CALL_FORWARDING_STATUS_ENABLED);
     }
