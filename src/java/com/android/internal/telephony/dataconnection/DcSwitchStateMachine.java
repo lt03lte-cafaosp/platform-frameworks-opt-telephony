@@ -543,7 +543,7 @@ public class DcSwitchStateMachine extends StateMachine {
                         // from the ServiceStateTracker will kick us out of attached when
                         // appropriate.
                         loge("EVENT_DATA_DISALLOWED failed, " + ar.exception);
-                        transitionTo(mAttachedState);
+                        transitionTo(mIdleState);
                     }
                     retVal = HANDLED;
                     break;
