@@ -114,6 +114,7 @@ public class UiccCardApplication {
             queryPin1State();
         }
         mCi.registerForNotAvailable(mHandler, EVENT_RADIO_UNAVAILABLE, null);
+        notifyNetworkLockedRegistrantsIfNeeded(null);
     }
 
     void update (IccCardApplicationStatus as, Context c, CommandsInterface ci) {
