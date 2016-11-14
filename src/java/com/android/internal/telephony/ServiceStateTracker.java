@@ -29,11 +29,13 @@ import android.os.RegistrantList;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.telephony.CarrierConfigManager;
 import android.telephony.CellInfo;
 import android.telephony.Rlog;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.SubscriptionManager.OnSubscriptionsChangedListener;
 import android.telephony.TelephonyManager;
@@ -51,6 +53,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import com.android.internal.telephony.dataconnection.DcTrackerBase;
 import com.android.internal.telephony.imsphone.ImsPhone;
@@ -226,6 +229,13 @@ public abstract class ServiceStateTracker extends Handler {
     protected static final String REGISTRATION_DENIED_GEN  = "General";
     protected static final String REGISTRATION_DENIED_AUTH = "Authentication Failure";
 
+    // value for subsidy lock resticted state
+    private static final int SUBSIDYLOCK_RESTRICTED = 103;
+    private static final String SUBSIDY_STATUS = "subsidy_status";
+    private static final String SUBSIDY_LOCK_SYSTEM_PROPERY = "persist.radio.subsidylock";
+    private static final String[] MCC_WHITE_LIST = {"^405|222\\d*"};
+    private static final String[] MNC_WHITE_LIST = {"^8(40|5[4-9]|6[0-9]|7[0-4])|01\\d*"};
+
     protected boolean mImsRegistrationOnOff = false;
     protected boolean mAlarmSwitch = false;
     protected IntentFilter mIntentFilter = null;
@@ -268,6 +278,12 @@ public abstract class ServiceStateTracker extends Handler {
 
                     boolean restoreSelection = !context.getResources().getBoolean(
                             com.android.internal.R.bool.skip_restoring_network_selection);
+
+                    if (isSubsidyRestricted()) {
+                        mPhoneBase.setNetworkSelectionModeAutomatic(null);
+                        restoreSelection = false;
+                    }
+
                     mPhoneBase.sendSubscriptionSettings(restoreSelection);
 
                     mPhoneBase.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
@@ -334,6 +350,32 @@ public abstract class ServiceStateTracker extends Handler {
         mPhoneBase.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
             ServiceState.rilRadioTechnologyToString(ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN));
         mCi.registerForImsNetworkStateChanged(this, EVENT_IMS_STATE_CHANGED, null);
+    }
+
+    private boolean isSubsidyRestricted() {
+        boolean subsidyLocked = Settings.Secure.getInt(
+                mPhoneBase.getContext().getContentResolver(),
+                SUBSIDY_STATUS, -1) == SUBSIDYLOCK_RESTRICTED;// not in NONE state
+        SubscriptionInfo sir = mSubscriptionManager.getActiveSubscriptionInfo(mPhoneBase.getSubId());
+        boolean isWhiteListed = isWhiteListed(String.valueOf(sir.getMcc()),
+                String.valueOf(sir.getMnc()));
+        return isSubSidyLockFeatureEnabled() && subsidyLocked && isWhiteListed;
+    }
+
+    private static boolean isSubSidyLockFeatureEnabled() {
+        return SystemProperties.getInt(SUBSIDY_LOCK_SYSTEM_PROPERY, 0) == 1;
+    }
+
+    private boolean isWhiteListed(String mcc, String mnc) {
+        boolean mccAllowed = false;
+        boolean mncAllowed = false;
+        for (String mccRegEx : MCC_WHITE_LIST) {
+            mccAllowed |= Pattern.compile(mccRegEx).matcher(mcc).matches();
+        }
+        for (String mncRegEx : MNC_WHITE_LIST) {
+            mncAllowed |= Pattern.compile(mncRegEx).matcher(mnc).matches();
+        }
+        return mccAllowed && mncAllowed;
     }
 
     void requestShutdown() {
