@@ -263,6 +263,12 @@ public class ImsPhone extends ImsPhoneBase {
         updateDataServiceState();
     }
 
+    /* package */ void setVoiceRadioTech(int radioTech) {
+        if (mSS != null) {
+            mSS.setRilVoiceRadioTechnology(radioTech);
+        }
+    }
+
     @Override
     public CallTracker getCallTracker() {
         return mCT;
