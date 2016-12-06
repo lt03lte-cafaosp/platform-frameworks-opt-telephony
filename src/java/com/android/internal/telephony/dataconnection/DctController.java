@@ -510,7 +510,7 @@ public class DctController extends Handler {
         }
     }
 
-    private void deactivateDdsRequests() {
+    private void resetPdnRequests(int phoneId) {
         int dataSubId = mSubController.getDefaultDataSubId();
 
         Iterator<Integer> iterator = mRequestInfos.keySet().iterator();
@@ -522,14 +522,14 @@ public class DctController extends Handler {
                 if (specifier == null || specifier.equals("")) {
                     if (requestInfo.executedPhoneId != INVALID_PHONE_INDEX) {
                         String apn = apnForNetworkRequest(requestInfo.request);
-                        int phoneId = requestInfo.executedPhoneId;
-                        requestInfo.executedPhoneId = INVALID_PHONE_INDEX;
+                        int executedPhoneId = requestInfo.executedPhoneId;
                         logd("[setDataSubId] subId =" + dataSubId);
                         requestInfo.log(
                                 "DctController.onSettingsChange releasing request");
-                        for (int i = 0; i < mPhoneNum; i++) {
+                        if (phoneId == executedPhoneId) {
+                            requestInfo.executedPhoneId = INVALID_PHONE_INDEX;
                             PhoneBase phoneBase =
-                                (PhoneBase)mPhones[i].getActivePhone();
+                                (PhoneBase)mPhones[phoneId].getActivePhone();
                             DcTrackerBase dcTracker = phoneBase.mDcTracker;
                             dcTracker.decApnRefCount(apn, requestInfo.getLog());
                         }
@@ -551,9 +551,11 @@ public class DctController extends Handler {
             }
         }
 
-        logd("onSettingsChange, activePhoneId = " + activePhoneId);
-        deactivateDdsRequests();
+        for (int i = 0; i < mPhoneNum; i++) {
+            resetPdnRequests(i);
+        }
 
+        logd("onSettingsChange, activePhoneId = " + activePhoneId);
         // Some request maybe pending due to invalid settings
         // Try to handle pending request when settings changed
         for (int i = 0; i < mPhoneNum; ++i) {
@@ -624,10 +626,7 @@ public class DctController extends Handler {
                 logd("onSubInfoReady: SIM card absent on phoneId = " + i);
                 PhoneBase phoneBase = (PhoneBase)mPhones[i].getActivePhone();
                 DcTrackerBase dcTracker = phoneBase.mDcTracker;
-                if (dcTracker.isApnTypeActive(PhoneConstants.APN_TYPE_DEFAULT)) {
-                    logd("onSubInfoReady: reset INTERNET request as SIM has been removed");
-                    deactivateDdsRequests();
-                }
+                resetPdnRequests(i);
             }
             mNetworkFilter[i].setNetworkSpecifier(String.valueOf(subId));
             ((DctController.TelephonyNetworkFactory)mNetworkFactory[i]).evalPendingRequest();
