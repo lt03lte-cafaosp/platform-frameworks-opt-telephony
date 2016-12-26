@@ -1704,4 +1704,10 @@ public abstract class PhoneBase extends Handler implements Phone {
     public boolean isMMI(String dialString) {
         return false;
     }
+
+    @Override
+    public boolean isUtEnabled() {
+        Rlog.e(LOG_TAG, "isUtEnabled() is only supported for IMSPhone");
+        return false;
+    }
 }
