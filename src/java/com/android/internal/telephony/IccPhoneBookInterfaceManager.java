@@ -19,6 +19,7 @@ package com.android.internal.telephony;
 import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.os.AsyncResult;
+import android.os.HandlerThread;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -62,7 +63,18 @@ public class IccPhoneBookInterfaceManager {
     protected static final int EVENT_LOAD_DONE = 2;
     protected static final int EVENT_UPDATE_DONE = 3;
 
-    protected Handler mBaseHandler = new Handler() {
+    protected final IccPbHandler mBaseHandler;
+
+    private static final HandlerThread  mHandlerThread  = new HandlerThread("IccPbHandlerLoader");
+    static {
+        mHandlerThread.start();
+    }
+
+    protected class IccPbHandler extends Handler {
+        public IccPbHandler(Looper looper) {
+            super(looper);
+        }
+
         @Override
         public void handleMessage(Message msg) {
             AsyncResult ar;
@@ -132,6 +144,8 @@ public class IccPhoneBookInterfaceManager {
                         phone.getContext(), phone.getPhoneId(), phone.mCi);
             }
         }
+
+        mBaseHandler = new IccPbHandler(mHandlerThread.getLooper());
     }
 
     public void dispose() {
@@ -191,9 +205,9 @@ public class IccPhoneBookInterfaceManager {
 
 
         if (DBG) logd("updateAdnRecordsInEfBySearch: efid=0x" +
-                Integer.toHexString(efid).toUpperCase() +
-                " ("+ oldTag + "," + oldPhoneNumber + ")"+ "==>" +
-                " ("+ newTag + "," + newPhoneNumber + ")"+ " pin2=" + pin2);
+                Integer.toHexString(efid).toUpperCase() + " ("+ Rlog.pii(LOG_TAG, oldTag) + "," +
+                Rlog.pii(LOG_TAG, oldPhoneNumber) + ")" + "==>" + " ("+ Rlog.pii(LOG_TAG, newTag) +
+                "," + Rlog.pii(LOG_TAG, newPhoneNumber) + ")"+ " pin2=" + Rlog.pii(LOG_TAG, pin2));
 
         efid = updateEfForIccType(efid);
 
@@ -314,9 +328,9 @@ public class IccPhoneBookInterfaceManager {
         }
 
         if (DBG) logd("updateAdnRecordsInEfByIndex: efid=0x" +
-                Integer.toHexString(efid).toUpperCase() +
-                " Index=" + index + " ==> " +
-                "("+ newTag + "," + newPhoneNumber + ")"+ " pin2=" + pin2);
+                Integer.toHexString(efid).toUpperCase() + " Index=" + index + " ==> " + "(" +
+                Rlog.pii(LOG_TAG, newTag) + "," + Rlog.pii(LOG_TAG, newPhoneNumber) + ")" +
+                " pin2=" + Rlog.pii(LOG_TAG, pin2));
         synchronized(mLock) {
             checkThread();
             mSuccess = false;
@@ -421,7 +435,7 @@ public class IccPhoneBookInterfaceManager {
     protected void checkThread() {
         if (!ALLOW_SIM_OP_IN_UI_THREAD) {
             // Make sure this isn't the UI thread, since it will block
-            if (mBaseHandler.getLooper().equals(Looper.myLooper())) {
+            if (Looper.getMainLooper().equals(Looper.myLooper())) {
                 loge("query() called on the main UI thread!");
                 throw new IllegalStateException(
                         "You cannot call query on this provder from the main UI thread.");
