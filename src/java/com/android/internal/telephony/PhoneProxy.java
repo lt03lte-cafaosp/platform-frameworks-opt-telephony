@@ -807,11 +807,26 @@ public class PhoneProxy extends Handler implements Phone {
     }
 
     @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason, int serviceClass,
+            Message onComplete) {
+        mActivePhone.getCallForwardingOption(commandInterfaceCFReason, serviceClass,
+                onComplete);
+    }
+
+    @Override
     public void setCallForwardingOption(int commandInterfaceCFReason,
             int commandInterfaceCFAction, String dialingNumber,
             int timerSeconds, Message onComplete) {
         mActivePhone.setCallForwardingOption(commandInterfaceCFReason,
             commandInterfaceCFAction, dialingNumber, timerSeconds, onComplete);
+    }
+
+    @Override
+    public void setCallForwardingOption(int commandInterfaceCFReason,
+            int commandInterfaceCFAction, int serviceClass, String dialingNumber,
+            int timerSeconds, Message onComplete) {
+        mActivePhone.setCallForwardingOption(commandInterfaceCFReason,
+            commandInterfaceCFAction, serviceClass, dialingNumber, timerSeconds, onComplete);
     }
 
     @Override

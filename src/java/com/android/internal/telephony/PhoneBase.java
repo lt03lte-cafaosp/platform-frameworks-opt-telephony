@@ -91,6 +91,10 @@ public abstract class PhoneBase extends Handler implements Phone {
     // Key used to read/write "disable data connection on boot" pref (used for testing)
     public static final String DATA_DISABLED_ON_BOOT_KEY = "disabled_on_boot_key";
 
+    // Key used to read/write if Video Call Forwarding is enabled
+    public static final String CF_ENABLED_VIDEO = "cf_enabled_key_video";
+    public static final String VM_SIM_IMSI = "vm_sim_imsi_key";
+
     /* Event Constants */
     protected static final int EVENT_RADIO_AVAILABLE             = 1;
     /** Supplementary Service Notification received. */
@@ -1709,5 +1713,34 @@ public abstract class PhoneBase extends Handler implements Phone {
     public boolean isUtEnabled() {
         Rlog.e(LOG_TAG, "isUtEnabled() is only supported for IMSPhone");
         return false;
+    }
+
+    protected void setVmSimImsi(String imsi) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putString(VM_SIM_IMSI, imsi);
+        editor.apply();
+    }
+
+    /**
+     * This method stores the CF_ENABLED_VIDEO flag in preferences
+     * @param enabled
+     */
+    public void setVideoCallForwardingPreference(boolean enabled) {
+        Rlog.d(LOG_TAG, "Set video callforwarding preference enabled = " + enabled);
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        SharedPreferences.Editor edit = sp.edit();
+        edit.putBoolean((CF_ENABLED_VIDEO + getSubscriberId()), enabled);
+        edit.commit();
+
+        // Using the same method as VoiceMail to be able to track when the sim card is changed.
+        setVmSimImsi(getSubscriberId());
+    }
+
+    public boolean getVideoCallForwardingPreference() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        boolean cf = sp.getBoolean((CF_ENABLED_VIDEO + getSubscriberId()), false);
+        Rlog.d(LOG_TAG, "Get video callforwarding preference enabled = " + cf);
+        return cf;
     }
 }
