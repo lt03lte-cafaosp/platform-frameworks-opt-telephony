@@ -1350,4 +1350,9 @@ public class PhoneProxy extends Handler implements Phone {
     public boolean isMMI(String dialString) {
         return mActivePhone.isMMI(dialString);
     }
+
+    @Override
+    public boolean isUtEnabled() {
+        return mActivePhone.isUtEnabled();
+    }
 }

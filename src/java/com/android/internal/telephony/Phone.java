@@ -2036,4 +2036,9 @@ public interface Phone {
      * @param dialString, string containing the number
      */
     public boolean isMMI(String dialString);
+
+    /**
+     * Return UT supported or not
+     */
+    public boolean isUtEnabled();
 }
