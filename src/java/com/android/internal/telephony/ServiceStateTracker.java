@@ -232,9 +232,9 @@ public abstract class ServiceStateTracker extends Handler {
     // value for subsidy lock resticted state
     private static final int SUBSIDYLOCK_RESTRICTED = 103;
     private static final String SUBSIDY_STATUS = "subsidy_status";
-    private static final String SUBSIDY_LOCK_SYSTEM_PROPERY = "persist.radio.subsidylock";
+    private static final String SUBSIDY_LOCK_SYSTEM_PROPERY = "ro.radio.subsidylock";
     private static final String[] MCC_WHITE_LIST = {"^405|222\\d*"};
-    private static final String[] MNC_WHITE_LIST = {"^8(40|5[4-9]|6[0-9]|7[0-4])|01\\d*"};
+    private static final String[] MNC_WHITE_LIST = {"^8(40|5[4-9]|6[0-9]|7[0-4])|01|1\\d*"};
 
     protected boolean mImsRegistrationOnOff = false;
     protected boolean mAlarmSwitch = false;
