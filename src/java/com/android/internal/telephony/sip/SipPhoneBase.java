@@ -354,8 +354,19 @@ abstract class SipPhoneBase extends PhoneBase {
     }
 
     @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason, int serviceClass,
+            Message onComplete) {
+    }
+
+    @Override
     public void setCallForwardingOption(int commandInterfaceCFAction,
             int commandInterfaceCFReason, String dialingNumber,
+            int timerSeconds, Message onComplete) {
+    }
+
+    @Override
+    public void setCallForwardingOption(int commandInterfaceCFAction,
+            int commandInterfaceCFReason,  int serviceClass, String dialingNumber,
             int timerSeconds, Message onComplete) {
     }
 

@@ -1119,6 +1119,21 @@ public interface Phone {
                                   Message onComplete);
 
     /**
+     * getCallForwardingOptions
+     * gets a call forwarding option. The return value of
+     * ((AsyncResult)onComplete.obj) is an array of CallForwardInfo.
+     *
+     * @param commandInterfaceCFReason is one of the valid call forwarding
+     *        CF_REASONS, as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param serviceClass is one of the service classes as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param onComplete a callback message when the action is completed.
+     *        @see com.android.internal.telephony.CallForwardInfo for details.
+     */
+    void getCallForwardingOption(int commandInterfaceCFReason, int serviceClass,
+                                  Message onComplete);
+    /**
      * setCallForwardingOptions
      * sets a call forwarding option.
      *
@@ -1135,6 +1150,30 @@ public interface Phone {
      */
     void setCallForwardingOption(int commandInterfaceCFReason,
                                  int commandInterfaceCFAction,
+                                 String dialingNumber,
+                                 int timerSeconds,
+                                 Message onComplete);
+
+    /**
+     * setCallForwardingOptions
+     * sets a call forwarding option.
+     *
+     * @param commandInterfaceCFReason is one of the valid call forwarding
+     *        CF_REASONS, as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param commandInterfaceCFAction is one of the valid call forwarding
+     *        CF_ACTIONS, as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param dialingNumber is the target phone number to forward calls to
+     * @param serviceClass is one of the service classes as defined in
+     *        <code>com.android.internal.telephony.CommandsInterface.</code>
+     * @param timerSeconds is used by CFNRy to indicate the timeout before
+     *        forwarding is attempted.
+     * @param onComplete a callback message when the action is completed.
+     */
+    void setCallForwardingOption(int commandInterfaceCFReason,
+                                 int commandInterfaceCFAction,
+                                 int serviceClass,
                                  String dialingNumber,
                                  int timerSeconds,
                                  Message onComplete);
@@ -2036,4 +2075,9 @@ public interface Phone {
      * @param dialString, string containing the number
      */
     public boolean isMMI(String dialString);
+
+    /**
+     * Return UT supported or not
+     */
+    public boolean isUtEnabled();
 }

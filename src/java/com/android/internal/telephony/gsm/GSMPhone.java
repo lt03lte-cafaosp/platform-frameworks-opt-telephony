@@ -330,7 +330,7 @@ public class GSMPhone extends PhoneBase {
             cf = r.getVoiceCallForwardingFlag();
         }
         if (!cf) {
-            cf = getCallForwardingPreference();
+            cf = getCallForwardingPreference() || getVideoCallForwardingPreference();
         }
         return cf;
     }
@@ -1046,6 +1046,12 @@ public class GSMPhone extends PhoneBase {
 
     @Override
     public void getCallForwardingOption(int commandInterfaceCFReason, Message onComplete) {
+        getCallForwardingOption(commandInterfaceCFReason, 0, onComplete);
+    }
+
+    @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason, int serviceClass,
+            Message onComplete) {
         if (isValidCommandInterfaceCFReason(commandInterfaceCFReason)) {
             if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "requesting call forwarding query.");
             Message resp;
@@ -1054,13 +1060,24 @@ public class GSMPhone extends PhoneBase {
             } else {
                 resp = onComplete;
             }
-            mCi.queryCallForwardStatus(commandInterfaceCFReason,0,null,resp);
+            mCi.queryCallForwardStatus(commandInterfaceCFReason,serviceClass,null,resp);
         }
     }
 
     @Override
     public void setCallForwardingOption(int commandInterfaceCFAction,
             int commandInterfaceCFReason,
+            String dialingNumber,
+            int timerSeconds,
+            Message onComplete) {
+        setCallForwardingOption(commandInterfaceCFAction, commandInterfaceCFReason,
+                CommandsInterface.SERVICE_CLASS_VOICE, dialingNumber, timerSeconds, onComplete);
+    }
+
+    @Override
+    public void setCallForwardingOption(int commandInterfaceCFAction,
+            int commandInterfaceCFReason,
+            int serviceClass,
             String dialingNumber,
             int timerSeconds,
             Message onComplete) {
@@ -1077,7 +1094,7 @@ public class GSMPhone extends PhoneBase {
             }
             mCi.setCallForward(commandInterfaceCFAction,
                     commandInterfaceCFReason,
-                    CommandsInterface.SERVICE_CLASS_VOICE,
+                    serviceClass,
                     dialingNumber,
                     timerSeconds,
                     resp);
@@ -1379,6 +1396,7 @@ public class GSMPhone extends PhoneBase {
                 if (imsi != null && imsiFromSIM != null && !imsiFromSIM.equals(imsi)) {
                     storeVoiceMailNumber(null);
                     setCallForwardingPreference(false);
+                    setVideoCallForwardingPreference(false);
                     setVmSimImsi(null);
                 }
 
@@ -1537,11 +1555,10 @@ public class GSMPhone extends PhoneBase {
                 break;
 
             case CHECK_CALLFORWARDING_STATUS:
-                boolean cfEnabled = getCallForwardingPreference();
+                boolean cfEnabled = getCallForwardingPreference() ||
+                        getVideoCallForwardingPreference();
                 if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "Callforwarding is " + cfEnabled);
-                if (cfEnabled) {
-                    notifyCallForwardingIndicator();
-                }
+                notifyCallForwardingIndicator();
                 break;
 
              default:
@@ -1679,6 +1696,7 @@ public class GSMPhone extends PhoneBase {
     }
 
     private void handleCfuQueryResult(CallForwardInfo[] infos) {
+        Rlog.d(LOG_TAG, "In handleCfuQueryResult");
         IccRecords r = mIccRecords.get();
         if (r != null) {
             if (infos == null || infos.length == 0) {
@@ -1692,6 +1710,13 @@ public class GSMPhone extends PhoneBase {
                         r.setVoiceCallForwardingFlag(1, (infos[i].status == 1),
                             infos[i].number);
                         // should only have the one
+                        break;
+                    } else if ((infos[i].serviceClass & (CommandsInterface.SERVICE_CLASS_DATA_SYNC
+                            + CommandsInterface.SERVICE_CLASS_PACKET)) != 0) {
+                        Rlog.d(LOG_TAG, "setting video call forward preference");
+                        setVideoCallForwardingPreference(infos[i].status == 1);
+                        Message msg = obtainMessage(CHECK_CALLFORWARDING_STATUS);
+                        sendMessage(msg);
                         break;
                     }
                 }

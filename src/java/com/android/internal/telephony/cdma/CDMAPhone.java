@@ -893,8 +893,24 @@ public class CDMAPhone extends PhoneBase {
     }
 
     @Override
+    public void getCallForwardingOption(int commandInterfaceCFReason, int serviceClass,
+            Message onComplete) {
+        Rlog.e(LOG_TAG, "getCallForwardingOption: not possible in CDMA");
+    }
+
+    @Override
     public void setCallForwardingOption(int commandInterfaceCFAction,
             int commandInterfaceCFReason,
+            String dialingNumber,
+            int timerSeconds,
+            Message onComplete) {
+        Rlog.e(LOG_TAG, "setCallForwardingOption: not possible in CDMA");
+    }
+
+    @Override
+    public void setCallForwardingOption(int commandInterfaceCFAction,
+            int commandInterfaceCFReason,
+            int serviceClass,
             String dialingNumber,
             int timerSeconds,
             Message onComplete) {
