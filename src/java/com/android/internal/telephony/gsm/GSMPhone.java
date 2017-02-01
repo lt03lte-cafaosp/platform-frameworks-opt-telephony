@@ -57,6 +57,7 @@ import static com.android.internal.telephony.TelephonyProperties.PROPERTY_BASEBA
 import com.android.internal.telephony.SmsBroadcastUndelivered;
 import com.android.internal.telephony.dataconnection.DcTracker;
 import com.android.internal.telephony.CallForwardInfo;
+import com.android.internal.telephony.CallManager;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Connection;
@@ -289,6 +290,13 @@ public class GSMPhone extends PhoneBase {
 
     @Override
     public PhoneConstants.State getState() {
+        Phone imsPhone = CallManager.getInstance().getImsPhone();
+        if (imsPhone != null) {
+            PhoneConstants.State state = imsPhone.getState();
+            if (state != PhoneConstants.State.IDLE) {
+                return state;
+            }
+        }
         return mCT.mState;
     }
 
