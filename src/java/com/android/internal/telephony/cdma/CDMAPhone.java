@@ -44,6 +44,7 @@ import android.telephony.cdma.CdmaCellLocation;
 import android.text.TextUtils;
 import android.telephony.Rlog;
 
+import com.android.internal.telephony.CallManager;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CallTracker;
 import com.android.internal.telephony.CommandException;
@@ -54,6 +55,7 @@ import com.android.internal.telephony.IccSmsInterfaceManager;
 import com.android.internal.telephony.MccTable;
 import com.android.internal.telephony.MmiCode;
 import com.android.internal.telephony.OperatorInfo;
+import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneNotifier;
@@ -287,6 +289,13 @@ public class CDMAPhone extends PhoneBase {
 
     @Override
     public PhoneConstants.State getState() {
+        Phone imsPhone = CallManager.getInstance().getImsPhone();
+        if (imsPhone != null) {
+            PhoneConstants.State state = imsPhone.getState();
+            if (state != PhoneConstants.State.IDLE) {
+                return state;
+            }
+        }
         return mCT.mState;
     }
 
