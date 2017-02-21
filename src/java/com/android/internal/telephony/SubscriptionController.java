@@ -238,6 +238,8 @@ public class SubscriptionController extends ISub.Stub {
         Intent intent = new Intent(TelephonyIntents.ACTION_SUBINFO_CONTENT_CHANGE);
         mContext.sendBroadcast(intent);
         intent = new Intent(TelephonyIntents.ACTION_SUBINFO_RECORD_UPDATED);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        intent.addFlags(Intent.FLAG_RECEIVER_REPLACE_PENDING);
         mContext.sendBroadcast(intent);
      }
 
