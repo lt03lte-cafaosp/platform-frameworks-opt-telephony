@@ -230,7 +230,7 @@ public abstract class ServiceStateTracker extends Handler {
     protected static final String REGISTRATION_DENIED_AUTH = "Authentication Failure";
 
     // value for subsidy lock resticted state
-    private static final int SUBSIDYLOCK_RESTRICTED = 103;
+    private static final int SUBSIDY_UNLOCKED = 100;
     private static final String SUBSIDY_STATUS = "subsidy_status";
     private static final String SUBSIDY_LOCK_SYSTEM_PROPERY = "ro.radio.subsidylock";
     private static final String[] MCC_WHITE_LIST = {"^405|222\\d*"};
@@ -279,9 +279,14 @@ public abstract class ServiceStateTracker extends Handler {
                     boolean restoreSelection = !context.getResources().getBoolean(
                             com.android.internal.R.bool.skip_restoring_network_selection);
 
-                    if (isSubsidyRestricted()) {
-                        mPhoneBase.setNetworkSelectionModeAutomatic(null);
-                        restoreSelection = false;
+                    SubscriptionInfo sir = mSubscriptionManager.getActiveSubscriptionInfo(subId);
+                    boolean isWhiteListed = isWhiteListed(String.valueOf(sir.getMcc()),
+                             String.valueOf(sir.getMnc()));
+                    if (isSubSidyLockFeatureEnabled() && isWhiteListed) {
+                        if (!isSubsidyUnlocked()) {
+                            mPhoneBase.setNetworkSelectionModeAutomatic(null);
+                            restoreSelection = false;
+                        }
                     }
 
                     mPhoneBase.sendSubscriptionSettings(restoreSelection);
@@ -352,14 +357,9 @@ public abstract class ServiceStateTracker extends Handler {
         mCi.registerForImsNetworkStateChanged(this, EVENT_IMS_STATE_CHANGED, null);
     }
 
-    private boolean isSubsidyRestricted() {
-        boolean subsidyLocked = Settings.Secure.getInt(
-                mPhoneBase.getContext().getContentResolver(),
-                SUBSIDY_STATUS, -1) == SUBSIDYLOCK_RESTRICTED;// not in NONE state
-        SubscriptionInfo sir = mSubscriptionManager.getActiveSubscriptionInfo(mPhoneBase.getSubId());
-        boolean isWhiteListed = isWhiteListed(String.valueOf(sir.getMcc()),
-                String.valueOf(sir.getMnc()));
-        return isSubSidyLockFeatureEnabled() && subsidyLocked && isWhiteListed;
+    private boolean isSubsidyUnlocked() {
+        return Settings.Secure.getInt(mPhoneBase.getContext().getContentResolver(),
+                SUBSIDY_STATUS, -1) == SUBSIDY_UNLOCKED;
     }
 
     private static boolean isSubSidyLockFeatureEnabled() {
