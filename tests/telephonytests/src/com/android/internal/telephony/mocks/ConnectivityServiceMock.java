@@ -32,6 +32,7 @@ import static android.net.NetworkPolicyManager.RULE_ALLOW_ALL;
 import static android.net.NetworkPolicyManager.RULE_REJECT_ALL;
 import static android.net.NetworkPolicyManager.RULE_REJECT_METERED;
 
+import android.net.wifi.WifiDevice;
 import android.annotation.Nullable;
 import android.app.AlarmManager;
 import android.app.BroadcastOptions;
@@ -315,7 +316,7 @@ public class ConnectivityServiceMock extends IConnectivityManager.Stub
         NetworkAgentInfo nai = mNetworkAgentInfos.get(msg.replyTo);
         if (nai != null) {
             if (DBG) {
-                log(nai.name() + " got DISCONNECTED, was satisfying " + nai.networkRequests.size());
+                log(nai.name() + " got DISCONNECTED, was satisfying " + nai.numNetworkRequests());
             }
             // A network agent has disconnected.
             // TODO - if we move the logic to the network agent (have them disconnect
@@ -557,7 +558,17 @@ public class ConnectivityServiceMock extends IConnectivityManager.Stub
     }
 
     @Override
+    public void requestLinkProperties(NetworkRequest networkRequest) {
+        throw new RuntimeException("not implemented");
+    }
+
+    @Override
     public NetworkCapabilities getNetworkCapabilities(Network network) {
+        throw new RuntimeException("not implemented");
+    }
+
+    @Override
+    public void requestNetworkCapabilities(NetworkRequest networkRequest) {
         throw new RuntimeException("not implemented");
     }
 
@@ -594,6 +605,10 @@ public class ConnectivityServiceMock extends IConnectivityManager.Stub
         throw new RuntimeException("not implemented");
     }
 
+    public void setAvoidUnvalidated(Network network) {
+        throw new RuntimeException("not implemented");
+    }
+
     public int tether(String iface) {
         throw new RuntimeException("not implemented");
     }
@@ -619,6 +634,10 @@ public class ConnectivityServiceMock extends IConnectivityManager.Stub
     }
 
     public int setUsbTethering(boolean enable) {
+        throw new RuntimeException("not implemented");
+    }
+
+    public List<WifiDevice> getTetherConnectedSta() {
         throw new RuntimeException("not implemented");
     }
 
@@ -755,9 +774,8 @@ public class ConnectivityServiceMock extends IConnectivityManager.Stub
         }
 
         NetworkRequest networkRequest = new NetworkRequest(networkCapabilities, legacyType,
-                nextNetworkRequestId());
-        NetworkRequestInfo nri = new NetworkRequestInfo(messenger, networkRequest, binder,
-                NetworkRequestInfo.REQUEST);
+                nextNetworkRequestId(), NetworkRequest.Type.REQUEST);
+        NetworkRequestInfo nri = new NetworkRequestInfo(messenger, networkRequest, binder, true);
         if (DBG) log("requestNetwork for " + nri);
 
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_REGISTER_NETWORK_REQUEST, nri));
@@ -949,8 +967,8 @@ public class ConnectivityServiceMock extends IConnectivityManager.Stub
     }
 
     private void sendUpdatedScoreToFactories(NetworkAgentInfo nai) {
-        for (int i = 0; i < nai.networkRequests.size(); i++) {
-            NetworkRequest nr = nai.networkRequests.valueAt(i);
+        for (int i = 0; i < nai.numNetworkRequests(); i++) {
+            NetworkRequest nr = nai.requestAt(i);
             // Don't send listening requests to factories. b/17393458
             if (!isRequest(nr)) continue;
                 sendUpdatedScoreToFactories(nr, nai.getCurrentScore());
