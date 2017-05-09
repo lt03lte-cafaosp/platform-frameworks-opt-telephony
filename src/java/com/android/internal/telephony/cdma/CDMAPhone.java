@@ -290,7 +290,7 @@ public class CDMAPhone extends PhoneBase {
     @Override
     public PhoneConstants.State getState() {
         Phone imsPhone = CallManager.getInstance().getImsPhone();
-        if (imsPhone != null) {
+        if (imsPhone != null && (imsPhone.getSubscription() == getSubscription())) {
             PhoneConstants.State state = imsPhone.getState();
             if (state != PhoneConstants.State.IDLE) {
                 return state;
