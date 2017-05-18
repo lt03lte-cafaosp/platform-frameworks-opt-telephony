@@ -233,8 +233,8 @@ public abstract class ServiceStateTracker extends Handler {
     private static final int SUBSIDY_UNLOCKED = 100;
     private static final String SUBSIDY_STATUS = "subsidy_status";
     private static final String SUBSIDY_LOCK_SYSTEM_PROPERY = "ro.radio.subsidylock";
-    private static final String[] MCC_WHITE_LIST = {"^405|222\\d*"};
-    private static final String[] MNC_WHITE_LIST = {"^8(40|5[4-9]|6[0-9]|7[0-4])|01|1\\d*"};
+    private static final String[] MCC_WHITE_LIST = {"^405\\d*", "^222\\d*"};
+    private static final String[] MNC_WHITE_LIST = {"^8(40|5[4-9]|6[0-9]|7[0-4])\\d*", "^01|1\\d*"};
 
     protected boolean mImsRegistrationOnOff = false;
     protected boolean mAlarmSwitch = false;
@@ -367,15 +367,16 @@ public abstract class ServiceStateTracker extends Handler {
     }
 
     private boolean isWhiteListed(String mcc, String mnc) {
-        boolean mccAllowed = false;
-        boolean mncAllowed = false;
-        for (String mccRegEx : MCC_WHITE_LIST) {
-            mccAllowed |= Pattern.compile(mccRegEx).matcher(mcc).matches();
+        for (int i = 0; i < MCC_WHITE_LIST.length; i++) {
+            boolean mccAllowed = false;
+            boolean mncAllowed = false;
+            mccAllowed |= Pattern.compile(MCC_WHITE_LIST[i]).matcher(mcc).matches();
+            mncAllowed |= Pattern.compile(MNC_WHITE_LIST[i]).matcher(mnc).matches();
+            if (mccAllowed && mncAllowed) {
+                return true;
+            }
         }
-        for (String mncRegEx : MNC_WHITE_LIST) {
-            mncAllowed |= Pattern.compile(mncRegEx).matcher(mnc).matches();
-        }
-        return mccAllowed && mncAllowed;
+        return false;
     }
 
     void requestShutdown() {
